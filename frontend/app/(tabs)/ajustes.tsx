@@ -13,6 +13,7 @@ import {
   toggleArchivePlan,
 } from "../../src/store/planStore";
 import type { Plan } from "../../src/types/plan";
+import { FLOATING_TAB_HEIGHT, FLOATING_TAB_MARGIN } from "./_layout";
 
 export default function AjustesScreen() {
   const insets = useSafeAreaInsets();
@@ -74,7 +75,27 @@ export default function AjustesScreen() {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: spacing.xxxl, gap: spacing.sm }}>
+      <ScrollView contentContainerStyle={{
+        padding: spacing.lg,
+        paddingBottom: FLOATING_TAB_HEIGHT + Math.max(insets.bottom, FLOATING_TAB_MARGIN) + spacing.xl,
+        gap: spacing.sm,
+      }}>
+        <Pressable
+          style={styles.statsShortcut}
+          onPress={() => router.push("/estatisticas")}
+          testID="ajustes-stats-shortcut"
+        >
+          <View style={styles.statsIconWrap}>
+            <MaterialDesignIcons name="chart-line" size={22} color={colors.brandPrimary} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.statsTitle}>Estatísticas</Text>
+            <Text style={styles.statsDesc}>Refeições, dias completos e sequência</Text>
+          </View>
+          <MaterialDesignIcons name="chevron-right" size={22} color={colors.onSurfaceTertiary} />
+        </Pressable>
+
+        <Text style={styles.sectionLabel}>PLANOS</Text>
         {plans.map((p) => {
           const active = p.id === activeId;
           return (
@@ -247,6 +268,31 @@ const styles = StyleSheet.create({
   },
   archBadgeText: { color: colors.onSurfaceTertiary, fontWeight: "700", fontSize: 10 },
   planActions: { flexDirection: "row", gap: spacing.xs, alignItems: "center" },
+  statsShortcut: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    backgroundColor: colors.surfaceSecondary,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+  },
+  statsIconWrap: {
+    width: 44, height: 44, borderRadius: radius.md,
+    backgroundColor: colors.brandPrimary + "22",
+    alignItems: "center", justifyContent: "center",
+  },
+  statsTitle: { color: colors.onSurface, fontSize: 16, fontWeight: "700" },
+  statsDesc: { color: colors.onSurfaceTertiary, fontSize: 12, marginTop: 2 },
+  sectionLabel: {
+    color: colors.onSurfaceTertiary,
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 1.5,
+    marginTop: spacing.lg,
+    marginBottom: spacing.xs,
+  },
   iconBtn: {
     width: 36,
     height: 36,

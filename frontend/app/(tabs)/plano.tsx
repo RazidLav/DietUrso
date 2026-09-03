@@ -9,6 +9,7 @@ import MealCard, { iconForMeal } from "../../src/components/MealCard";
 import { dayMacrosDefault, getActivePlan, optionMacros } from "../../src/store/planStore";
 import { WEEKDAYS_SHORT } from "../../src/utils/date";
 import type { Plan } from "../../src/types/plan";
+import { FLOATING_TAB_HEIGHT, FLOATING_TAB_MARGIN } from "./_layout";
 
 export default function PlanoScreen() {
   const insets = useSafeAreaInsets();
@@ -87,7 +88,10 @@ export default function PlanoScreen() {
 
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={{ padding: spacing.lg, paddingBottom: spacing.xxxl }}
+        contentContainerStyle={{
+          padding: spacing.lg,
+          paddingBottom: FLOATING_TAB_HEIGHT + Math.max(insets.bottom, FLOATING_TAB_MARGIN) + spacing.xl,
+        }}
       >
         <MacroSummary kcal={totals.kcal} protein={totals.protein} carbs={totals.carbs} fats={totals.fats} />
         <Text style={styles.sectionTitle}>Refeições</Text>

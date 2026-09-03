@@ -9,24 +9,26 @@ interface Props {
   icon?: string;
   kcal?: number;
   onPress?: () => void;
+  onToggleDone?: () => void;
   status?: "planned" | "as_planned" | "modified";
   testID?: string;
   right?: React.ReactNode;
 }
 
-export default function MealCard({ title, subtitle, icon, kcal, onPress, status, testID, right }: Props) {
+export default function MealCard({ title, subtitle, icon, kcal, onPress, onToggleDone, status, testID, right }: Props) {
+  const done = status === "as_planned" || status === "modified";
   return (
     <Pressable
       onPress={onPress}
       testID={testID}
-      style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
+      style={({ pressed }) => [styles.card, done && styles.cardDone, pressed && styles.cardPressed]}
     >
       <View style={styles.left}>
         <View style={styles.iconWrap}>
           <MaterialDesignIcons name={(icon as any) ?? "silverware-fork-knife"} size={22} color={colors.onSurface} />
         </View>
         <View style={styles.textCol}>
-          <Text style={styles.title} numberOfLines={1}>{title}</Text>
+          <Text style={[styles.title, done && styles.titleDone]} numberOfLines={1}>{title}</Text>
           {subtitle ? <Text style={styles.subtitle} numberOfLines={1}>{subtitle}</Text> : null}
         </View>
       </View>
@@ -37,7 +39,24 @@ export default function MealCard({ title, subtitle, icon, kcal, onPress, status,
             <Text style={styles.kcalUnit}>kcal</Text>
           </View>
         ) : null}
-        {status === "as_planned" ? (
+        {onToggleDone ? (
+          <Pressable
+            onPress={(e) => { e.stopPropagation?.(); onToggleDone(); }}
+            style={[styles.checkBtn, done && styles.checkBtnOn]}
+            testID={testID ? `${testID}-check` : undefined}
+            hitSlop={8}
+          >
+            {done ? (
+              <MaterialDesignIcons
+                name={status === "modified" ? "pencil" : "check"}
+                size={18}
+                color={status === "modified" ? colors.onWarning : colors.onBrandPrimary}
+              />
+            ) : (
+              <MaterialDesignIcons name="check" size={18} color={colors.onSurfaceTertiary} />
+            )}
+          </Pressable>
+        ) : status === "as_planned" ? (
           <View style={[styles.badge, { backgroundColor: colors.brandPrimary }]}>
             <MaterialDesignIcons name="check" size={14} color={colors.onBrandPrimary} />
           </View>
@@ -78,6 +97,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   cardPressed: { opacity: 0.85 },
+  cardDone: { borderColor: colors.brandPrimary + "55" },
   left: { flexDirection: "row", alignItems: "center", gap: spacing.md, flex: 1 },
   iconWrap: {
     width: 44,
@@ -89,6 +109,7 @@ const styles = StyleSheet.create({
   },
   textCol: { flex: 1 },
   title: { color: colors.onSurface, fontSize: 16, fontWeight: "700" },
+  titleDone: { color: colors.onSurfaceSecondary },
   subtitle: { color: colors.onSurfaceTertiary, fontSize: 12, marginTop: 2 },
   right: { flexDirection: "row", alignItems: "center", gap: spacing.md },
   kcalWrap: { alignItems: "flex-end" },
@@ -100,5 +121,19 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     alignItems: "center",
     justifyContent: "center",
+  },
+  checkBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 999,
+    borderWidth: 2,
+    borderColor: colors.borderStrong,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.surface,
+  },
+  checkBtnOn: {
+    backgroundColor: colors.brandPrimary,
+    borderColor: colors.brandPrimary,
   },
 });

@@ -1,0 +1,28 @@
+{
+  "summary": "Frontend-only regression on Projeto Urso iteration 2 (quick-check, floating tab bar, categorized shopping list, Estatísticas screen). All 4 features validated on mobile viewport 390x844 via Expo web preview. 100% of requested testIDs present and interactive flows working: meal card check toggle increments/decrements daily-progress-count (0/6 → 1/6 → 0/6), open-stats-btn and ajustes-stats-shortcut both route to /estatisticas, stats-back-btn returns, all 4 counter cards + streak-card + current-streak render, 7 category blocks render in Compras with collapsible headers (collapsing Proteínas hid its 4 items) and item check persists on the global counter (0/21 → 1/21). Tab bar is confirmed floating pill: computed style position=absolute, bottom=12px, left=12px, right=12px, width=366px (< 390 viewport), borderRadius=999px. Screen content padding accounts for tab bar height. Minor: React Native Web console warning \"shadow* style props are deprecated. Use boxShadow\" from tab bar shadow* props in (tabs)/_layout.tsx — cosmetic only.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "TabsLayout tabBarStyle", "issue": "Uses deprecated shadow* props (shadowColor/shadowOpacity/shadowRadius/shadowOffset). RN Web logs deprecation warning: 'shadow*' style props are deprecated. Use 'boxShadow'. Reference: /app/frontend/app/(tabs)/_layout.tsx:38-41"}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Optional: replace deprecated shadow* props in (tabs)/_layout.tsx with boxShadow for RN Web compatibility (cosmetic warning, does not affect functionality)."
+  ],
+  "critical_code_review_comments": [
+    "computeStats currentStreak logic: when today is incomplete but yesterday is complete, streak starts at 0 (i=0 skipped) and iterates back correctly; verified visually with 0/0 streak on fresh data.",
+    "MealCard uses inner Pressable for check button and calls e.stopPropagation to avoid triggering parent Pressable navigation — good pattern.",
+    "Both open-stats-btn (Hoje) and ajustes-stats-shortcut (Ajustes) route via router.push('/estatisticas'), giving two entry points as required."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A", "frontend": "100%"},
+  "seed_data_creation": "Reused pre-seeded 'Projeto Urso — Dieta b...' plan (6 meals) that was already active from prior iteration.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Iteration 2 features fully validated. Active plan has 6 meals and 21 aggregated shopping items across 7 categories. Estatísticas empty state renders correctly with 0 counters and empty bar chart when no consumption entries exist for the day.",
+  "rca_of_issue": ""
+}
