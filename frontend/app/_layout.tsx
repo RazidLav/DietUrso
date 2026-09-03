@@ -1,18 +1,31 @@
 import { Stack } from "expo-router";
-import { LogBox, StatusBar, View } from "react-native";
+import { ActivityIndicator, StatusBar, Text, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { colors } from "../src/theme";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { ensureSeed } from "../src/store/planStore";
 
-// Disable logbox errors etc so that users can see the app
-// and agent works as expected.
-LogBox.ignoreAllLogs(true);
-
 export default function RootLayout() {
+  const [storeState, setStoreState] = useState<"loading" | "ready" | "error">(
+    "loading"
+  );
+
   useEffect(() => {
-    ensureSeed().catch(() => {});
+    let mounted = true;
+
+    ensureSeed()
+      .then(() => {
+        if (mounted) setStoreState("ready");
+      })
+      .catch((error) => {
+        console.error("Falha ao inicializar os dados locais", error);
+        if (mounted) setStoreState("error");
+      });
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   return (
@@ -20,15 +33,35 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <StatusBar barStyle="light-content" backgroundColor={colors.surface} />
         <View style={{ flex: 1, backgroundColor: colors.surface }}>
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              contentStyle: { backgroundColor: colors.surface },
-              animation: "slide_from_right",
-            }}
-          />
+          {storeState === "ready" ? (
+            <Stack
+              screenOptions={{
+                headerShown: false,
+                contentStyle: { backgroundColor: colors.surface },
+                animation: "slide_from_right",
+              }}
+            />
+          ) : (
+            <View
+              style={{
+                flex: 1,
+                alignItems: "center",
+                justifyContent: "center",
+                padding: 24,
+              }}
+            >
+              {storeState === "loading" ? (
+                <ActivityIndicator color={colors.brandPrimary} size="large" />
+              ) : (
+                <Text style={{ color: colors.onSurface, textAlign: "center" }}>
+                  Não foi possível acessar os dados locais. Recarregue o aplicativo.
+                </Text>
+              )}
+            </View>
+          )}
         </View>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
 }
+
