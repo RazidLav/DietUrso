@@ -644,4 +644,3 @@ const styles = StyleSheet.create({
   },
   modalBtnPrimaryText: { color: colors.onBrandPrimary, fontWeight: "800" },
 });
-

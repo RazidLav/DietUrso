@@ -93,4 +93,3 @@ export function computeStats(entries: ConsumptionEntry[], plan: Plan | null): St
     last7,
   };
 }
-

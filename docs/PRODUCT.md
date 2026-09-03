@@ -20,4 +20,3 @@ O DietUrso é um aplicativo pessoal, local-first, para planejamento alimentar. O
 ## Limitação de persistência
 
 Os dados pertencem ao navegador ou dispositivo em que foram criados. Uma futura funcionalidade de exportação/importação deve permitir backups portáteis.
-

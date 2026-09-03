@@ -662,4 +662,3 @@ export const INITIAL_PLAN: Plan = {
     },
   ],
 };
-

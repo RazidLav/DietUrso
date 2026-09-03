@@ -323,4 +323,3 @@ const styles = StyleSheet.create({
   itemQty: { color: colors.onSurfaceTertiary, fontSize: 12, marginTop: 2 },
   empty: { color: colors.onSurfaceTertiary, textAlign: "center", marginTop: spacing.xl },
 });
-

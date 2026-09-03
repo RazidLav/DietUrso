@@ -38,4 +38,3 @@ Ao criar um Blueprint no Render, selecione este repositório e confirme a config
 ## Persistência
 
 Os dados são locais e não sincronizam entre navegadores ou dispositivos. Limpar os dados do navegador remove planos e histórico. Exportação e restauração de backup devem ser implementadas antes de depender do app como registro permanente.
-
