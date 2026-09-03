@@ -1,0 +1,152 @@
+{
+  "app_name": "Projeto Urso",
+  "personality": "7 Dark-First Utility DARK",
+  "personality_one_liner": "A high-performance, command-center aesthetic for diet tracking, utilizing striking high-contrast accents against a deep slate background for instant scanability.",
+  "color": {
+    "surface": "#121214",
+    "onSurface": "#FFFFFF",
+    "surfaceSecondary": "#1E1E24",
+    "onSurfaceSecondary": "#E1E1E6",
+    "surfaceTertiary": "#292930",
+    "onSurfaceTertiary": "#A9A9B2",
+    "surfaceInverse": "#FFFFFF",
+    "onSurfaceInverse": "#000000",
+    "brand": "#34C759",
+    "onBrand": "#000000",
+    "brandPrimary": "#34C759",
+    "onBrandPrimary": "#000000",
+    "brandSecondary": "#0A84FF",
+    "onBrandSecondary": "#FFFFFF",
+    "brandTertiary": "#FF9F0A",
+    "onBrandTertiary": "#000000",
+    "success": "#34C759",
+    "onSuccess": "#000000",
+    "warning": "#FF9F0A",
+    "onWarning": "#000000",
+    "error": "#FF453A",
+    "onError": "#FFFFFF",
+    "info": "#0A84FF",
+    "onInfo": "#FFFFFF",
+    "border": "#292930",
+    "borderStrong": "#3E3E4A",
+    "divider": "#292930",
+    "muted": "#8D8D99",
+    "protein": "#34C759",
+    "carbs": "#0A84FF",
+    "fats": "#FF9F0A"
+  },
+  "typography": {
+    "displayFontFamily": "Barlow Condensed",
+    "textFontFamily": "Inter",
+    "scale": {
+      "sm": 12,
+      "base": 14,
+      "lg": 16,
+      "xl": 20,
+      "2xl": 24
+    }
+  },
+  "spacing": {
+    "rule": "Handle spacing correctly dont have extra spaces where its not required, handle padding and margin corectly and subtle for buttons and components",
+    "xs": 4,
+    "sm": 8,
+    "md": 12,
+    "lg": 16,
+    "xl": 24,
+    "2xl": 32,
+    "3xl": 48
+  },
+  "radius_tokens": {
+    "sm": 6,
+    "md": 12,
+    "lg": 20,
+    "pill": 999
+  },
+  "shadow_tier": "0",
+  "navigation": "bottom_tabs",
+  "icon_set": "Phosphor",
+  "glassmorphism": {
+    "enabled": false,
+    "do's": [],
+    "dont's": ["Do not use blur or glassmorphism on dense data screens. Maintain sharp contrast and clarity."]
+  },
+  "platform_libraries": {
+    "glass": {
+      "ios": "expo-glass-effect",
+      "android": "expo-blur",
+      "low_end_android_fallback": "solid surfaceSecondary"
+    },
+    "image": "expo-image",
+    "blur": "expo-blur",
+    "bottom_sheet": "@gorhom/bottom-sheet",
+    "animation": "react-native-reanimated",
+    "gesture": "react-native-gesture-handler"
+  },
+  "screens": [
+    {
+      "name": "Dashboard (HOJE)",
+      "purpose": "A live operational surface showing today's macro goals and planned meals.",
+      "states": {
+        "loading": "Centered minimalist spinner",
+        "empty": "No plan assigned for today illustration + button 'Criar Plano'",
+        "error": "Failed to load today's data with 'Tentar Novamente' button"
+      },
+      "layout": "1. Hero block at the top displaying daily macros: Calorie total central, flanked or encircled by Protein (Green), Carbs (Blue), and Fats (Orange) progress bars. 2. Vertical list of Meal Cards (Café da manhã, Almoço, etc.). 3. Each meal card displays: Meal Name, Total Kcal, and quick actions 'Consumir' (BrandPrimary button) or 'Trocar' (SurfaceTertiary button). 4. Use condensed fonts for numeric values to enhance the fitness aesthetic."
+    },
+    {
+      "name": "Meu Plano",
+      "purpose": "A comprehensive view of the 7-day meal plan showing macros and detailed food items.",
+      "states": {
+        "loading": "Skeleton of day tabs and meal cards",
+        "empty": "Empty state illustration of a diet plan + 'Criar meu primeiro plano' CTA",
+        "error": "Unable to fetch plan with a retry action"
+      },
+      "layout": "1. Top horizontal scrollable tabs for 7 days (Seg, Ter, Qua...). 2. Daily summary section below tabs with totals (kcal/p/c/f). 3. Vertical list of meals. Each meal expands to show food items (Name, Qty, macros, obs). 4. Floating Action Button to edit the plan."
+    },
+    {
+      "name": "Meal Detail / Editor",
+      "purpose": "Granular view to inspect food quantities, swap items, or log alterations.",
+      "states": {
+        "loading": "Skeleton loading for items list",
+        "empty": "No items added to this meal yet",
+        "error": "Error loading meal details"
+      },
+      "layout": "1. Sticky header with meal name and aggregated macros. 2. List of foods with inline quantities and units. 3. 'Substituir' (Swap) button next to eligible items. 4. Primary sticky CTA at the bottom: 'Comi conforme o plano' or 'Registrar alteração'."
+    },
+    {
+      "name": "Compras",
+      "purpose": "Weekly shopping list aggregated from the active meal plan.",
+      "states": {
+        "loading": "List skeleton",
+        "empty": "No active plan to generate a shopping list",
+        "error": "Error generating list"
+      },
+      "layout": "1. Simple list grouped by categories (Proteins, Carbs, Veggies). 2. Checkboxes for each item. 3. Items visually distinct with surfaceSecondary cards or rows."
+    }
+  ],
+  "images": {
+    "empty_state_plan": {
+      "url": "https://images.unsplash.com/photo-1543352632-5a4b24e4d2a6?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjY2NzN8MHwxfHNlYXJjaHwxfHxkYXJrJTIwaGVhbHRoeSUyMG1lYWwlMjBwcmVwJTIwY29udGFpbmVyfGVufDB8fHx8MTc4ODQ1MDgzMnww&ixlib=rb-4.1.0&q=85",
+      "alt": "Healthy meal prep containers"
+    },
+    "hero_texture": {
+      "url": "https://images.unsplash.com/photo-1662473991701-c69c3b6bf6fb?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2OTV8MHwxfHNlYXJjaHwzfHxkYXJrJTIwZml0bmVzcyUyMGFwcCUyMGJhY2tncm91bmQlMjB0ZXh0dXJlfGVufDB8fHx8MTc4ODQ1MDgyOHww&ixlib=rb-4.1.0&q=85",
+      "alt": "Flowing dark grey lines creating a smooth wave pattern"
+    }
+  },
+  "instructions_to_main_agent": [
+    "Strictly adhere to the '7 Dark-First Utility DARK' personality. Use `#121214` as the primary background.",
+    "The user explicitly requested color-coded macros: Green (`brandPrimary`/`#34C759`) for Protein and Goals met, Blue (`brandSecondary`/`#0A84FF`) for Carbs, and Orange (`brandTertiary`/`#FF9F0A`) for Fats. Use these semantic colors meticulously in progress bars and data visualizations.",
+    "Do not use blur or glassmorphism. Use flat surfaces with divider lines or subtle borders for separation. Maintain high contrast.",
+    "Utilize 'Barlow Condensed' for all numeric values, timers, and macro numbers to give it a tactical, athletic feel. Use 'Inter' for all other readable texts.",
+    "Implement the 'Dashboard HOJE' with a strong hero component that summarizes the day's total calories and macros visually (e.g., segmented rings or stacked bars).",
+    "For meal cards, include a quick 'Consumir' button that feels mechanical and instant, updating the macro progress immediately.",
+    "Ensure standard Native mobile rules are applied: 44x44pt touch targets, safe area respecting roots, and loading/empty/error states for all data-driven screens.",
+    "All copy must be in Portuguese (pt-BR)."
+  ],
+  "haptics": {
+    "button_press": "light",
+    "meal_consume_success": "success",
+    "tab_change": "selection"
+  }
+}
