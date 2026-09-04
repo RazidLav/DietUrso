@@ -18,6 +18,7 @@ import {
   type Category,
 } from "../../src/utils/categories";
 import { FLOATING_TAB_HEIGHT, FLOATING_TAB_MARGIN } from "./_layout";
+import { useCloudDataRefresh } from "../../src/cloud/useCloudDataRefresh";
 
 interface Agg {
   key: string;
@@ -41,6 +42,7 @@ export default function ComprasScreen() {
   }, []);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
+  useCloudDataRefresh(load);
 
   const toggleDay = (i: number) => {
     setSelectedDays((prev) =>

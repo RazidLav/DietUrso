@@ -10,6 +10,7 @@ import { dayMacrosDefault, getActivePlan, optionMacros } from "../../src/store/p
 import { WEEKDAYS_SHORT } from "../../src/utils/date";
 import type { Plan } from "../../src/types/plan";
 import { FLOATING_TAB_HEIGHT, FLOATING_TAB_MARGIN } from "./_layout";
+import { useCloudDataRefresh } from "../../src/cloud/useCloudDataRefresh";
 
 export default function PlanoScreen() {
   const insets = useSafeAreaInsets();
@@ -26,6 +27,7 @@ export default function PlanoScreen() {
       load();
     }, [load])
   );
+  useCloudDataRefresh(load);
 
   if (!plan) {
     return (

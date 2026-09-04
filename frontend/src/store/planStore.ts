@@ -1,13 +1,15 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { INITIAL_PLAN } from "../data/dietData";
 import { ConsumptionEntry, Food, Meal, MealOption, Plan } from "../types/plan";
-
-const PLANS_KEY = "urso:plans";
-const ACTIVE_PLAN_KEY = "urso:activePlanId";
-const CONSUMPTION_KEY = "urso:consumption";
-const CHOSEN_OPTIONS_KEY = "urso:chosenOptions"; // per date+meal chosen option
-const SHOPPING_STATE_KEY = "urso:shoppingChecked";
-const SEED_KEY = "urso:seeded_v1";
+import { markLocalChange } from "../cloud/cloudSync";
+import {
+  ACTIVE_PLAN_KEY,
+  CHOSEN_OPTIONS_KEY,
+  CONSUMPTION_KEY,
+  PLANS_KEY,
+  SEED_KEY,
+  SHOPPING_STATE_KEY,
+} from "./storageKeys";
 
 // --------- helpers ---------
 const uuid = () =>
@@ -22,15 +24,16 @@ async function readJson<T>(key: string, fallback: T): Promise<T> {
     return fallback;
   }
 }
-async function writeJson(key: string, value: any) {
+async function writeJson(key: string, value: any, trackChange = true) {
   await AsyncStorage.setItem(key, JSON.stringify(value));
+  if (trackChange) await markLocalChange();
 }
 
 // --------- seed ---------
 export async function ensureSeed(): Promise<void> {
   const seeded = await AsyncStorage.getItem(SEED_KEY);
   if (seeded) return;
-  await writeJson(PLANS_KEY, [INITIAL_PLAN]);
+  await writeJson(PLANS_KEY, [INITIAL_PLAN], false);
   await AsyncStorage.setItem(ACTIVE_PLAN_KEY, INITIAL_PLAN.id);
   await AsyncStorage.setItem(SEED_KEY, "1");
 }
@@ -47,6 +50,7 @@ export async function getActivePlanId(): Promise<string | null> {
 }
 export async function setActivePlanId(id: string): Promise<void> {
   await AsyncStorage.setItem(ACTIVE_PLAN_KEY, id);
+  await markLocalChange();
 }
 export async function getActivePlan(): Promise<Plan | null> {
   const id = await getActivePlanId();
@@ -83,7 +87,10 @@ export async function deletePlan(id: string): Promise<void> {
   if (activeId === id) {
     const first = next.find((p) => !p.archived);
     if (first) await setActivePlanId(first.id);
-    else await AsyncStorage.removeItem(ACTIVE_PLAN_KEY);
+    else {
+      await AsyncStorage.removeItem(ACTIVE_PLAN_KEY);
+      await markLocalChange();
+    }
   }
 }
 export async function toggleArchivePlan(id: string): Promise<void> {
