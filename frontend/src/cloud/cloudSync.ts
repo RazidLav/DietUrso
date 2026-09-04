@@ -55,6 +55,7 @@ let initialized = false;
 let applyingRemote = false;
 let pushTimer: ReturnType<typeof setTimeout> | null = null;
 let activeSync: Promise<void> | null = null;
+let pendingLocalChange = false;
 
 function updateStatus(next: Partial<CloudStatus>) {
   status = { ...status, ...next };
@@ -240,6 +241,7 @@ export function subscribeCloudData(listener: () => void) {
 export async function markLocalChange(): Promise<void> {
   if (applyingRemote) return;
   await AsyncStorage.setItem(LOCAL_CHANGED_AT_KEY, new Date().toISOString());
+  pendingLocalChange = true;
   scheduleCloudPush();
 }
 
@@ -256,6 +258,7 @@ export function syncCloudNow(): Promise<void> {
   if (!isCloudConfigured) return Promise.resolve();
   if (activeSync) return activeSync;
 
+  pendingLocalChange = false;
   activeSync = performSync()
     .catch((error) => {
       console.error("Falha ao sincronizar dados", error);
@@ -268,6 +271,7 @@ export function syncCloudNow(): Promise<void> {
     })
     .finally(() => {
       activeSync = null;
+      if (pendingLocalChange) scheduleCloudPush();
     });
 
   return activeSync;
