@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: dieturso
+    runtime: static
+    rootDir: frontend
+    buildCommand: pnpm install --frozen-lockfile && pnpm run build:web
+    staticPublishPath: dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html

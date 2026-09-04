@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useState } from "react";
 import {
   ScrollView,
   StyleSheet,
@@ -25,12 +25,12 @@ import {
   setChosenOption,
 } from "../../../src/store/planStore";
 import { todayISO } from "../../../src/utils/date";
-import type { ConsumptionEntry, Food, Meal, MealOption, Plan, Substitution } from "../../../src/types/plan";
+import type { ConsumptionEntry, Food, Meal, MealOption, Plan } from "../../../src/types/plan";
 
 export default function MealDetailScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { planId, mealId, date: dateParam } = useLocalSearchParams<{
+  const { mealId, date: dateParam } = useLocalSearchParams<{
     planId: string;
     mealId: string;
     date?: string;
@@ -73,7 +73,7 @@ export default function MealDetailScreen() {
   const meal: Meal | undefined = plan?.meals.find((m) => m.id === mealId);
   const currentOption: MealOption | undefined = meal?.options.find((o) => o.id === optionId);
 
-  const macros = useMemo(() => {
+  const macros = (() => {
     if (!currentOption) return { kcal: 0, protein: 0, carbs: 0, fats: 0 };
     // apply substitution overrides
     const patched: MealOption = {
@@ -97,7 +97,7 @@ export default function MealDetailScreen() {
       }),
     };
     return optionMacros(patched);
-  }, [currentOption, subs]);
+  })();
 
   const handleChooseOption = async (oid: string) => {
     setOptionId(oid);

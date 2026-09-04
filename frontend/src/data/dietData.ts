@@ -3,10 +3,6 @@
 
 import { Plan } from "../types/plan";
 
-// Helpers to build ids
-const uid = (prefix: string, i: number, j = 0, k = 0) =>
-  `${prefix}-${i}-${j}-${k}`;
-
 export const MEAL_TYPES = [
   { key: "pre_treino", label: "Pré-treino" },
   { key: "cafe", label: "Café da manhã" },

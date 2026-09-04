@@ -8,7 +8,7 @@ export interface Stats {
   daysComplete: number;
   currentStreak: number;
   bestStreak: number;
-  last7: Array<{ date: string; count: number; total: number }>;
+  last7: { date: string; count: number; total: number }[];
 }
 
 function localISO(d: Date) {
@@ -72,7 +72,7 @@ export function computeStats(entries: ConsumptionEntry[], plan: Plan | null): St
     prev = d;
   }
 
-  const last7: Array<{ date: string; count: number; total: number }> = [];
+  const last7: { date: string; count: number; total: number }[] = [];
   for (let i = 6; i >= 0; i--) {
     const d = new Date(today);
     d.setDate(today.getDate() - i);

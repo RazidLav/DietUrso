@@ -51,7 +51,7 @@ export default function ComprasScreen() {
     setSelectedDays((prev) => (prev.length === 7 ? [] : [0, 1, 2, 3, 4, 5, 6]));
   };
 
-  const grouped = useMemo<Array<[Category, Agg[]]>>(() => {
+  const grouped = useMemo<[Category, Agg[]][]>(() => {
     if (!plan) return [];
     const map = new Map<string, Agg>();
     const daysCount = selectedDays.length;
