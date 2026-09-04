@@ -61,5 +61,7 @@ export interface ConsumptionEntry {
   manualProtein?: number;
   manualCarbs?: number;
   manualFats?: number;
+  foodNames?: string[];
+  isFreeMeal?: boolean;
   createdAt: string;
 }

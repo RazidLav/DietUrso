@@ -4,34 +4,22 @@ import {
   Pressable,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native";
+import { useRouter } from "expo-router";
 import MaterialDesignIcons from "@react-native-vector-icons/material-design-icons";
 import { colors, radius, spacing } from "../theme";
 import {
   getCloudStatus,
-  signInToCloud,
   signOutFromCloud,
-  signUpForCloud,
   subscribeCloudStatus,
   syncCloudNow,
   type CloudStatus,
 } from "../cloud/cloudSync";
 
-function friendlyError(error: unknown) {
-  const message = error instanceof Error ? error.message : String(error);
-  if (/invalid login credentials/i.test(message)) return "E-mail ou senha incorretos.";
-  if (/email not confirmed/i.test(message)) return "Confirme seu e-mail antes de entrar.";
-  if (/password should be at least/i.test(message)) return "Use uma senha com pelo menos 6 caracteres.";
-  if (/user already registered/i.test(message)) return "Esta conta já existe. Toque em Entrar.";
-  return "Não foi possível concluir agora. Tente novamente.";
-}
-
 export default function CloudSyncCard({ onSynced }: { onSynced?: () => void | Promise<void> }) {
+  const router = useRouter();
   const [cloud, setCloud] = useState<CloudStatus>(getCloudStatus());
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -42,10 +30,9 @@ export default function CloudSyncCard({ onSynced }: { onSynced?: () => void | Pr
     setNotice(null);
     try {
       await action();
-      setPassword("");
       await onSynced?.();
-    } catch (error) {
-      setNotice(friendlyError(error));
+    } catch {
+      setNotice("Não foi possível concluir agora. Seus dados locais continuam seguros.");
     } finally {
       setBusy(false);
     }
@@ -117,48 +104,10 @@ export default function CloudSyncCard({ onSynced }: { onSynced?: () => void | Pr
           </View>
         </>
       ) : (
-        <>
-          <TextInput
-            style={styles.input}
-            placeholder="Seu e-mail"
-            placeholderTextColor={colors.muted}
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoCorrect={false}
-            textContentType="emailAddress"
-            testID="cloud-email-input"
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Senha"
-            placeholderTextColor={colors.muted}
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            textContentType="password"
-            testID="cloud-password-input"
-          />
-          <View style={styles.actions}>
-            <Pressable
-              style={[styles.primaryButton, syncing && styles.disabled]}
-              disabled={syncing || !email.trim() || password.length < 6}
-              onPress={() => run(() => signInToCloud(email, password))}
-              testID="cloud-sign-in-btn"
-            >
-              <Text style={styles.primaryButtonText}>Entrar</Text>
-            </Pressable>
-            <Pressable
-              style={[styles.secondaryButton, syncing && styles.disabled]}
-              disabled={syncing || !email.trim() || password.length < 6}
-              onPress={() => run(() => signUpForCloud(email, password))}
-              testID="cloud-sign-up-btn"
-            >
-              <Text style={styles.secondaryButtonText}>Criar conta</Text>
-            </Pressable>
-          </View>
-        </>
+        <Pressable style={styles.primaryButton} onPress={() => router.push("/conta")} testID="open-account-btn">
+          <MaterialDesignIcons name="account-circle-outline" size={18} color={colors.onBrandPrimary} />
+          <Text style={styles.primaryButtonText}>Entrar ou criar conta</Text>
+        </Pressable>
       )}
 
       {notice || cloud.phase === "confirmation_required" ? (
@@ -189,14 +138,6 @@ const styles = StyleSheet.create({
   title: { color: colors.onSurface, fontSize: 16, fontWeight: "700" },
   description: { color: colors.onSurfaceTertiary, fontSize: 12, marginTop: 2 },
   statusText: { color: colors.onSurfaceSecondary, fontSize: 12 },
-  input: {
-    backgroundColor: colors.surfaceTertiary,
-    color: colors.onSurface,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    borderRadius: radius.md,
-    fontSize: 15,
-  },
   actions: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
   primaryButton: {
     minHeight: 42,
