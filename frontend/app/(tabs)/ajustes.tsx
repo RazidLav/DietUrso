@@ -14,6 +14,8 @@ import {
 } from "../../src/store/planStore";
 import type { Plan } from "../../src/types/plan";
 import { FLOATING_TAB_HEIGHT, FLOATING_TAB_MARGIN } from "./_layout";
+import CloudSyncCard from "../../src/components/CloudSyncCard";
+import { useCloudDataRefresh } from "../../src/cloud/useCloudDataRefresh";
 
 export default function AjustesScreen() {
   const insets = useSafeAreaInsets();
@@ -34,6 +36,7 @@ export default function AjustesScreen() {
       load();
     }, [load])
   );
+  useCloudDataRefresh(load);
 
   const handleActivate = async (id: string) => {
     await setActivePlanId(id);
@@ -80,6 +83,8 @@ export default function AjustesScreen() {
         paddingBottom: FLOATING_TAB_HEIGHT + Math.max(insets.bottom, FLOATING_TAB_MARGIN) + spacing.xl,
         gap: spacing.sm,
       }}>
+        <CloudSyncCard onSynced={load} />
+
         <Pressable
           style={styles.statsShortcut}
           onPress={() => router.push("/estatisticas")}

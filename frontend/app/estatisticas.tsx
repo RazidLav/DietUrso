@@ -8,6 +8,7 @@ import { getActivePlan, listConsumption } from "../src/store/planStore";
 import { computeStats, type Stats } from "../src/utils/stats";
 import { WEEKDAYS_SHORT } from "../src/utils/date";
 import type { Plan } from "../src/types/plan";
+import { useCloudDataRefresh } from "../src/cloud/useCloudDataRefresh";
 
 const EMPTY_STATS: Stats = {
   totalMeals: 0,
@@ -34,6 +35,7 @@ export default function EstatisticasScreen() {
   }, []);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
+  useCloudDataRefresh(load);
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.surface }} testID="estatisticas-screen">

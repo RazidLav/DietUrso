@@ -18,6 +18,7 @@ import {
 import { todayISO, WEEKDAYS_LONG } from "../../src/utils/date";
 import type { ConsumptionEntry, Plan } from "../../src/types/plan";
 import { FLOATING_TAB_HEIGHT, FLOATING_TAB_MARGIN } from "./_layout";
+import { useCloudDataRefresh } from "../../src/cloud/useCloudDataRefresh";
 
 export default function HojeScreen() {
   const insets = useSafeAreaInsets();
@@ -43,6 +44,7 @@ export default function HojeScreen() {
   }, []);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
+  useCloudDataRefresh(load);
 
   const onRefresh = async () => {
     setRefreshing(true);

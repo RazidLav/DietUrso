@@ -5,6 +5,11 @@ services:
     rootDir: frontend
     buildCommand: pnpm install --frozen-lockfile && pnpm run build:web
     staticPublishPath: dist
+    envVars:
+      - key: EXPO_PUBLIC_SUPABASE_URL
+        sync: false
+      - key: EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+        sync: false
     routes:
       - type: rewrite
         source: /*
