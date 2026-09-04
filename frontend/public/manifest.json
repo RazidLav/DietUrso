@@ -1,0 +1,26 @@
+{
+  "id": "/",
+  "name": "DietUrso",
+  "short_name": "DietUrso",
+  "description": "Planejador alimentar pessoal com acompanhamento de refeições e lista de compras.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#121214",
+  "theme_color": "#121214",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
