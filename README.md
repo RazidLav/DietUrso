@@ -42,4 +42,10 @@ Ao criar um Blueprint no Render, selecione este repositório e confirme a config
 
 O schema do banco e as políticas de acesso ficam em `supabase/migrations`. A tabela usa Row Level Security: cada usuário só pode ler e alterar o próprio registro.
 
-Sem login, os dados permanecem somente no aparelho. Após entrar com a mesma conta em dois dispositivos, planos, refeições registradas, opções escolhidas e lista de compras são sincronizados. Alterações feitas offline são enviadas quando o app volta a ter conexão.
+Sem login, os dados permanecem somente no aparelho. Após entrar com a mesma conta em dois dispositivos, planos, refeições registradas, opções escolhidas, água, XP e conquistas são sincronizados. Alterações feitas offline são enviadas quando o app volta a ter conexão.
+
+## Gamificação
+
+O catálogo modular de conquistas fica em `frontend/src/gamification/achievements.ts` e os valores de XP, níveis e meta de água ficam em `frontend/src/gamification/config.ts`. O motor usa chaves determinísticas para impedir que marcar e desmarcar a mesma refeição gere XP repetido.
+
+A sequência considera dias com ao menos um registro alimentar. Nenhuma regra remove XP ou pune o usuário por ultrapassar metas; o sistema recompensa registro, consistência, hidratação, variedade e retorno à rotina.

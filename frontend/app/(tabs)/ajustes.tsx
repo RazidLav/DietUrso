@@ -87,6 +87,21 @@ export default function AjustesScreen() {
 
         <Pressable
           style={styles.statsShortcut}
+          onPress={() => router.push("/conquistas")}
+          testID="ajustes-achievements-shortcut"
+        >
+          <View style={[styles.statsIconWrap, { backgroundColor: colors.brandTertiary + "22" }]}>
+            <MaterialDesignIcons name="trophy-outline" size={22} color={colors.brandTertiary} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.statsTitle}>Caverna de Troféus</Text>
+            <Text style={styles.statsDesc}>Níveis, XP, sequências e conquistas</Text>
+          </View>
+          <MaterialDesignIcons name="chevron-right" size={22} color={colors.onSurfaceTertiary} />
+        </Pressable>
+
+        <Pressable
+          style={styles.statsShortcut}
           onPress={() => router.push("/estatisticas")}
           testID="ajustes-stats-shortcut"
         >
@@ -95,7 +110,7 @@ export default function AjustesScreen() {
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.statsTitle}>Estatísticas</Text>
-            <Text style={styles.statsDesc}>Refeições, dias completos e sequência</Text>
+            <Text style={styles.statsDesc}>Histórico de refeições e atividade</Text>
           </View>
           <MaterialDesignIcons name="chevron-right" size={22} color={colors.onSurfaceTertiary} />
         </Pressable>

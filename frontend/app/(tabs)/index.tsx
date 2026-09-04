@@ -19,6 +19,12 @@ import { todayISO, WEEKDAYS_LONG } from "../../src/utils/date";
 import type { ConsumptionEntry, Plan } from "../../src/types/plan";
 import { FLOATING_TAB_HEIGHT, FLOATING_TAB_MARGIN } from "./_layout";
 import { useCloudDataRefresh } from "../../src/cloud/useCloudDataRefresh";
+import GamificationSummaryCard from "../../src/components/GamificationSummaryCard";
+import WaterCard from "../../src/components/WaterCard";
+import AchievementUnlockModal from "../../src/components/AchievementUnlockModal";
+import { dismissAchievement, evaluateGamification, getPendingAchievement } from "../../src/gamification/engine";
+import type { AchievementDefinition, GamificationSummary } from "../../src/gamification/types";
+import { changeWater, getWater } from "../../src/store/waterStore";
 
 export default function HojeScreen() {
   const insets = useSafeAreaInsets();
@@ -27,6 +33,9 @@ export default function HojeScreen() {
   const [consumption, setConsumption] = useState<ConsumptionEntry[]>([]);
   const [chosen, setChosen] = useState<Record<string, string>>({});
   const [refreshing, setRefreshing] = useState(false);
+  const [gamification, setGamification] = useState<GamificationSummary | null>(null);
+  const [water, setWater] = useState(0);
+  const [pendingAchievement, setPendingAchievement] = useState<AchievementDefinition | null>(null);
 
   const load = useCallback(async () => {
     const p = await getActivePlan();
@@ -41,6 +50,14 @@ export default function HojeScreen() {
       }
       setChosen(map);
     }
+    const game = await evaluateGamification();
+    const [waterAmount, pending] = await Promise.all([
+      getWater(todayISO()),
+      getPendingAchievement(),
+    ]);
+    setGamification(game);
+    setWater(waterAmount);
+    setPendingAchievement(pending);
   }, []);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
@@ -69,6 +86,17 @@ export default function HojeScreen() {
     await load();
   };
 
+  const handleWater = async (delta: number) => {
+    await changeWater(today, delta);
+    await load();
+  };
+
+  const handleDismissAchievement = async () => {
+    if (!pendingAchievement) return;
+    await dismissAchievement(pendingAchievement.id);
+    setPendingAchievement(await getPendingAchievement());
+  };
+
   if (!plan) {
     return (
       <View style={[styles.empty, { paddingTop: insets.top + spacing.xxl }]}>
@@ -85,6 +113,7 @@ export default function HojeScreen() {
   const doneCount = plan.meals.filter((m) => doneToday.has(m.id)).length;
 
   return (
+    <>
     <ScrollView
       style={styles.screen}
       contentContainerStyle={{
@@ -110,8 +139,18 @@ export default function HojeScreen() {
         </Pressable>
       </View>
 
+      {gamification ? (
+        <View style={styles.section}>
+          <GamificationSummaryCard summary={gamification} onPress={() => router.push("/conquistas")} />
+        </View>
+      ) : null}
+
       <View style={styles.section}>
         <MacroSummary kcal={totals.kcal} protein={totals.protein} carbs={totals.carbs} fats={totals.fats} />
+      </View>
+
+      <View style={styles.section}>
+        <WaterCard amount={water} onChange={handleWater} />
       </View>
 
       {/* Progress ring / counter */}
@@ -162,6 +201,8 @@ export default function HojeScreen() {
         </View>
       </View>
     </ScrollView>
+    <AchievementUnlockModal achievement={pendingAchievement} onDismiss={handleDismissAchievement} />
+    </>
   );
 }
 

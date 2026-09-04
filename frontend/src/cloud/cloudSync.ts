@@ -1,13 +1,17 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { Session, User } from "@supabase/supabase-js";
 import type { ConsumptionEntry, Plan } from "../types/plan";
+import { createInitialGamificationState, type GamificationState } from "../gamification/types";
 import {
   ACTIVE_PLAN_KEY,
   CHOSEN_OPTIONS_KEY,
   CONSUMPTION_KEY,
+  GAMIFICATION_KEY,
   LOCAL_CHANGED_AT_KEY,
+  ONBOARDING_COMPLETE_KEY,
   PLANS_KEY,
   SHOPPING_STATE_KEY,
+  WATER_KEY,
 } from "../store/storageKeys";
 import { isCloudConfigured, supabase } from "./supabase";
 
@@ -28,12 +32,15 @@ export interface CloudStatus {
 }
 
 interface AppSnapshot {
-  version: 1;
+  version: 1 | 2;
   plans: Plan[];
   activePlanId: string | null;
   consumption: ConsumptionEntry[];
   chosenOptions: Record<string, Record<string, string>>;
   shoppingChecked: Record<string, boolean>;
+  gamification?: GamificationState;
+  waterByDate?: Record<string, number>;
+  onboardingComplete?: boolean;
 }
 
 type CloudRow = {
@@ -77,22 +84,28 @@ async function readJson<T>(key: string, fallback: T): Promise<T> {
 }
 
 async function readLocalSnapshot(): Promise<AppSnapshot> {
-  const [plans, activePlanId, consumption, chosenOptions, shoppingChecked] =
+  const [plans, activePlanId, consumption, chosenOptions, shoppingChecked, gamification, waterByDate, onboardingComplete] =
     await Promise.all([
       readJson<Plan[]>(PLANS_KEY, []),
       AsyncStorage.getItem(ACTIVE_PLAN_KEY),
       readJson<ConsumptionEntry[]>(CONSUMPTION_KEY, []),
       readJson<Record<string, Record<string, string>>>(CHOSEN_OPTIONS_KEY, {}),
       readJson<Record<string, boolean>>(SHOPPING_STATE_KEY, {}),
+      readJson<GamificationState>(GAMIFICATION_KEY, createInitialGamificationState()),
+      readJson<Record<string, number>>(WATER_KEY, {}),
+      AsyncStorage.getItem(ONBOARDING_COMPLETE_KEY),
     ]);
 
   return {
-    version: 1,
+    version: 2,
     plans,
     activePlanId,
     consumption,
     chosenOptions,
     shoppingChecked,
+    gamification,
+    waterByDate,
+    onboardingComplete: onboardingComplete === "1",
   };
 }
 
@@ -100,7 +113,7 @@ function isValidSnapshot(value: unknown): value is AppSnapshot {
   if (!value || typeof value !== "object") return false;
   const candidate = value as Partial<AppSnapshot>;
   return (
-    candidate.version === 1 &&
+    (candidate.version === 1 || candidate.version === 2) &&
     Array.isArray(candidate.plans) &&
     Array.isArray(candidate.consumption) &&
     typeof candidate.chosenOptions === "object" &&
@@ -131,6 +144,14 @@ async function applyCloudSnapshot(row: CloudRow) {
         SHOPPING_STATE_KEY,
         JSON.stringify(row.payload.shoppingChecked)
       ),
+      AsyncStorage.setItem(
+        GAMIFICATION_KEY,
+        JSON.stringify(row.payload.gamification ?? createInitialGamificationState())
+      ),
+      AsyncStorage.setItem(WATER_KEY, JSON.stringify(row.payload.waterByDate ?? {})),
+      row.payload.onboardingComplete
+        ? AsyncStorage.setItem(ONBOARDING_COMPLETE_KEY, "1")
+        : AsyncStorage.removeItem(ONBOARDING_COMPLETE_KEY),
       AsyncStorage.setItem(LOCAL_CHANGED_AT_KEY, row.updated_at),
       row.payload.activePlanId
         ? AsyncStorage.setItem(ACTIVE_PLAN_KEY, row.payload.activePlanId)

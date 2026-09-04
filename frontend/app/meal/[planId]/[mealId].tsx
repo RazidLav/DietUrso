@@ -50,6 +50,7 @@ export default function MealDetailScreen() {
   const [modP, setModP] = useState("");
   const [modC, setModC] = useState("");
   const [modF, setModF] = useState("");
+  const [modFreeMeal, setModFreeMeal] = useState(false);
 
   const load = useCallback(async () => {
     const p = await getActivePlan();
@@ -73,12 +74,7 @@ export default function MealDetailScreen() {
   const meal: Meal | undefined = plan?.meals.find((m) => m.id === mealId);
   const currentOption: MealOption | undefined = meal?.options.find((o) => o.id === optionId);
 
-  const macros = (() => {
-    if (!currentOption) return { kcal: 0, protein: 0, carbs: 0, fats: 0 };
-    // apply substitution overrides
-    const patched: MealOption = {
-      ...currentOption,
-      foods: currentOption.foods.map((f) => {
+  const effectiveFoods = currentOption?.foods.map((f) => {
         const subKey = subs[f.id];
         if (!subKey || subKey === "original") return f;
         const sub = f.substitutions.find((s) => s.id === subKey);
@@ -94,8 +90,11 @@ export default function MealDetailScreen() {
           carbs: sub.carbs ?? f.carbs,
           fats: sub.fats ?? f.fats,
         };
-      }),
-    };
+      }) ?? [];
+
+  const macros = (() => {
+    if (!currentOption) return { kcal: 0, protein: 0, carbs: 0, fats: 0 };
+    const patched: MealOption = { ...currentOption, foods: effectiveFoods };
     return optionMacros(patched);
   })();
 
@@ -113,6 +112,7 @@ export default function MealDetailScreen() {
       mealId: mealId as string,
       status: "as_planned",
       chosenOptionId: optionId,
+      foodNames: effectiveFoods.map((food) => food.name),
     });
     router.back();
   };
@@ -123,6 +123,7 @@ export default function MealDetailScreen() {
     setModP(String(entry?.manualProtein ?? Math.round(macros.protein)));
     setModC(String(entry?.manualCarbs ?? Math.round(macros.carbs)));
     setModF(String(entry?.manualFats ?? Math.round(macros.fats)));
+    setModFreeMeal(Boolean(entry?.isFreeMeal));
     setShowModify(true);
   };
 
@@ -139,6 +140,7 @@ export default function MealDetailScreen() {
       manualProtein: Number(modP) || 0,
       manualCarbs: Number(modC) || 0,
       manualFats: Number(modF) || 0,
+      isFreeMeal: modFreeMeal,
     });
     setShowModify(false);
     router.back();
@@ -294,6 +296,13 @@ export default function MealDetailScreen() {
               testID="mod-note-input"
               multiline
             />
+            <Pressable style={[styles.freeMealToggle, modFreeMeal && styles.freeMealToggleActive]} onPress={() => setModFreeMeal((value) => !value)} testID="mod-free-meal-toggle">
+              <MaterialDesignIcons name={modFreeMeal ? "checkbox-marked-circle" : "checkbox-blank-circle-outline"} size={20} color={modFreeMeal ? colors.brandPrimary : colors.onSurfaceTertiary} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.freeMealTitle}>Refeição livre</Text>
+                <Text style={styles.freeMealDescription}>Sem culpa — marcar ajuda o histórico a contar a história real.</Text>
+              </View>
+            </Pressable>
             <View style={styles.macroInputs}>
               <MacroInput label="kcal" value={modKcal} onChange={setModKcal} testID="mod-kcal-input" />
               <MacroInput label="P (g)" value={modP} onChange={setModP} color={colors.protein} testID="mod-p-input" />
@@ -618,6 +627,10 @@ const styles = StyleSheet.create({
     minHeight: 60,
   },
   macroInputs: { flexDirection: "row", gap: spacing.sm },
+  freeMealToggle: { flexDirection: "row", alignItems: "center", gap: spacing.sm, padding: spacing.md, backgroundColor: colors.surfaceTertiary, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border },
+  freeMealToggleActive: { borderColor: colors.brandPrimary + "88", backgroundColor: colors.brandPrimary + "12" },
+  freeMealTitle: { color: colors.onSurface, fontSize: 13, fontWeight: "800" },
+  freeMealDescription: { color: colors.onSurfaceTertiary, fontSize: 10, lineHeight: 14, marginTop: 2 },
   macroInputWrap: { flex: 1 },
   macroInputLabel: { color: colors.onSurfaceTertiary, fontSize: 11, marginBottom: 4, fontWeight: "700" },
   macroInputField: {

@@ -39,15 +39,16 @@ export function computeStats(entries: ConsumptionEntry[], plan: Plan | null): St
     }
   });
 
-  // Streak atual: contar para trás desde hoje enquanto o dia estiver completo.
-  // Se hoje ainda não estiver completo, começamos pelo dia anterior.
+  // A sequência recompensa dias com ao menos um registro, não perfeição.
+  // Se hoje ainda não tiver registro, preservamos a sequência que vem de ontem.
+  const activeDates = new Set(byDate.keys());
   let currentStreak = 0;
   const today = new Date();
   for (let i = 0; i < 3650; i++) {
     const d = new Date(today);
     d.setDate(today.getDate() - i);
     const iso = localISO(d);
-    if (completedDates.has(iso)) {
+    if (activeDates.has(iso)) {
       currentStreak += 1;
     } else {
       if (i === 0) continue; // hoje ainda incompleto não zera streak que vem de ontem
@@ -56,7 +57,7 @@ export function computeStats(entries: ConsumptionEntry[], plan: Plan | null): St
   }
 
   // Melhor streak
-  const sortedDates = Array.from(completedDates).sort();
+  const sortedDates = Array.from(activeDates).sort();
   let bestStreak = 0;
   let run = 0;
   let prev: Date | null = null;

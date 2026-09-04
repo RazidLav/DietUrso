@@ -66,7 +66,9 @@ export default function EstatisticasScreen() {
               </Text>
             </View>
             <Text style={styles.streakSub}>
-              Melhor: {stats.bestStreak} {stats.bestStreak === 1 ? "dia" : "dias"}
+              {stats.currentStreak === 0 && stats.bestStreak > 0
+                ? "O urso deu uma cochilada. Bora começar de novo? 💤"
+                : `Melhor: ${stats.bestStreak} ${stats.bestStreak === 1 ? "dia" : "dias"}`}
             </Text>
           </View>
         </View>

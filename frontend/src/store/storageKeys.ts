@@ -5,3 +5,6 @@ export const CHOSEN_OPTIONS_KEY = "urso:chosenOptions";
 export const SHOPPING_STATE_KEY = "urso:shoppingChecked";
 export const SEED_KEY = "urso:seeded_v1";
 export const LOCAL_CHANGED_AT_KEY = "urso:localChangedAt";
+export const GAMIFICATION_KEY = "urso:gamification";
+export const WATER_KEY = "urso:water";
+export const ONBOARDING_COMPLETE_KEY = "urso:onboardingComplete";
