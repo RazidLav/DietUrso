@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { ensureSeed } from "../src/store/planStore";
 import { initializeCloudSync, syncCloudNow } from "../src/cloud/cloudSync";
 import { ensureNutritionSeed } from "../src/store/nutritionStore";
+import { ensureHydrationSeed } from "../src/store/hydrationStore";
 
 export default function RootLayout() {
   const [storeState, setStoreState] = useState<"loading" | "ready" | "error">(
@@ -18,6 +19,7 @@ export default function RootLayout() {
 
     ensureSeed()
       .then(() => ensureNutritionSeed())
+      .then(() => ensureHydrationSeed())
       .then(async () => {
         if (mounted) setStoreState("ready");
         try {
