@@ -4,11 +4,14 @@ import {
   ACTIVE_PLAN_KEY,
   CHOSEN_OPTIONS_KEY,
   CONSUMPTION_KEY,
+  FOOD_LIBRARY_KEY,
   GAMIFICATION_KEY,
   PLANS_KEY,
+  RECIPES_KEY,
   WATER_KEY,
 } from "../store/storageKeys";
-import type { ConsumptionEntry, MealOption, Plan } from "../types/plan";
+import type { ConsumptionEntry, FoodCatalogItem, MealOption, Plan, Recipe } from "../types/plan";
+import { entryNutrients } from "../nutrition/records";
 import { categorizeFood } from "../utils/categories";
 import { ACHIEVEMENTS, findAchievement } from "./achievements";
 import { levelFromXp, WATER_GOAL_ML, XP_REWARDS } from "./config";
@@ -102,8 +105,13 @@ function optionMacros(option: MealOption | null) {
   );
 }
 
-function planTargets(plan: Plan | null) {
-  return (plan?.meals ?? []).reduce(
+function planMealsForDate(plan: Plan | null, date: string) {
+  const weekday = new Date(`${date}T12:00:00`).getDay();
+  return (plan?.meals ?? []).filter((meal) => !meal.archived && (!meal.daysOfWeek?.length || meal.daysOfWeek.includes(weekday)));
+}
+
+function planTargets(plan: Plan | null, date: string) {
+  return planMealsForDate(plan, date).reduce(
     (total, meal) => {
       const macros = optionMacros(meal.options[0] ?? null);
       return {
@@ -120,17 +128,18 @@ function resolveEntry(entry: ConsumptionEntry, plan: Plan | null, chosen: Chosen
   const optionId = entry.chosenOptionId ?? chosen[entry.date]?.[entry.mealId];
   const option = meal?.options.find((candidate) => candidate.id === optionId) ?? meal?.options[0] ?? null;
   const planned = optionMacros(option);
-  const foodNames = entry.status === "modified"
-    ? [entry.note ?? ""]
-    : entry.foodNames ?? (option?.foods ?? []).map((food) => food.name);
+  const foodNames = entry.consumedItems?.map((item) => item.name)
+    ?? entry.foodNames
+    ?? (entry.status === "modified" || entry.status === "off_plan" ? [entry.note ?? ""] : (option?.foods ?? []).map((food) => food.name));
+  const recorded = entryNutrients(entry);
 
   return {
     entry,
-    kcal: entry.status === "modified" ? entry.manualKcal ?? 0 : planned.kcal,
-    protein: entry.status === "modified" ? entry.manualProtein ?? 0 : planned.protein,
+    kcal: entry.consumedItems?.length || entry.status === "modified" || entry.status === "off_plan" ? recorded.kcal : planned.kcal,
+    protein: entry.consumedItems?.length || entry.status === "modified" || entry.status === "off_plan" ? recorded.protein : planned.protein,
     foodNames,
     searchText: normalize(foodNames.join(" ")),
-    mealType: meal?.type ?? "custom",
+    mealType: entry.mealType ?? meal?.type ?? "custom",
     option,
   };
 }
@@ -139,12 +148,13 @@ function buildContext(
   entries: ConsumptionEntry[],
   plan: Plan | null,
   chosen: ChosenOptions,
-  water: WaterByDate
+  water: WaterByDate,
+  personalFoods = 0,
+  recipes = 0
 ): { context: GamificationContext; completedDates: string[]; proteinDates: string[]; balanceDates: string[]; waterDates: string[] } {
-  const resolved = entries.map((entry) => resolveEntry(entry, plan, chosen));
+  const resolved = entries.filter((entry) => entry.status !== "skipped").map((entry) => resolveEntry(entry, plan, chosen));
   const byDate = new Map<string, ResolvedEntry[]>();
   resolved.forEach((item) => byDate.set(item.entry.date, [...(byDate.get(item.entry.date) ?? []), item]));
-  const targets = planTargets(plan);
   const activeDates = Array.from(byDate.keys());
   const activeStreak = streaks(activeDates);
   const completedDates: string[] = [];
@@ -156,9 +166,12 @@ function buildContext(
   let sixEggDays = 0;
 
   byDate.forEach((items, date) => {
-    const uniqueMeals = new Set(items.map((item) => item.entry.mealId));
-    if ((plan?.meals.length ?? 0) > 0 && uniqueMeals.size >= (plan?.meals.length ?? 0)) completedDates.push(date);
+    const plannedMeals = planMealsForDate(plan, date);
+    const plannedIds = new Set(plannedMeals.map((meal) => meal.id));
+    const uniqueMeals = new Set(items.filter((item) => plannedIds.has(item.entry.mealId)).map((item) => item.entry.mealId));
+    if (plannedMeals.length > 0 && uniqueMeals.size >= plannedMeals.length) completedDates.push(date);
 
+    const targets = planTargets(plan, date);
     const dailyKcal = items.reduce((sum, item) => sum + item.kcal, 0);
     const dailyProtein = items.reduce((sum, item) => sum + item.protein, 0);
     if (targets.protein > 0 && dailyProtein >= targets.protein) proteinDates.push(date);
@@ -195,10 +208,17 @@ function buildContext(
     const nextIso = `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, "0")}-${String(next.getDate()).padStart(2, "0")}`;
     return activeSet.has(nextIso);
   });
+  const offPlanEntries = entries.filter((entry) => entry.status === "off_plan" || entry.isFreeMeal);
+  const returnedToPlanAfterOffPlan = offPlanEntries.some((offPlan) =>
+    entries.some((entry) =>
+      entry.status === "as_planned" &&
+      (entry.date > offPlan.date || (entry.date === offPlan.date && entry.createdAt > offPlan.createdAt))
+    )
+  );
 
   const contains = (item: ResolvedEntry, pattern: RegExp) => pattern.test(item.searchText);
   const context: GamificationContext = {
-    totalMeals: entries.length,
+    totalMeals: resolved.length,
     activeDays: activeDates.length,
     currentStreak: activeStreak.current,
     bestStreak: activeStreak.best,
@@ -226,6 +246,10 @@ function buildContext(
       const hour = new Date(entry.createdAt).getHours();
       return hour >= 0 && hour < 5;
     }).length,
+    personalFoods,
+    recipes,
+    offPlanMeals: offPlanEntries.length,
+    returnedToPlanAfterOffPlan,
   };
 
   return { context, completedDates, proteinDates, balanceDates, waterDates };
@@ -245,17 +269,26 @@ function sanitizeState(value: GamificationState): GamificationState {
 }
 
 export async function evaluateGamification(): Promise<GamificationSummary> {
-  const [plans, activePlanId, entries, chosen, water, storedState] = await Promise.all([
+  const [plans, activePlanId, entries, chosen, water, storedState, foods, recipes] = await Promise.all([
     readJson<Plan[]>(PLANS_KEY, []),
     AsyncStorage.getItem(ACTIVE_PLAN_KEY),
     readJson<ConsumptionEntry[]>(CONSUMPTION_KEY, []),
     readJson<ChosenOptions>(CHOSEN_OPTIONS_KEY, {}),
     readJson<WaterByDate>(WATER_KEY, {}),
     readJson<GamificationState>(GAMIFICATION_KEY, createInitialGamificationState()),
+    readJson<FoodCatalogItem[]>(FOOD_LIBRARY_KEY, []),
+    readJson<Recipe[]>(RECIPES_KEY, []),
   ]);
   const plan = plans.find((candidate) => candidate.id === activePlanId) ?? plans.find((candidate) => !candidate.archived) ?? null;
   const state = sanitizeState(storedState);
-  const { context, completedDates, proteinDates, balanceDates, waterDates } = buildContext(entries, plan, chosen, water);
+  const { context, completedDates, proteinDates, balanceDates, waterDates } = buildContext(
+    entries,
+    plan,
+    chosen,
+    water,
+    foods.filter((food) => food.scope === "personal").length,
+    recipes.filter((recipe) => !recipe.archived).length
+  );
   const rewarded = new Set(state.rewardedEvents);
   let totalXp = state.totalXp;
   let changed = false;
@@ -272,6 +305,9 @@ export async function evaluateGamification(): Promise<GamificationSummary> {
   proteinDates.forEach((date) => reward(`protein:${date}`, XP_REWARDS.proteinGoal));
   balanceDates.forEach((date) => reward(`balance:${date}`, XP_REWARDS.calorieBalance));
   waterDates.forEach((date) => reward(`water:${date}`, XP_REWARDS.waterGoal));
+  foods.filter((food) => food.scope === "personal").forEach((food) => reward(`food-created:${food.id}`, XP_REWARDS.foodCreated));
+  recipes.forEach((recipe) => reward(`recipe-created:${recipe.id}`, XP_REWARDS.recipeCreated));
+  entries.filter((entry) => entry.status === "off_plan").forEach((entry) => reward(`off-plan:${entry.id}`, XP_REWARDS.offPlanLogged));
 
   const unlockedAt = { ...state.unlockedAt };
   const newlyUnlocked: string[] = [];

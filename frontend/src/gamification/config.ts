@@ -4,6 +4,9 @@ export const XP_REWARDS = {
   proteinGoal: 30,
   calorieBalance: 30,
   waterGoal: 25,
+  foodCreated: 15,
+  recipeCreated: 25,
+  offPlanLogged: 10,
 } as const;
 
 export const WATER_GOAL_ML = 2500;

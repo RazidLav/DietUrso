@@ -7,6 +7,7 @@ import { colors, radius, spacing } from "../../src/theme";
 import {
   createEmptyPlan,
   deletePlan,
+  duplicatePlan,
   getActivePlanId,
   listPlans,
   setActivePlanId,
@@ -59,6 +60,11 @@ export default function AjustesScreen() {
     setShowCreate(false);
     await load();
     router.push(`/editor/${plan.id}`);
+  };
+  const handleDuplicate = async (id: string) => {
+    const copy = await duplicatePlan(id);
+    await load();
+    router.push(`/editor/${copy.id}`);
   };
 
   return (
@@ -156,6 +162,9 @@ export default function AjustesScreen() {
                   testID={`edit-${p.id}`}
                 >
                   <MaterialDesignIcons name="pencil-outline" size={22} color={colors.onSurface} />
+                </Pressable>
+                <Pressable style={styles.iconBtn} onPress={() => void handleDuplicate(p.id)} testID={`duplicate-${p.id}`}>
+                  <MaterialDesignIcons name="content-copy" size={21} color={colors.brandSecondary} />
                 </Pressable>
                 <Pressable
                   style={styles.iconBtn}

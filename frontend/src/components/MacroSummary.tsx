@@ -3,20 +3,26 @@ import { View, Text, StyleSheet } from "react-native";
 import { colors, radius, spacing } from "../theme";
 
 interface Props {
+  title?: string;
+  subtitle?: string;
   kcal: number;
   protein: number;
   carbs: number;
   fats: number;
+  fiber?: number;
   compact?: boolean;
 }
 
-export default function MacroSummary({ kcal, protein, carbs, fats, compact }: Props) {
+export default function MacroSummary({ title, subtitle, kcal, protein, carbs, fats, fiber, compact }: Props) {
   return (
     <View style={[styles.wrap, compact && styles.wrapCompact]} testID="macro-summary">
+      {title ? <Text style={styles.title}>{title}</Text> : null}
       <View style={styles.kcalRow}>
         <Text style={styles.kcalValue}>{Math.round(kcal).toLocaleString("pt-BR")}</Text>
         <Text style={styles.kcalLabel}>kcal</Text>
       </View>
+      {fiber !== undefined ? <Text style={styles.fiber}>Fibras {fiber.toFixed(1)} g</Text> : null}
+      {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
       <View style={styles.macrosRow}>
         <MacroPill label="Proteína" value={protein} color={colors.protein} testID="macro-protein" />
         <MacroPill label="Carbo" value={carbs} color={colors.carbs} testID="macro-carbs" />
@@ -49,6 +55,9 @@ const styles = StyleSheet.create({
   wrapCompact: {
     padding: spacing.md,
   },
+  title: { color: colors.brandPrimary, fontSize: 10, fontWeight: "800", letterSpacing: 1.2, marginBottom: spacing.sm },
+  fiber: { color: colors.onSurfaceSecondary, fontSize: 11, fontWeight: "600", marginTop: spacing.md },
+  subtitle: { color: colors.onSurfaceTertiary, fontSize: 11, marginTop: spacing.sm },
   kcalRow: {
     flexDirection: "row",
     alignItems: "baseline",

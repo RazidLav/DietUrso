@@ -25,7 +25,9 @@ import {
   setChosenOption,
 } from "../../../src/store/planStore";
 import { todayISO } from "../../../src/utils/date";
-import type { ConsumptionEntry, Food, Meal, MealOption, Plan } from "../../../src/types/plan";
+import type { ConsumptionEntry, Food, FoodCatalogItem, Meal, MealOption, Plan } from "../../../src/types/plan";
+import { createPlanConsumption, resolvePlanFood } from "../../../src/nutrition/records";
+import { listFoodCatalog } from "../../../src/store/nutritionStore";
 
 export default function MealDetailScreen() {
   const insets = useSafeAreaInsets();
@@ -42,19 +44,19 @@ export default function MealDetailScreen() {
   // per-food substitution overrides (foodId -> subId or "original")
   const [subs, setSubs] = useState<Record<string, string>>({});
   const [entry, setEntry] = useState<ConsumptionEntry | null>(null);
+  const [catalog, setCatalog] = useState<FoodCatalogItem[]>([]);
 
   // Modify modal state
   const [showModify, setShowModify] = useState(false);
   const [modNote, setModNote] = useState("");
-  const [modKcal, setModKcal] = useState("");
-  const [modP, setModP] = useState("");
-  const [modC, setModC] = useState("");
-  const [modF, setModF] = useState("");
   const [modFreeMeal, setModFreeMeal] = useState(false);
+  const [quantities, setQuantities] = useState<Record<string, string>>({});
+  const [actualTime, setActualTime] = useState("");
 
   const load = useCallback(async () => {
-    const p = await getActivePlan();
+    const [p, foodCatalog] = await Promise.all([getActivePlan(), listFoodCatalog()]);
     setPlan(p);
+    setCatalog(foodCatalog);
     if (!p) return;
     const meal = p.meals.find((m) => m.id === mealId);
     if (!meal) return;
@@ -75,25 +77,11 @@ export default function MealDetailScreen() {
   const currentOption: MealOption | undefined = meal?.options.find((o) => o.id === optionId);
 
   const effectiveFoods = currentOption?.foods.map((f) => {
-        const subKey = subs[f.id];
-        if (!subKey || subKey === "original") return f;
-        const sub = f.substitutions.find((s) => s.id === subKey);
-        if (!sub) return f;
-        // Replace macros with sub macros (fallback to original if null)
-        return {
-          ...f,
-          quantity: sub.quantity,
-          unit: sub.unit,
-          name: sub.name + " (subst.)",
-          kcal: sub.kcal ?? f.kcal,
-          protein: sub.protein ?? f.protein,
-          carbs: sub.carbs ?? f.carbs,
-          fats: sub.fats ?? f.fats,
-        };
+        return resolvePlanFood(f, subs[f.id], catalog);
       }) ?? [];
 
   const macros = (() => {
-    if (!currentOption) return { kcal: 0, protein: 0, carbs: 0, fats: 0 };
+    if (!currentOption) return { kcal: 0, protein: 0, carbs: 0, fats: 0, fiber: 0, sodium: 0 };
     const patched: MealOption = { ...currentOption, foods: effectiveFoods };
     return optionMacros(patched);
   })();
@@ -107,42 +95,53 @@ export default function MealDetailScreen() {
   const handleAsPlanned = async () => {
     if (!optionId) return;
     await removeConsumptionForDayMeal(date, mealId as string);
-    await addConsumption({
+    if (plan && meal && currentOption) await addConsumption(createPlanConsumption({
+      plan,
+      meal,
+      option: currentOption,
       date,
-      mealId: mealId as string,
-      status: "as_planned",
-      chosenOptionId: optionId,
-      foodNames: effectiveFoods.map((food) => food.name),
-    });
+      substitutions: subs,
+      catalog,
+    }));
     router.back();
   };
 
   const openModify = () => {
     setModNote(entry?.note ?? "");
-    setModKcal(String(entry?.manualKcal ?? Math.round(macros.kcal)));
-    setModP(String(entry?.manualProtein ?? Math.round(macros.protein)));
-    setModC(String(entry?.manualCarbs ?? Math.round(macros.carbs)));
-    setModF(String(entry?.manualFats ?? Math.round(macros.fats)));
     setModFreeMeal(Boolean(entry?.isFreeMeal));
+    const nextQuantities: Record<string, string> = {};
+    currentOption?.foods.forEach((food, index) => {
+      nextQuantities[food.id] = String(entry?.consumedItems?.[index]?.quantity ?? effectiveFoods[index]?.quantity ?? food.quantity);
+    });
+    setQuantities(nextQuantities);
+    setActualTime(entry?.actualAt ? new Date(entry.actualAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", hour12: false }) : new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", hour12: false }));
     setShowModify(true);
   };
 
   const handleSubmitModify = async () => {
     if (!optionId) return;
     await removeConsumptionForDayMeal(date, mealId as string);
-    await addConsumption({
+    if (plan && meal && currentOption) await addConsumption(createPlanConsumption({
+      plan,
+      meal,
+      option: currentOption,
       date,
-      mealId: mealId as string,
-      status: "modified",
-      chosenOptionId: optionId,
+      substitutions: subs,
+      catalog,
+      quantities: Object.fromEntries(Object.entries(quantities).map(([key, value]) => [key, Math.max(0, Number(value.replace(",", ".")) || 0)])),
       note: modNote,
-      manualKcal: Number(modKcal) || 0,
-      manualProtein: Number(modP) || 0,
-      manualCarbs: Number(modC) || 0,
-      manualFats: Number(modF) || 0,
+      actualAt: new Date(`${date}T${/^\d{2}:\d{2}$/.test(actualTime) ? actualTime : "12:00"}:00`).toISOString(),
       isFreeMeal: modFreeMeal,
-    });
+    }));
     setShowModify(false);
+    router.back();
+  };
+
+  const handleSkipped = async () => {
+    if (!plan || !meal || !currentOption) return;
+    await removeConsumptionForDayMeal(date, meal.id);
+    const snapshot = createPlanConsumption({ plan, meal, option: currentOption, date });
+    await addConsumption({ ...snapshot, status: "skipped", consumedItems: [], foodNames: [] });
     router.back();
   };
 
@@ -211,6 +210,7 @@ export default function MealDetailScreen() {
               protein={macros.protein}
               carbs={macros.carbs}
               fats={macros.fats}
+              fiber={macros.fiber}
             />
 
             <Text style={styles.sectionTitle}>Ingredientes</Text>
@@ -220,6 +220,7 @@ export default function MealDetailScreen() {
                   key={food.id}
                   food={food}
                   currentSub={subs[food.id]}
+                  catalog={catalog}
                   onChangeSub={(v) => setSubs((prev) => ({ ...prev, [food.id]: v }))}
                 />
               ))}
@@ -229,17 +230,17 @@ export default function MealDetailScreen() {
               <View
                 style={[
                   styles.statusBox,
-                  { borderColor: entry.status === "as_planned" ? colors.brandPrimary : colors.warning },
+                  { borderColor: entry.status === "as_planned" ? colors.brandPrimary : entry.status === "skipped" ? colors.borderStrong : colors.warning },
                 ]}
               >
                 <MaterialDesignIcons
-                  name={entry.status === "as_planned" ? "check-circle" : "pencil-circle"}
+                  name={entry.status === "as_planned" ? "check-circle" : entry.status === "skipped" ? "minus-circle" : "pencil-circle"}
                   size={22}
-                  color={entry.status === "as_planned" ? colors.brandPrimary : colors.warning}
+                  color={entry.status === "as_planned" ? colors.brandPrimary : entry.status === "skipped" ? colors.onSurfaceTertiary : colors.warning}
                 />
                 <View style={{ flex: 1 }}>
                   <Text style={styles.statusTitle}>
-                    {entry.status === "as_planned" ? "Consumido conforme o plano" : "Consumo com alteração"}
+                    {entry.status === "as_planned" ? "Consumido conforme o plano" : entry.status === "skipped" ? "Refeição não realizada" : "Consumo com alteração"}
                   </Text>
                   {entry.note ? <Text style={styles.statusNote}>{entry.note}</Text> : null}
                   {entry.status === "modified" ? (
@@ -275,6 +276,9 @@ export default function MealDetailScreen() {
             <MaterialDesignIcons name="check" size={18} color={colors.onBrandPrimary} />
             <Text style={styles.ctaPrimaryText}>Comi conforme o plano</Text>
           </Pressable>
+          <Pressable style={styles.skipButton} onPress={handleSkipped} testID="cta-skipped-btn">
+            <Text style={styles.skipButtonText}>Não realizei esta refeição</Text>
+          </Pressable>
         </View>
       ) : null}
 
@@ -296,6 +300,15 @@ export default function MealDetailScreen() {
               testID="mod-note-input"
               multiline
             />
+            <Text style={styles.modalSectionLabel}>QUANTIDADE REALMENTE CONSUMIDA</Text>
+            <ScrollView style={{ maxHeight: 210 }} contentContainerStyle={{ gap: spacing.sm }}>
+              {currentOption?.foods.map((food) => {
+                const selected = subs[food.id] && subs[food.id] !== "original" ? food.substitutions.find((sub) => sub.id === subs[food.id]) : null;
+                return <View key={food.id} style={styles.quantityRow}><View style={{ flex: 1 }}><Text style={styles.quantityName}>{selected?.name ?? food.name}</Text><Text style={styles.quantityHint}>Planejado: {selected?.quantity ?? food.quantity} {selected?.unit ?? food.unit}</Text></View><TextInput value={quantities[food.id] ?? ""} onChangeText={(value) => setQuantities((current) => ({ ...current, [food.id]: value }))} keyboardType="decimal-pad" style={styles.quantityInput} /><Text style={styles.quantityUnit}>{selected?.unit ?? food.unit}</Text></View>;
+              })}
+            </ScrollView>
+            <Text style={styles.modalSectionLabel}>HORÁRIO REAL</Text>
+            <TextInput style={styles.input} value={actualTime} onChangeText={setActualTime} placeholder="HH:MM" placeholderTextColor={colors.muted} />
             <Pressable style={[styles.freeMealToggle, modFreeMeal && styles.freeMealToggleActive]} onPress={() => setModFreeMeal((value) => !value)} testID="mod-free-meal-toggle">
               <MaterialDesignIcons name={modFreeMeal ? "checkbox-marked-circle" : "checkbox-blank-circle-outline"} size={20} color={modFreeMeal ? colors.brandPrimary : colors.onSurfaceTertiary} />
               <View style={{ flex: 1 }}>
@@ -303,12 +316,7 @@ export default function MealDetailScreen() {
                 <Text style={styles.freeMealDescription}>Sem culpa — marcar ajuda o histórico a contar a história real.</Text>
               </View>
             </Pressable>
-            <View style={styles.macroInputs}>
-              <MacroInput label="kcal" value={modKcal} onChange={setModKcal} testID="mod-kcal-input" />
-              <MacroInput label="P (g)" value={modP} onChange={setModP} color={colors.protein} testID="mod-p-input" />
-              <MacroInput label="C (g)" value={modC} onChange={setModC} color={colors.carbs} testID="mod-c-input" />
-              <MacroInput label="G (g)" value={modF} onChange={setModF} color={colors.fats} testID="mod-f-input" />
-            </View>
+            <Pressable style={styles.extraLink} onPress={() => { setShowModify(false); router.push(`/fora-do-plano?date=${date}`); }}><MaterialDesignIcons name="plus-circle-outline" size={18} color={colors.brandSecondary} /><Text style={styles.extraLinkText}>Adicionar alimento extra como registro separado</Text></Pressable>
             <View style={styles.modalActions}>
               <Pressable style={styles.modalBtnSecondary} onPress={() => setShowModify(false)}>
                 <Text style={styles.modalBtnSecondaryText}>Cancelar</Text>
@@ -324,40 +332,15 @@ export default function MealDetailScreen() {
   );
 }
 
-function MacroInput({
-  label,
-  value,
-  onChange,
-  color,
-  testID,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  color?: string;
-  testID?: string;
-}) {
-  return (
-    <View style={styles.macroInputWrap}>
-      <Text style={[styles.macroInputLabel, color && { color }]}>{label}</Text>
-      <TextInput
-        style={styles.macroInputField}
-        value={value}
-        onChangeText={onChange}
-        keyboardType="numeric"
-        testID={testID}
-      />
-    </View>
-  );
-}
-
 function FoodRow({
   food,
   currentSub,
+  catalog,
   onChangeSub,
 }: {
   food: Food;
   currentSub?: string;
+  catalog: FoodCatalogItem[];
   onChangeSub: (v: string) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
@@ -366,9 +349,7 @@ function FoodRow({
     ? food.substitutions.find((s) => s.id === currentSub)
     : null;
 
-  const display = activeSub
-    ? { name: activeSub.name, quantity: activeSub.quantity, unit: activeSub.unit }
-    : { name: food.name, quantity: food.quantity, unit: food.unit };
+  const display = resolvePlanFood(food, currentSub, catalog);
 
   return (
     <View style={styles.foodCard} testID={`food-row-${food.id}`}>
@@ -384,14 +365,14 @@ function FoodRow({
           {food.notes ? <Text style={styles.foodNotes}>{food.notes}</Text> : null}
         </View>
         <View style={styles.foodMacros}>
-          <Text style={styles.foodKcal}>{food.kcal !== null ? Math.round(food.kcal) : "—"}</Text>
+          <Text style={styles.foodKcal}>{display.kcal !== null ? Math.round(display.kcal) : "—"}</Text>
           <Text style={styles.foodKcalLabel}>kcal</Text>
         </View>
       </View>
       <View style={styles.foodMacroLine}>
-        <MacroDot label="P" value={food.protein} color={colors.protein} />
-        <MacroDot label="C" value={food.carbs} color={colors.carbs} />
-        <MacroDot label="G" value={food.fats} color={colors.fats} />
+        <MacroDot label="P" value={display.protein} color={colors.protein} />
+        <MacroDot label="C" value={display.carbs} color={colors.carbs} />
+        <MacroDot label="G" value={display.fats} color={colors.fats} />
       </View>
       {hasSubs ? (
         <>
@@ -574,6 +555,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.border,
     flexDirection: "row",
+    flexWrap: "wrap",
     gap: spacing.sm,
   },
   ctaSecondary: {
@@ -598,6 +580,8 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
   },
   ctaPrimaryText: { color: colors.onBrandPrimary, fontWeight: "800", fontSize: 13 },
+  skipButton: { flexBasis: "100%", alignItems: "center", paddingVertical: spacing.xs },
+  skipButtonText: { color: colors.onSurfaceTertiary, fontSize: 11, fontWeight: "600" },
   emptyText: { color: colors.onSurfaceTertiary, textAlign: "center", marginTop: spacing.xl },
   modalWrap: {
     flex: 1,
@@ -615,6 +599,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     gap: spacing.md,
+    maxHeight: "92%",
   },
   modalTitle: { color: colors.onSurface, fontSize: 18, fontWeight: "800" },
   modalDesc: { color: colors.onSurfaceTertiary, fontSize: 13 },
@@ -626,21 +611,18 @@ const styles = StyleSheet.create({
     fontSize: 14,
     minHeight: 60,
   },
-  macroInputs: { flexDirection: "row", gap: spacing.sm },
+  modalSectionLabel: { color: colors.brandPrimary, fontSize: 10, fontWeight: "800", letterSpacing: 1.1 },
+  quantityRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, backgroundColor: colors.surfaceTertiary, borderRadius: radius.md, padding: spacing.sm },
+  quantityName: { color: colors.onSurface, fontSize: 12, fontWeight: "700" },
+  quantityHint: { color: colors.onSurfaceTertiary, fontSize: 9, marginTop: 2 },
+  quantityInput: { width: 64, color: colors.onSurface, backgroundColor: colors.surface, borderRadius: radius.sm, padding: spacing.sm, textAlign: "right" },
+  quantityUnit: { color: colors.onSurfaceTertiary, fontSize: 10, minWidth: 24 },
+  extraLink: { flexDirection: "row", alignItems: "center", gap: spacing.sm, padding: spacing.sm },
+  extraLinkText: { color: colors.brandSecondary, fontSize: 11, fontWeight: "700" },
   freeMealToggle: { flexDirection: "row", alignItems: "center", gap: spacing.sm, padding: spacing.md, backgroundColor: colors.surfaceTertiary, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border },
   freeMealToggleActive: { borderColor: colors.brandPrimary + "88", backgroundColor: colors.brandPrimary + "12" },
   freeMealTitle: { color: colors.onSurface, fontSize: 13, fontWeight: "800" },
   freeMealDescription: { color: colors.onSurfaceTertiary, fontSize: 10, lineHeight: 14, marginTop: 2 },
-  macroInputWrap: { flex: 1 },
-  macroInputLabel: { color: colors.onSurfaceTertiary, fontSize: 11, marginBottom: 4, fontWeight: "700" },
-  macroInputField: {
-    backgroundColor: colors.surfaceTertiary,
-    color: colors.onSurface,
-    padding: spacing.sm,
-    borderRadius: radius.sm,
-    textAlign: "center",
-    fontWeight: "700",
-  },
   modalActions: { flexDirection: "row", justifyContent: "flex-end", gap: spacing.sm },
   modalBtnSecondary: {
     paddingHorizontal: spacing.lg,
