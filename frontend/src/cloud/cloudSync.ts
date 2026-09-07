@@ -107,6 +107,7 @@ async function readLocalSnapshot(): Promise<AppSnapshot> {
       readJson<ShoppingConfig>(SHOPPING_CONFIG_KEY, {
         periodDays: 7,
         preferredSubstitutions: {},
+        quantityOverrides: {},
         manualItems: [],
       }),
     ]);
@@ -179,6 +180,7 @@ async function applyCloudSnapshot(row: CloudRow) {
             JSON.stringify(row.payload.shoppingConfig ?? {
               periodDays: 7,
               preferredSubstitutions: {},
+              quantityOverrides: {},
               manualItems: [],
             })
           )

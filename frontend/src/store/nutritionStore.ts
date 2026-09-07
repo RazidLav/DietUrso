@@ -23,12 +23,14 @@ export interface ManualShoppingItem {
 export interface ShoppingConfig {
   periodDays: number;
   preferredSubstitutions: Record<string, string>;
+  quantityOverrides: Record<string, number>;
   manualItems: ManualShoppingItem[];
 }
 
 const EMPTY_SHOPPING_CONFIG: ShoppingConfig = {
   periodDays: 7,
   preferredSubstitutions: {},
+  quantityOverrides: {},
   manualItems: [],
 };
 
@@ -278,6 +280,7 @@ export async function getShoppingConfig(): Promise<ShoppingConfig> {
   return {
     periodDays: Number.isInteger(storedPeriod) && storedPeriod >= 1 && storedPeriod <= 60 ? storedPeriod : 7,
     preferredSubstitutions: stored.preferredSubstitutions ?? {},
+    quantityOverrides: stored.quantityOverrides ?? {},
     manualItems: Array.isArray(stored.manualItems) ? stored.manualItems : [],
   };
 }
