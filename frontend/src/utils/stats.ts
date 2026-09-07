@@ -19,10 +19,15 @@ function localISO(d: Date) {
 }
 
 export function computeStats(entries: ConsumptionEntry[], plan: Plan | null): Stats {
-  const totalPerDay = plan?.meals.length ?? 0;
+  const activeMeals = (plan?.meals ?? []).filter((meal) => !meal.archived);
+  const mealsForDate = (iso: string) => {
+    const weekday = new Date(`${iso}T12:00:00`).getDay();
+    return activeMeals.filter((meal) => !meal.daysOfWeek?.length || meal.daysOfWeek.includes(weekday));
+  };
+  const loggedEntries = entries.filter((entry) => entry.status !== "skipped");
 
   const byDate = new Map<string, ConsumptionEntry[]>();
-  for (const e of entries) {
+  for (const e of loggedEntries) {
     const arr = byDate.get(e.date) ?? [];
     arr.push(e);
     byDate.set(e.date, arr);
@@ -32,7 +37,9 @@ export function computeStats(entries: ConsumptionEntry[], plan: Plan | null): St
   let daysComplete = 0;
   const completedDates = new Set<string>();
   byDate.forEach((arr, date) => {
-    const unique = new Set(arr.map((e) => e.mealId));
+    const expected = new Set(mealsForDate(date).map((meal) => meal.id));
+    const unique = new Set(arr.filter((entry) => expected.has(entry.mealId)).map((e) => e.mealId));
+    const totalPerDay = expected.size;
     if (totalPerDay > 0 && unique.size >= totalPerDay) {
       daysComplete += 1;
       completedDates.add(date);
@@ -79,14 +86,17 @@ export function computeStats(entries: ConsumptionEntry[], plan: Plan | null): St
     d.setDate(today.getDate() - i);
     const iso = localISO(d);
     const arr = byDate.get(iso) ?? [];
-    const uniq = new Set(arr.map((e) => e.mealId));
+    const dailyMeals = mealsForDate(iso);
+    const dailyIds = new Set(dailyMeals.map((meal) => meal.id));
+    const uniq = new Set(arr.filter((entry) => dailyIds.has(entry.mealId)).map((e) => e.mealId));
+    const totalPerDay = dailyMeals.length;
     last7.push({ date: iso, count: uniq.size, total: totalPerDay });
   }
 
   return {
-    totalMeals: entries.length,
-    totalAsPlanned: entries.filter((e) => e.status === "as_planned").length,
-    totalModified: entries.filter((e) => e.status === "modified").length,
+    totalMeals: loggedEntries.length,
+    totalAsPlanned: loggedEntries.filter((e) => e.status === "as_planned").length,
+    totalModified: loggedEntries.filter((e) => e.status === "modified" || e.status === "off_plan").length,
     daysActive,
     daysComplete,
     currentStreak,

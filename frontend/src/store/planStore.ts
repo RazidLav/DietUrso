@@ -1,6 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { INITIAL_PLAN } from "../data/dietData";
 import { ConsumptionEntry, Food, Meal, MealOption, Plan } from "../types/plan";
+import { foodNutrients } from "../nutrition/calculations";
 import { markLocalChange } from "../cloud/cloudSync";
 import {
   ACTIVE_PLAN_KEY,
@@ -72,12 +73,44 @@ export async function createEmptyPlan(name: string): Promise<Plan> {
     description: "",
     archived: false,
     createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
     meals: [],
   };
   const plans = await listPlans();
   plans.push(plan);
   await savePlans(plans);
   return plan;
+}
+export async function duplicatePlan(id: string): Promise<Plan> {
+  const plans = await listPlans();
+  const source = plans.find((plan) => plan.id === id);
+  if (!source) throw new Error("Plano não encontrado.");
+  const now = new Date().toISOString();
+  const copy: Plan = {
+    ...source,
+    id: uuid(),
+    name: `${source.name} — cópia`,
+    archived: false,
+    createdAt: now,
+    updatedAt: now,
+    meals: source.meals.map((meal, mealIndex) => ({
+      ...meal,
+      id: uuid(),
+      order: mealIndex,
+      options: meal.options.map((option) => ({
+        ...option,
+        id: uuid(),
+        foods: option.foods.map((food) => ({
+          ...food,
+          id: uuid(),
+          substitutions: food.substitutions.map((substitution) => ({ ...substitution, id: uuid() })),
+        })),
+      })),
+    })),
+  };
+  plans.push(copy);
+  await savePlans(plans);
+  return copy;
 }
 export async function deletePlan(id: string): Promise<void> {
   const plans = await listPlans();
@@ -181,8 +214,30 @@ export async function listConsumption(): Promise<ConsumptionEntry[]> {
 }
 export async function addConsumption(entry: Omit<ConsumptionEntry, "id" | "createdAt">): Promise<void> {
   const all = await listConsumption();
-  all.push({ ...entry, id: uuid(), createdAt: new Date().toISOString() });
+  const now = new Date().toISOString();
+  all.push({ ...entry, id: uuid(), createdAt: now, updatedAt: now });
   await writeJson(CONSUMPTION_KEY, all);
+}
+export async function toggleMealArchived(planId: string, mealId: string): Promise<void> {
+  const plans = await listPlans();
+  const plan = plans.find((candidate) => candidate.id === planId);
+  const meal = plan?.meals.find((candidate) => candidate.id === mealId);
+  if (!plan || !meal) return;
+  meal.archived = !meal.archived;
+  plan.updatedAt = new Date().toISOString();
+  await savePlans(plans);
+}
+export async function upsertConsumption(entry: ConsumptionEntry): Promise<void> {
+  const all = await listConsumption();
+  const index = all.findIndex((candidate) => candidate.id === entry.id);
+  const next = { ...entry, updatedAt: new Date().toISOString() };
+  if (index >= 0) all[index] = next;
+  else all.push(next);
+  await writeJson(CONSUMPTION_KEY, all);
+}
+export async function removeConsumption(id: string): Promise<void> {
+  const all = await listConsumption();
+  await writeJson(CONSUMPTION_KEY, all.filter((entry) => entry.id !== id));
 }
 export async function removeConsumptionForDayMeal(date: string, mealId: string): Promise<void> {
   const all = await listConsumption();
@@ -214,12 +269,7 @@ export async function setShoppingChecked(map: ShoppingState): Promise<void> {
 
 // --------- macro helpers ---------
 export function foodMacros(food: Food) {
-  return {
-    kcal: food.kcal ?? 0,
-    protein: food.protein ?? 0,
-    carbs: food.carbs ?? 0,
-    fats: food.fats ?? 0,
-  };
+  return foodNutrients(food);
 }
 export function optionMacros(opt: MealOption) {
   return opt.foods.reduce(
@@ -230,14 +280,16 @@ export function optionMacros(opt: MealOption) {
         protein: a.protein + m.protein,
         carbs: a.carbs + m.carbs,
         fats: a.fats + m.fats,
+        fiber: a.fiber + m.fiber,
+        sodium: a.sodium + m.sodium,
       };
     },
-    { kcal: 0, protein: 0, carbs: 0, fats: 0 }
+    { kcal: 0, protein: 0, carbs: 0, fats: 0, fiber: 0, sodium: 0 }
   );
 }
 // Default day macros = sum of option 1 of each meal
 export function dayMacrosDefault(plan: Plan) {
-  return plan.meals.reduce(
+  return plan.meals.filter((meal) => !meal.archived).reduce(
     (a, meal) => {
       const opt = meal.options[0];
       if (!opt) return a;
@@ -247,8 +299,10 @@ export function dayMacrosDefault(plan: Plan) {
         protein: a.protein + m.protein,
         carbs: a.carbs + m.carbs,
         fats: a.fats + m.fats,
+        fiber: a.fiber + m.fiber,
+        sodium: a.sodium + m.sodium,
       };
     },
-    { kcal: 0, protein: 0, carbs: 0, fats: 0 }
+    { kcal: 0, protein: 0, carbs: 0, fats: 0, fiber: 0, sodium: 0 }
   );
 }

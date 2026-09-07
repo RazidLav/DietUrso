@@ -10,13 +10,13 @@ interface Props {
   kcal?: number;
   onPress?: () => void;
   onToggleDone?: () => void;
-  status?: "planned" | "as_planned" | "modified";
+  status?: "planned" | "as_planned" | "modified" | "skipped";
   testID?: string;
   right?: React.ReactNode;
 }
 
 export default function MealCard({ title, subtitle, icon, kcal, onPress, onToggleDone, status, testID, right }: Props) {
-  const done = status === "as_planned" || status === "modified";
+  const done = status === "as_planned" || status === "modified" || status === "skipped";
   return (
     <Pressable
       onPress={onPress}
@@ -48,7 +48,7 @@ export default function MealCard({ title, subtitle, icon, kcal, onPress, onToggl
           >
             {done ? (
               <MaterialDesignIcons
-                name={status === "modified" ? "pencil" : "check"}
+                name={status === "modified" ? "pencil" : status === "skipped" ? "minus" : "check"}
                 size={18}
                 color={status === "modified" ? colors.onWarning : colors.onBrandPrimary}
               />

@@ -7,7 +7,6 @@ import { colors, radius, spacing } from "../src/theme";
 import { getActivePlan, listConsumption } from "../src/store/planStore";
 import { computeStats, type Stats } from "../src/utils/stats";
 import { WEEKDAYS_SHORT } from "../src/utils/date";
-import type { Plan } from "../src/types/plan";
 import { useCloudDataRefresh } from "../src/cloud/useCloudDataRefresh";
 
 const EMPTY_STATS: Stats = {
@@ -24,13 +23,11 @@ const EMPTY_STATS: Stats = {
 export default function EstatisticasScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const [plan, setPlan] = useState<Plan | null>(null);
   const [stats, setStats] = useState<Stats>(EMPTY_STATS);
 
   const load = useCallback(async () => {
     const p = await getActivePlan();
     const entries = await listConsumption();
-    setPlan(p);
     setStats(computeStats(entries, p));
   }, []);
 
@@ -109,7 +106,7 @@ export default function EstatisticasScreen() {
         <View style={styles.chartCard}>
           <Text style={styles.chartTitle}>Últimos 7 dias</Text>
           <Text style={styles.chartSub}>
-            Refeições registradas por dia{plan?.meals.length ? ` (meta: ${plan.meals.length})` : ""}
+            Refeições registradas por dia (meta conforme a programação)
           </Text>
           <View style={styles.barsRow}>
             {stats.last7.map((d) => {

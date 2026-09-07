@@ -25,6 +25,8 @@ import AchievementUnlockModal from "../../src/components/AchievementUnlockModal"
 import { dismissAchievement, evaluateGamification, getPendingAchievement } from "../../src/gamification/engine";
 import type { AchievementDefinition, GamificationSummary } from "../../src/gamification/types";
 import { changeWater, getWater } from "../../src/store/waterStore";
+import { createPlanConsumption, dayConsumedNutrients, entryNutrients } from "../../src/nutrition/records";
+import { listFoodCatalog } from "../../src/store/nutritionStore";
 
 export default function HojeScreen() {
   const insets = useSafeAreaInsets();
@@ -76,12 +78,12 @@ export default function HojeScreen() {
     if (already) {
       await removeConsumptionForDayMeal(today, mealId);
     } else {
-      await addConsumption({
-        date: today,
-        mealId,
-        status: "as_planned",
-        chosenOptionId: optionId,
-      });
+      const meal = plan?.meals.find((candidate) => candidate.id === mealId);
+      const option = meal?.options.find((candidate) => candidate.id === optionId) ?? meal?.options[0];
+      if (plan && meal && option) {
+        const catalog = await listFoodCatalog();
+        await addConsumption(createPlanConsumption({ plan, meal, option, date: today, catalog }));
+      }
     }
     await load();
   };
@@ -106,11 +108,14 @@ export default function HojeScreen() {
     );
   }
 
-  const totals = dayMacrosDefault(plan);
+  const todayWeekday = new Date().getDay();
+  const dayMeals = plan.meals.filter((meal) => !meal.archived && (!meal.daysOfWeek?.length || meal.daysOfWeek.includes(todayWeekday))).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+  const totals = dayMacrosDefault({ ...plan, meals: dayMeals });
+  const consumedTotals = dayConsumedNutrients(consumption, today);
   const weekdayName = WEEKDAYS_LONG[new Date().getDay()].toUpperCase();
-  const doneToday = new Set(consumption.filter((e) => e.date === today).map((e) => e.mealId));
-  const totalMeals = plan.meals.length;
-  const doneCount = plan.meals.filter((m) => doneToday.has(m.id)).length;
+  const doneToday = new Set(consumption.filter((e) => e.date === today && e.status !== "off_plan").map((e) => e.mealId));
+  const totalMeals = dayMeals.length;
+  const doneCount = dayMeals.filter((m) => doneToday.has(m.id)).length;
 
   return (
     <>
@@ -146,7 +151,19 @@ export default function HojeScreen() {
       ) : null}
 
       <View style={styles.section}>
-        <MacroSummary kcal={totals.kcal} protein={totals.protein} carbs={totals.carbs} fats={totals.fats} />
+        <MacroSummary
+          title="CONSUMIDO HOJE"
+          kcal={consumedTotals.kcal}
+          protein={consumedTotals.protein}
+          carbs={consumedTotals.carbs}
+          fats={consumedTotals.fats}
+          fiber={consumedTotals.fiber}
+          subtitle={`Planejado: ${Math.round(totals.kcal)} kcal · Diferença: ${consumedTotals.kcal - totals.kcal >= 0 ? "+" : ""}${Math.round(consumedTotals.kcal - totals.kcal)} kcal`}
+        />
+        <View style={styles.quickActions}>
+          <Pressable style={styles.quickAction} onPress={() => router.push("/fora-do-plano")} testID="home-off-plan-btn"><MaterialDesignIcons name="silverware-variant" size={18} color={colors.brandTertiary} /><Text style={styles.quickActionText}>Fora do plano</Text></Pressable>
+          <Pressable style={styles.quickAction} onPress={() => router.push("/historico-alimentar")} testID="home-history-btn"><MaterialDesignIcons name="calendar-search" size={18} color={colors.brandSecondary} /><Text style={styles.quickActionText}>Ver histórico</Text></Pressable>
+        </View>
       </View>
 
       <View style={styles.section}>
@@ -179,19 +196,19 @@ export default function HojeScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Refeições do dia</Text>
         <View style={{ gap: spacing.sm }}>
-          {plan.meals.map((meal) => {
+          {dayMeals.map((meal) => {
             const chosenOpt = meal.options.find((o) => o.id === chosen[meal.id]) ?? meal.options[0];
-            const mac = chosenOpt ? optionMacros(chosenOpt) : { kcal: 0, protein: 0, carbs: 0, fats: 0 };
+            const mac = chosenOpt ? optionMacros(chosenOpt) : { kcal: 0, protein: 0, carbs: 0, fats: 0, fiber: 0, sodium: 0 };
             const entry = consumption.find((e) => e.date === today && e.mealId === meal.id);
-            const status = entry ? entry.status : "planned";
+            const status = entry ? (entry.status === "off_plan" ? "modified" : entry.status) : "planned";
             return (
               <MealCard
                 key={meal.id}
                 testID={`meal-card-${meal.id}`}
                 title={meal.name}
-                subtitle={chosenOpt?.name ?? "Sem opções"}
+                subtitle={entry ? `${entry.status === "as_planned" ? "Conforme o plano" : entry.status === "skipped" ? "Não realizada" : "Com alterações"} · ${meal.suggestedTime ? `${meal.suggestedTime} · ` : ""}${chosenOpt?.name ?? ""}` : `${meal.suggestedTime ? `${meal.suggestedTime} · ` : ""}${chosenOpt?.name ?? "Sem opções"}`}
                 icon={iconForMeal(meal.type)}
-                kcal={mac.kcal}
+                kcal={entry ? entryNutrients(entry).kcal : mac.kcal}
                 status={status}
                 onPress={() => router.push(`/meal/${plan.id}/${meal.id}?date=${today}`)}
                 onToggleDone={() => toggleQuickDone(meal.id, chosenOpt?.id)}
@@ -224,6 +241,9 @@ const styles = StyleSheet.create({
     alignItems: "center", justifyContent: "center",
   },
   section: { paddingHorizontal: spacing.lg, marginTop: spacing.lg },
+  quickActions: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.sm },
+  quickAction: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: spacing.sm, backgroundColor: colors.surfaceSecondary, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, padding: spacing.md },
+  quickActionText: { color: colors.onSurfaceSecondary, fontSize: 11, fontWeight: "700" },
   sectionTitle: {
     color: colors.onSurfaceTertiary,
     fontSize: 12,

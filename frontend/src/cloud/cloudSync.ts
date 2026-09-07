@@ -1,16 +1,21 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { Session, User } from "@supabase/supabase-js";
-import type { ConsumptionEntry, Plan } from "../types/plan";
+import type { ConsumptionEntry, FoodCatalogItem, Plan, Recipe } from "../types/plan";
+import type { ShoppingConfig } from "../store/nutritionStore";
 import { createInitialGamificationState, type GamificationState } from "../gamification/types";
 import {
   ACTIVE_PLAN_KEY,
   CHOSEN_OPTIONS_KEY,
   CONSUMPTION_KEY,
+  FOOD_LIBRARY_KEY,
   GAMIFICATION_KEY,
   LOCAL_CHANGED_AT_KEY,
   ONBOARDING_COMPLETE_KEY,
+  NUTRITION_SEED_KEY,
   PLANS_KEY,
   SHOPPING_STATE_KEY,
+  SHOPPING_CONFIG_KEY,
+  RECIPES_KEY,
   WATER_KEY,
 } from "../store/storageKeys";
 import { isCloudConfigured, supabase } from "./supabase";
@@ -32,7 +37,7 @@ export interface CloudStatus {
 }
 
 interface AppSnapshot {
-  version: 1 | 2;
+  version: 1 | 2 | 3;
   plans: Plan[];
   activePlanId: string | null;
   consumption: ConsumptionEntry[];
@@ -41,6 +46,9 @@ interface AppSnapshot {
   gamification?: GamificationState;
   waterByDate?: Record<string, number>;
   onboardingComplete?: boolean;
+  foodLibrary?: FoodCatalogItem[];
+  recipes?: Recipe[];
+  shoppingConfig?: ShoppingConfig;
 }
 
 type CloudRow = {
@@ -84,7 +92,7 @@ async function readJson<T>(key: string, fallback: T): Promise<T> {
 }
 
 async function readLocalSnapshot(): Promise<AppSnapshot> {
-  const [plans, activePlanId, consumption, chosenOptions, shoppingChecked, gamification, waterByDate, onboardingComplete] =
+  const [plans, activePlanId, consumption, chosenOptions, shoppingChecked, gamification, waterByDate, onboardingComplete, foodLibrary, recipes, shoppingConfig] =
     await Promise.all([
       readJson<Plan[]>(PLANS_KEY, []),
       AsyncStorage.getItem(ACTIVE_PLAN_KEY),
@@ -94,10 +102,18 @@ async function readLocalSnapshot(): Promise<AppSnapshot> {
       readJson<GamificationState>(GAMIFICATION_KEY, createInitialGamificationState()),
       readJson<Record<string, number>>(WATER_KEY, {}),
       AsyncStorage.getItem(ONBOARDING_COMPLETE_KEY),
+      readJson<FoodCatalogItem[]>(FOOD_LIBRARY_KEY, []),
+      readJson<Recipe[]>(RECIPES_KEY, []),
+      readJson<ShoppingConfig>(SHOPPING_CONFIG_KEY, {
+        periodDays: 7,
+        preferredSubstitutions: {},
+        quantityOverrides: {},
+        manualItems: [],
+      }),
     ]);
 
   return {
-    version: 2,
+    version: 3,
     plans,
     activePlanId,
     consumption,
@@ -106,6 +122,9 @@ async function readLocalSnapshot(): Promise<AppSnapshot> {
     gamification,
     waterByDate,
     onboardingComplete: onboardingComplete === "1",
+    foodLibrary,
+    recipes,
+    shoppingConfig,
   };
 }
 
@@ -113,7 +132,7 @@ function isValidSnapshot(value: unknown): value is AppSnapshot {
   if (!value || typeof value !== "object") return false;
   const candidate = value as Partial<AppSnapshot>;
   return (
-    (candidate.version === 1 || candidate.version === 2) &&
+    (candidate.version === 1 || candidate.version === 2 || candidate.version === 3) &&
     Array.isArray(candidate.plans) &&
     Array.isArray(candidate.consumption) &&
     typeof candidate.chosenOptions === "object" &&
@@ -149,6 +168,26 @@ async function applyCloudSnapshot(row: CloudRow) {
         JSON.stringify(row.payload.gamification ?? createInitialGamificationState())
       ),
       AsyncStorage.setItem(WATER_KEY, JSON.stringify(row.payload.waterByDate ?? {})),
+      row.payload.version === 3
+        ? AsyncStorage.setItem(FOOD_LIBRARY_KEY, JSON.stringify(row.payload.foodLibrary ?? []))
+        : Promise.resolve(),
+      row.payload.version === 3
+        ? AsyncStorage.setItem(RECIPES_KEY, JSON.stringify(row.payload.recipes ?? []))
+        : Promise.resolve(),
+      row.payload.version === 3
+        ? AsyncStorage.setItem(
+            SHOPPING_CONFIG_KEY,
+            JSON.stringify(row.payload.shoppingConfig ?? {
+              periodDays: 7,
+              preferredSubstitutions: {},
+              quantityOverrides: {},
+              manualItems: [],
+            })
+          )
+        : Promise.resolve(),
+      row.payload.version === 3
+        ? AsyncStorage.setItem(NUTRITION_SEED_KEY, "1")
+        : Promise.resolve(),
       row.payload.onboardingComplete
         ? AsyncStorage.setItem(ONBOARDING_COMPLETE_KEY, "1")
         : AsyncStorage.removeItem(ONBOARDING_COMPLETE_KEY),
@@ -367,5 +406,5 @@ export async function signOutFromCloud(): Promise<void> {
 
 export function getSignedInUser(): Promise<User | null> {
   if (!supabase) return Promise.resolve(null);
-  return supabase.auth.getUser().then(({ data }) => data.user);
+  return getSession().then((session) => session?.user ?? null);
 }

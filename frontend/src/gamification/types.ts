@@ -38,6 +38,10 @@ export interface GamificationContext {
   bananaWheyMeals: number;
   bigBreakfasts: number;
   midnightMeals: number;
+  personalFoods: number;
+  recipes: number;
+  offPlanMeals: number;
+  returnedToPlanAfterOffPlan: boolean;
 }
 
 export interface AchievementDefinition {

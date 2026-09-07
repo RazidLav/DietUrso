@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   ScrollView,
   StyleSheet,
@@ -16,17 +16,20 @@ import MaterialDesignIcons from "@react-native-vector-icons/material-design-icon
 import { colors, radius, spacing } from "../../src/theme";
 import {
   deleteFood,
-  deleteMeal,
   deleteOption,
   listPlans,
   optionMacros,
+  toggleMealArchived,
   upsertFood,
   upsertMeal,
   upsertOption,
   updatePlan,
 } from "../../src/store/planStore";
 import { MEAL_TYPES } from "../../src/data/dietData";
-import type { Food, Meal, MealOption, Plan, Substitution, Unit } from "../../src/types/plan";
+import type { Food, FoodCatalogItem, Meal, MealOption, Plan, Substitution, Unit } from "../../src/types/plan";
+import { WEEKDAYS_SHORT } from "../../src/utils/date";
+import { listFoodCatalog } from "../../src/store/nutritionStore";
+import { scaleNutrients } from "../../src/nutrition/calculations";
 
 const uid = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
 
@@ -63,8 +66,8 @@ export default function EditorScreen() {
     await load();
   };
 
-  const doDeleteMeal = async (mealId: string) => {
-    await deleteMeal(plan.id, mealId);
+  const doToggleMealArchived = async (mealId: string) => {
+    await toggleMealArchived(plan.id, mealId);
     await load();
   };
   const doDeleteOption = async (mealId: string, optId: string) => {
@@ -80,10 +83,11 @@ export default function EditorScreen() {
       ...meal,
       id: uid(),
       name: meal.name + " (cópia)",
+      archived: false,
       options: meal.options.map((o) => ({
         ...o,
         id: uid(),
-        foods: o.foods.map((f) => ({ ...f, id: uid() })),
+        foods: o.foods.map((f) => ({ ...f, id: uid(), substitutions: f.substitutions.map((substitution) => ({ ...substitution, id: uid() })) })),
       })),
     };
     await upsertMeal(plan.id, copy);
@@ -94,9 +98,18 @@ export default function EditorScreen() {
       ...opt,
       id: uid(),
       name: opt.name + " (cópia)",
-      foods: opt.foods.map((f) => ({ ...f, id: uid() })),
+      foods: opt.foods.map((f) => ({ ...f, id: uid(), substitutions: f.substitutions.map((substitution) => ({ ...substitution, id: uid() })) })),
     };
     await upsertOption(plan.id, mealId, copy);
+    await load();
+  };
+  const doMoveMeal = async (mealId: string, direction: -1 | 1) => {
+    const meals = [...plan.meals];
+    const index = meals.findIndex((meal) => meal.id === mealId);
+    const target = index + direction;
+    if (index < 0 || target < 0 || target >= meals.length) return;
+    [meals[index], meals[target]] = [meals[target], meals[index]];
+    await updatePlan({ ...plan, meals: meals.map((meal, order) => ({ ...meal, order })), updatedAt: new Date().toISOString() });
     await load();
   };
 
@@ -124,17 +137,22 @@ export default function EditorScreen() {
           <Text style={styles.addBtnText}>Adicionar refeição</Text>
         </Pressable>
 
-        {plan.meals.map((meal) => (
-          <View key={meal.id} style={styles.mealBlock} testID={`edit-meal-${meal.id}`}>
+        {plan.meals.slice().sort((a, b) => (a.order ?? 0) - (b.order ?? 0)).map((meal, mealIndex) => (
+          <View key={meal.id} style={[styles.mealBlock, meal.archived && { opacity: 0.55 }]} testID={`edit-meal-${meal.id}`}>
             <View style={styles.mealHeader}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.mealName}>{meal.name}</Text>
-                <Text style={styles.mealMeta}>{meal.options.length} opções</Text>
+                <Text style={styles.mealMeta}>{meal.archived ? "Arquivada · " : ""}{meal.suggestedTime ? `${meal.suggestedTime} · ` : ""}{meal.options.length} opções · {meal.daysOfWeek?.length ? meal.daysOfWeek.map((day) => WEEKDAYS_SHORT[day]).join(", ") : "todos os dias"}</Text>
+              </View>
+              <View style={styles.orderActions}>
+                <Pressable style={styles.orderBtn} disabled={mealIndex === 0} onPress={() => void doMoveMeal(meal.id, -1)}><MaterialDesignIcons name="chevron-up" size={17} color={mealIndex === 0 ? colors.onSurfaceTertiary : colors.onSurface} /></Pressable>
+                <Pressable style={styles.orderBtn} disabled={mealIndex === plan.meals.length - 1} onPress={() => void doMoveMeal(meal.id, 1)}><MaterialDesignIcons name="chevron-down" size={17} color={mealIndex === plan.meals.length - 1 ? colors.onSurfaceTertiary : colors.onSurface} /></Pressable>
               </View>
               <ActionsRow
                 onEdit={() => setModal({ kind: "meal", meal })}
                 onDuplicate={() => doDuplicateMeal(meal)}
-                onDelete={() => doDeleteMeal(meal.id)}
+                onDelete={() => doToggleMealArchived(meal.id)}
+                archiveState={Boolean(meal.archived)}
               />
             </View>
 
@@ -237,10 +255,12 @@ function ActionsRow({
   onEdit,
   onDuplicate,
   onDelete,
+  archiveState,
 }: {
   onEdit: () => void;
   onDuplicate: () => void;
   onDelete: () => void;
+  archiveState?: boolean;
 }) {
   return (
     <View style={{ flexDirection: "row", gap: spacing.xs }}>
@@ -251,7 +271,7 @@ function ActionsRow({
         <MaterialDesignIcons name="content-copy" size={16} color={colors.onSurface} />
       </Pressable>
       <Pressable onPress={onDelete} style={styles.smallIcon}>
-        <MaterialDesignIcons name="trash-can-outline" size={16} color={colors.error} />
+        <MaterialDesignIcons name={archiveState === undefined ? "trash-can-outline" : archiveState ? "archive-arrow-up" : "archive-outline"} size={16} color={archiveState === undefined ? colors.error : colors.brandTertiary} />
       </Pressable>
     </View>
   );
@@ -301,12 +321,19 @@ function EditorModals({
 function MealForm({ planId, meal, onDone, onCancel }: any) {
   const [name, setName] = useState<string>(meal?.name ?? "");
   const [type, setType] = useState<string>(meal?.type ?? "lanche");
+  const [suggestedTime, setSuggestedTime] = useState<string>(meal?.suggestedTime ?? "");
+  const [guidance, setGuidance] = useState<string>(meal?.guidance ?? "");
+  const [daysOfWeek, setDaysOfWeek] = useState<number[]>(meal?.daysOfWeek ?? [0, 1, 2, 3, 4, 5, 6]);
   const submit = async () => {
     const m: Meal = {
       id: meal?.id ?? uid(),
       type,
       name: name.trim() || "Nova refeição",
       options: meal?.options ?? [],
+      suggestedTime: suggestedTime.trim() || undefined,
+      guidance: guidance.trim() || undefined,
+      daysOfWeek,
+      order: meal?.order ?? 999,
     };
     await upsertMeal(planId, m);
     onDone();
@@ -328,6 +355,12 @@ function MealForm({ planId, meal, onDone, onCancel }: any) {
           </Pressable>
         ))}
       </View>
+      <Text style={mStyles.label}>Horário sugerido</Text>
+      <TextInput style={mStyles.input} value={suggestedTime} onChangeText={setSuggestedTime} placeholder="Ex.: 12:30" placeholderTextColor={colors.onSurfaceTertiary} />
+      <Text style={mStyles.label}>Dias de uso</Text>
+      <View style={mStyles.chipRow}>{WEEKDAYS_SHORT.map((label, day) => { const selected = daysOfWeek.includes(day); return <Pressable key={day} style={[mStyles.chip, selected && mStyles.chipSelected]} onPress={() => setDaysOfWeek((current) => selected ? current.filter((value) => value !== day) : [...current, day].sort())}><Text style={[mStyles.chipText, selected && mStyles.chipTextSel]}>{label}</Text></Pressable>; })}</View>
+      <Text style={mStyles.label}>Orientações</Text>
+      <TextInput style={[mStyles.input, { minHeight: 64 }]} value={guidance} onChangeText={setGuidance} multiline />
       <FormActions onCancel={onCancel} onSave={submit} />
     </ScrollView>
   );
@@ -371,8 +404,28 @@ function FoodForm({ planId, mealId, optionId, food, onDone, onCancel }: any) {
   const [p, setP] = useState<string>(food?.protein !== null && food?.protein !== undefined ? String(food.protein) : "");
   const [c, setC] = useState<string>(food?.carbs !== null && food?.carbs !== undefined ? String(food.carbs) : "");
   const [g, setG] = useState<string>(food?.fats !== null && food?.fats !== undefined ? String(food.fats) : "");
+  const [fiber, setFiber] = useState<string>(food?.fiber !== null && food?.fiber !== undefined ? String(food.fiber) : "");
+  const [sodium, setSodium] = useState<string>(food?.sodium !== null && food?.sodium !== undefined ? String(food.sodium) : "");
+  const [foodId, setFoodId] = useState<string | undefined>(food?.foodId);
   const [notes, setNotes] = useState<string>(food?.notes ?? "");
   const [subs, setSubs] = useState<Substitution[]>(food?.substitutions ?? []);
+  const [catalog, setCatalog] = useState<FoodCatalogItem[]>([]);
+  const [showCatalog, setShowCatalog] = useState(false);
+  useEffect(() => { void listFoodCatalog().then(setCatalog); }, []);
+
+  const chooseCatalogFood = (item: FoodCatalogItem) => {
+    setFoodId(item.id); setName(item.name); setQty(String(item.referenceQuantity)); setUnit(item.referenceUnit);
+    setKcal(String(item.nutrients.kcal)); setP(String(item.nutrients.protein)); setC(String(item.nutrients.carbs)); setG(String(item.nutrients.fats));
+    setFiber(String(item.nutrients.fiber)); setSodium(String(item.nutrients.sodium)); setNotes(item.notes ?? ""); setShowCatalog(false);
+  };
+  const changeQuantity = (value: string) => {
+    setQty(value);
+    const item = catalog.find((candidate) => candidate.id === foodId);
+    const amount = Number(value.replace(",", "."));
+    if (!item || item.referenceUnit !== unit || !Number.isFinite(amount) || amount < 0) return;
+    const scaled = scaleNutrients(item.nutrients, item.referenceQuantity, amount);
+    setKcal(String(scaled.kcal)); setP(String(scaled.protein)); setC(String(scaled.carbs)); setG(String(scaled.fats)); setFiber(String(scaled.fiber)); setSodium(String(scaled.sodium));
+  };
 
   const addSub = () => {
     setSubs((prev) => [...prev, { id: uid(), name: "", quantity: 0, unit: "g", kcal: null, protein: null, carbs: null, fats: null }]);
@@ -392,6 +445,11 @@ function FoodForm({ planId, mealId, optionId, food, onDone, onCancel }: any) {
       protein: p === "" ? null : Number(p),
       carbs: c === "" ? null : Number(c),
       fats: g === "" ? null : Number(g),
+      fiber: fiber === "" ? null : Number(fiber),
+      sodium: sodium === "" ? null : Number(sodium),
+      foodId,
+      referenceQuantity: Number(qty) || 0,
+      referenceUnit: unit,
       notes,
       substitutions: subs.filter((s) => s.name.trim()),
     };
@@ -402,6 +460,8 @@ function FoodForm({ planId, mealId, optionId, food, onDone, onCancel }: any) {
   return (
     <ScrollView>
       <Text style={mStyles.title}>{food ? "Editar alimento" : "Novo alimento"}</Text>
+      <Pressable style={mStyles.catalogBtn} onPress={() => setShowCatalog((value) => !value)}><MaterialDesignIcons name="basket-outline" size={17} color={colors.brandPrimary} /><Text style={mStyles.catalogBtnText}>Escolher do banco de alimentos</Text></Pressable>
+      {showCatalog ? <View style={mStyles.catalogList}>{catalog.map((item) => <Pressable key={item.id} style={mStyles.catalogRow} onPress={() => chooseCatalogFood(item)}><View style={{ flex: 1 }}><Text style={mStyles.catalogName}>{item.name}</Text><Text style={mStyles.catalogMeta}>{item.referenceQuantity} {item.referenceUnit} · {Math.round(item.nutrients.kcal)} kcal</Text></View><MaterialDesignIcons name="plus-circle" size={20} color={colors.brandPrimary} /></Pressable>)}</View> : null}
       <Text style={mStyles.label}>Nome</Text>
       <TextInput style={mStyles.input} value={name} onChangeText={setName} testID="food-name-input" />
 
@@ -411,7 +471,7 @@ function FoodForm({ planId, mealId, optionId, food, onDone, onCancel }: any) {
           <TextInput
             style={mStyles.input}
             value={qty}
-            onChangeText={setQty}
+            onChangeText={changeQuantity}
             keyboardType="numeric"
             testID="food-qty-input"
           />
@@ -419,7 +479,7 @@ function FoodForm({ planId, mealId, optionId, food, onDone, onCancel }: any) {
         <View style={{ flex: 1 }}>
           <Text style={mStyles.label}>Unidade</Text>
           <View style={mStyles.unitRow}>
-            {(["g", "ml", "un"] as Unit[]).map((u) => (
+            {(["g", "ml", "un", "porcao"] as Unit[]).map((u) => (
               <Pressable
                 key={u}
                 style={[mStyles.unitChip, unit === u && mStyles.unitChipSel]}
@@ -430,6 +490,10 @@ function FoodForm({ planId, mealId, optionId, food, onDone, onCancel }: any) {
             ))}
           </View>
         </View>
+      </View>
+      <View style={{ flexDirection: "row", gap: spacing.sm }}>
+        <SmallField label="Fibras (g)" v={fiber} on={setFiber} />
+        <SmallField label="Sódio (mg)" v={sodium} on={setSodium} />
       </View>
 
       <View style={{ flexDirection: "row", gap: spacing.sm }}>
@@ -468,7 +532,7 @@ function FoodForm({ planId, mealId, optionId, food, onDone, onCancel }: any) {
               onChangeText={(v) => updateSub(i, { quantity: Number(v) || 0 })}
             />
             <View style={[mStyles.unitRow, { flex: 1 }]}>
-              {(["g", "ml", "un"] as Unit[]).map((u) => (
+              {(["g", "ml", "un", "porcao"] as Unit[]).map((u) => (
                 <Pressable
                   key={u}
                   style={[mStyles.unitChip, s.unit === u && mStyles.unitChipSel]}
@@ -545,6 +609,8 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   mealHeader: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  orderActions: { gap: 2 },
+  orderBtn: { width: 27, height: 24, borderRadius: radius.sm, backgroundColor: colors.surfaceTertiary, alignItems: "center", justifyContent: "center" },
   mealName: { color: colors.onSurface, fontSize: 16, fontWeight: "700" },
   mealMeta: { color: colors.onSurfaceTertiary, fontSize: 11, marginTop: 2 },
   optionsBlock: { gap: spacing.sm },
@@ -609,6 +675,12 @@ const mStyles = StyleSheet.create({
     borderRadius: radius.sm,
     fontSize: 14,
   },
+  catalogBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: spacing.sm, borderWidth: 1, borderColor: colors.brandPrimary + "55", backgroundColor: colors.brandPrimary + "12", padding: spacing.md, borderRadius: radius.md, marginBottom: spacing.sm },
+  catalogBtnText: { color: colors.brandPrimary, fontSize: 12, fontWeight: "800" },
+  catalogList: { gap: 4, backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.sm, maxHeight: 260, overflow: "hidden" },
+  catalogRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, padding: spacing.sm, backgroundColor: colors.surfaceTertiary, borderRadius: radius.sm },
+  catalogName: { color: colors.onSurface, fontSize: 12, fontWeight: "700" },
+  catalogMeta: { color: colors.onSurfaceTertiary, fontSize: 10, marginTop: 2 },
   chipRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs, marginTop: 4 },
   chip: {
     paddingHorizontal: spacing.md,
