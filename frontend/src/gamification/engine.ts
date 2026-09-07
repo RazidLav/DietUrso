@@ -7,12 +7,14 @@ import {
   FOOD_LIBRARY_KEY,
   GAMIFICATION_KEY,
   HYDRATION_STATE_KEY,
+  TRAINING_STATE_KEY,
   PLANS_KEY,
   RECIPES_KEY,
   WATER_KEY,
 } from "../store/storageKeys";
 import type { ConsumptionEntry, FoodCatalogItem, MealOption, Plan, Recipe } from "../types/plan";
 import type { HydrationState } from "../hydration/types";
+import type { TrainingState } from "../training/types";
 import { entryNutrients } from "../nutrition/records";
 import { categorizeFood } from "../utils/categories";
 import { ACHIEVEMENTS, findAchievement } from "./achievements";
@@ -153,6 +155,7 @@ function buildContext(
   chosen: ChosenOptions,
   water: WaterByDate,
   hydration: HydrationState | undefined,
+  training: TrainingState | undefined,
   personalFoods = 0,
   recipes = 0
 ): { context: GamificationContext; completedDates: string[]; proteinDates: string[]; balanceDates: string[]; waterDates: string[] } {
@@ -205,6 +208,19 @@ function buildContext(
     .filter(([date, amount]) => amount >= (hydration?.daySnapshots[date]?.dailyGoalMl ?? hydration?.config.dailyGoalMl ?? WATER_GOAL_ML))
     .map(([date]) => date);
   const waterStreak = streaks(waterDates);
+  const completedWorkouts = training?.sessions.filter((session) => session.status === "completed") ?? [];
+  const workoutDates = Array.from(new Set(completedWorkouts.map((session) => session.date)));
+  const workoutStreak = streaks(workoutDates);
+  const modalityDays = new Map<string, Set<string>>();
+  completedWorkouts.forEach((session) => modalityDays.set(session.date, new Set([...(modalityDays.get(session.date) ?? []), session.activityType])));
+  const weekDays = new Map<string, Set<string>>();
+  workoutDates.forEach((date) => {
+    const value = new Date(`${date}T12:00:00`);
+    const monday = new Date(value);
+    monday.setDate(value.getDate() - ((value.getDay() + 6) % 7));
+    const key = `${monday.getFullYear()}-${String(monday.getMonth() + 1).padStart(2, "0")}-${String(monday.getDate()).padStart(2, "0")}`;
+    weekDays.set(key, new Set([...(weekDays.get(key) ?? []), date]));
+  });
   const activeSet = new Set(activeDates);
   const returnedAfterOverGoal = overDates.some((date) => {
     const next = new Date(`${date}T12:00:00`);
@@ -234,6 +250,20 @@ function buildContext(
     waterBestStreak: waterStreak.best,
     waterRecords: hydration?.records.filter((record) => record.source !== "legacy").length ?? 0,
     customContainerUses: hydration?.records.filter((record) => record.source === "container").length ?? 0,
+    workoutSessions: completedWorkouts.length,
+    strengthSessions: completedWorkouts.filter((session) => session.activityType === "strength").length,
+    mobilitySessions: completedWorkouts.filter((session) => session.activityType === "mobility").length,
+    runningSessions: completedWorkouts.filter((session) => session.activityType === "running").length,
+    cyclingSessions: completedWorkouts.filter((session) => session.activityType === "cycling").length,
+    crossfitSessions: completedWorkouts.filter((session) => session.activityType === "crossfit").length,
+    customSessions: completedWorkouts.filter((session) => session.activityType === "custom").length,
+    workoutCurrentStreak: workoutStreak.current,
+    workoutBestStreak: workoutStreak.best,
+    completeTrainingWeeks: Array.from(weekDays.values()).filter((dates) => dates.size >= 3).length,
+    personalRecords: training?.personalRecords.length ?? 0,
+    fiveKmRuns: completedWorkouts.filter((session) => (session.result.running?.distanceKm ?? 0) >= 5).length,
+    tenKmRuns: completedWorkouts.filter((session) => (session.result.running?.distanceKm ?? 0) >= 10).length,
+    multiModalityDays: Array.from(modalityDays.values()).filter((types) => types.size >= 2).length,
     wheyMeals: resolved.filter((item) => contains(item, /\bwhey\b/)).length,
     chickenMeals: resolved.filter((item) => contains(item, /\bfrango\b/)).length,
     cheeseMeals: resolved.filter((item) => contains(item, /queijo|mucarela|requeijao|coalho/)).length,
@@ -275,7 +305,7 @@ function sanitizeState(value: GamificationState): GamificationState {
 }
 
 export async function evaluateGamification(): Promise<GamificationSummary> {
-  const [plans, activePlanId, entries, chosen, water, storedState, foods, recipes, hydration] = await Promise.all([
+  const [plans, activePlanId, entries, chosen, water, storedState, foods, recipes, hydration, training] = await Promise.all([
     readJson<Plan[]>(PLANS_KEY, []),
     AsyncStorage.getItem(ACTIVE_PLAN_KEY),
     readJson<ConsumptionEntry[]>(CONSUMPTION_KEY, []),
@@ -285,6 +315,7 @@ export async function evaluateGamification(): Promise<GamificationSummary> {
     readJson<FoodCatalogItem[]>(FOOD_LIBRARY_KEY, []),
     readJson<Recipe[]>(RECIPES_KEY, []),
     readJson<HydrationState | undefined>(HYDRATION_STATE_KEY, undefined),
+    readJson<TrainingState | undefined>(TRAINING_STATE_KEY, undefined),
   ]);
   const plan = plans.find((candidate) => candidate.id === activePlanId) ?? plans.find((candidate) => !candidate.archived) ?? null;
   const state = sanitizeState(storedState);
@@ -294,6 +325,7 @@ export async function evaluateGamification(): Promise<GamificationSummary> {
     chosen,
     water,
     hydration,
+    training,
     foods.filter((food) => food.scope === "personal").length,
     recipes.filter((recipe) => !recipe.archived).length
   );
@@ -314,6 +346,8 @@ export async function evaluateGamification(): Promise<GamificationSummary> {
   proteinDates.forEach((date) => reward(`protein:${date}`, XP_REWARDS.proteinGoal));
   balanceDates.forEach((date) => reward(`balance:${date}`, XP_REWARDS.calorieBalance));
   waterDates.forEach((date) => reward(`water:${date}`, XP_REWARDS.waterGoal));
+  training?.sessions.filter((session) => session.status === "completed").forEach((session) => reward(`workout:${session.id}`, XP_REWARDS.workoutCompleted));
+  training?.personalRecords.forEach((record) => reward(record.dedupeKey, XP_REWARDS.personalRecord));
   foods.filter((food) => food.scope === "personal").forEach((food) => reward(`food-created:${food.id}`, XP_REWARDS.foodCreated));
   recipes.forEach((recipe) => reward(`recipe-created:${recipe.id}`, XP_REWARDS.recipeCreated));
   entries.filter((entry) => entry.status === "off_plan").forEach((entry) => reward(`off-plan:${entry.id}`, XP_REWARDS.offPlanLogged));

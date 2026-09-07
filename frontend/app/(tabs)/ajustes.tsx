@@ -121,6 +121,21 @@ export default function AjustesScreen() {
           <MaterialDesignIcons name="chevron-right" size={22} color={colors.onSurfaceTertiary} />
         </Pressable>
 
+        <Pressable
+          style={styles.statsShortcut}
+          onPress={() => router.push("/treinos")}
+          testID="ajustes-training-shortcut"
+        >
+          <View style={[styles.statsIconWrap, { backgroundColor: colors.brandPrimary + "22" }]}>
+            <MaterialDesignIcons name="arm-flex-outline" size={22} color={colors.brandPrimary} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.statsTitle}>Treinos completos</Text>
+            <Text style={styles.statsDesc}>Planos, sessões, exercícios e evolução</Text>
+          </View>
+          <MaterialDesignIcons name="chevron-right" size={22} color={colors.onSurfaceTertiary} />
+        </Pressable>
+
         <Text style={styles.sectionLabel}>PLANOS</Text>
         {plans.map((p) => {
           const active = p.id === activeId;

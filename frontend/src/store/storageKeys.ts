@@ -8,6 +8,7 @@ export const LOCAL_CHANGED_AT_KEY = "urso:localChangedAt";
 export const GAMIFICATION_KEY = "urso:gamification";
 export const WATER_KEY = "urso:water";
 export const HYDRATION_STATE_KEY = "urso:hydration_v1";
+export const TRAINING_STATE_KEY = "urso:training_v1";
 export const ONBOARDING_COMPLETE_KEY = "urso:onboardingComplete";
 export const FOOD_LIBRARY_KEY = "urso:foodLibrary_v1";
 export const RECIPES_KEY = "urso:recipes_v1";

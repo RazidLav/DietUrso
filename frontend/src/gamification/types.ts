@@ -10,6 +10,7 @@ export type AchievementCategory =
   | "Proteína"
   | "Alimentação"
   | "Água"
+  | "Treinos"
   | "Secretas";
 
 export interface GamificationContext {
@@ -25,6 +26,20 @@ export interface GamificationContext {
   waterBestStreak: number;
   waterRecords: number;
   customContainerUses: number;
+  workoutSessions: number;
+  strengthSessions: number;
+  mobilitySessions: number;
+  runningSessions: number;
+  cyclingSessions: number;
+  crossfitSessions: number;
+  customSessions: number;
+  workoutCurrentStreak: number;
+  workoutBestStreak: number;
+  completeTrainingWeeks: number;
+  personalRecords: number;
+  fiveKmRuns: number;
+  tenKmRuns: number;
+  multiModalityDays: number;
   wheyMeals: number;
   chickenMeals: number;
   cheeseMeals: number;
