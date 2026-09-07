@@ -6,15 +6,18 @@ import {
   CONSUMPTION_KEY,
   FOOD_LIBRARY_KEY,
   GAMIFICATION_KEY,
+  HYDRATION_STATE_KEY,
   PLANS_KEY,
   RECIPES_KEY,
   WATER_KEY,
 } from "../store/storageKeys";
 import type { ConsumptionEntry, FoodCatalogItem, MealOption, Plan, Recipe } from "../types/plan";
+import type { HydrationState } from "../hydration/types";
 import { entryNutrients } from "../nutrition/records";
 import { categorizeFood } from "../utils/categories";
 import { ACHIEVEMENTS, findAchievement } from "./achievements";
 import { levelFromXp, WATER_GOAL_ML, XP_REWARDS } from "./config";
+import { applyIdempotentReward } from "./rewards";
 import {
   createInitialGamificationState,
   type GamificationContext,
@@ -149,6 +152,7 @@ function buildContext(
   plan: Plan | null,
   chosen: ChosenOptions,
   water: WaterByDate,
+  hydration: HydrationState | undefined,
   personalFoods = 0,
   recipes = 0
 ): { context: GamificationContext; completedDates: string[]; proteinDates: string[]; balanceDates: string[]; waterDates: string[] } {
@@ -198,7 +202,7 @@ function buildContext(
   });
 
   const waterDates = Object.entries(water)
-    .filter(([, amount]) => amount >= WATER_GOAL_ML)
+    .filter(([date, amount]) => amount >= (hydration?.daySnapshots[date]?.dailyGoalMl ?? hydration?.config.dailyGoalMl ?? WATER_GOAL_ML))
     .map(([date]) => date);
   const waterStreak = streaks(waterDates);
   const activeSet = new Set(activeDates);
@@ -228,6 +232,8 @@ function buildContext(
     waterGoalDays: waterDates.length,
     waterCurrentStreak: waterStreak.current,
     waterBestStreak: waterStreak.best,
+    waterRecords: hydration?.records.filter((record) => record.source !== "legacy").length ?? 0,
+    customContainerUses: hydration?.records.filter((record) => record.source === "container").length ?? 0,
     wheyMeals: resolved.filter((item) => contains(item, /\bwhey\b/)).length,
     chickenMeals: resolved.filter((item) => contains(item, /\bfrango\b/)).length,
     cheeseMeals: resolved.filter((item) => contains(item, /queijo|mucarela|requeijao|coalho/)).length,
@@ -269,7 +275,7 @@ function sanitizeState(value: GamificationState): GamificationState {
 }
 
 export async function evaluateGamification(): Promise<GamificationSummary> {
-  const [plans, activePlanId, entries, chosen, water, storedState, foods, recipes] = await Promise.all([
+  const [plans, activePlanId, entries, chosen, water, storedState, foods, recipes, hydration] = await Promise.all([
     readJson<Plan[]>(PLANS_KEY, []),
     AsyncStorage.getItem(ACTIVE_PLAN_KEY),
     readJson<ConsumptionEntry[]>(CONSUMPTION_KEY, []),
@@ -278,6 +284,7 @@ export async function evaluateGamification(): Promise<GamificationSummary> {
     readJson<GamificationState>(GAMIFICATION_KEY, createInitialGamificationState()),
     readJson<FoodCatalogItem[]>(FOOD_LIBRARY_KEY, []),
     readJson<Recipe[]>(RECIPES_KEY, []),
+    readJson<HydrationState | undefined>(HYDRATION_STATE_KEY, undefined),
   ]);
   const plan = plans.find((candidate) => candidate.id === activePlanId) ?? plans.find((candidate) => !candidate.archived) ?? null;
   const state = sanitizeState(storedState);
@@ -286,6 +293,7 @@ export async function evaluateGamification(): Promise<GamificationSummary> {
     plan,
     chosen,
     water,
+    hydration,
     foods.filter((food) => food.scope === "personal").length,
     recipes.filter((recipe) => !recipe.archived).length
   );
@@ -294,9 +302,10 @@ export async function evaluateGamification(): Promise<GamificationSummary> {
   let changed = false;
 
   const reward = (eventId: string, amount: number) => {
-    if (rewarded.has(eventId)) return;
+    const result = applyIdempotentReward(rewarded, totalXp, eventId, amount);
+    if (!result.rewarded) return;
     rewarded.add(eventId);
-    totalXp += amount;
+    totalXp = result.totalXp;
     changed = true;
   };
 

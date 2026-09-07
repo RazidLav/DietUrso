@@ -23,6 +23,8 @@ export interface GamificationContext {
   waterGoalDays: number;
   waterCurrentStreak: number;
   waterBestStreak: number;
+  waterRecords: number;
+  customContainerUses: number;
   wheyMeals: number;
   chickenMeals: number;
   cheeseMeals: number;

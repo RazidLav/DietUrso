@@ -2,6 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { Session, User } from "@supabase/supabase-js";
 import type { ConsumptionEntry, FoodCatalogItem, Plan, Recipe } from "../types/plan";
 import type { ShoppingConfig } from "../store/nutritionStore";
+import type { HydrationState } from "../hydration/types";
 import { createInitialGamificationState, type GamificationState } from "../gamification/types";
 import {
   ACTIVE_PLAN_KEY,
@@ -9,6 +10,7 @@ import {
   CONSUMPTION_KEY,
   FOOD_LIBRARY_KEY,
   GAMIFICATION_KEY,
+  HYDRATION_STATE_KEY,
   LOCAL_CHANGED_AT_KEY,
   ONBOARDING_COMPLETE_KEY,
   NUTRITION_SEED_KEY,
@@ -37,7 +39,7 @@ export interface CloudStatus {
 }
 
 interface AppSnapshot {
-  version: 1 | 2 | 3;
+  version: 1 | 2 | 3 | 4;
   plans: Plan[];
   activePlanId: string | null;
   consumption: ConsumptionEntry[];
@@ -49,6 +51,7 @@ interface AppSnapshot {
   foodLibrary?: FoodCatalogItem[];
   recipes?: Recipe[];
   shoppingConfig?: ShoppingConfig;
+  hydrationState?: HydrationState;
 }
 
 type CloudRow = {
@@ -92,7 +95,7 @@ async function readJson<T>(key: string, fallback: T): Promise<T> {
 }
 
 async function readLocalSnapshot(): Promise<AppSnapshot> {
-  const [plans, activePlanId, consumption, chosenOptions, shoppingChecked, gamification, waterByDate, onboardingComplete, foodLibrary, recipes, shoppingConfig] =
+  const [plans, activePlanId, consumption, chosenOptions, shoppingChecked, gamification, waterByDate, onboardingComplete, foodLibrary, recipes, shoppingConfig, hydrationState] =
     await Promise.all([
       readJson<Plan[]>(PLANS_KEY, []),
       AsyncStorage.getItem(ACTIVE_PLAN_KEY),
@@ -110,10 +113,11 @@ async function readLocalSnapshot(): Promise<AppSnapshot> {
         quantityOverrides: {},
         manualItems: [],
       }),
+      readJson<HydrationState | undefined>(HYDRATION_STATE_KEY, undefined),
     ]);
 
   return {
-    version: 3,
+    version: 4,
     plans,
     activePlanId,
     consumption,
@@ -125,6 +129,7 @@ async function readLocalSnapshot(): Promise<AppSnapshot> {
     foodLibrary,
     recipes,
     shoppingConfig,
+    hydrationState,
   };
 }
 
@@ -132,7 +137,7 @@ function isValidSnapshot(value: unknown): value is AppSnapshot {
   if (!value || typeof value !== "object") return false;
   const candidate = value as Partial<AppSnapshot>;
   return (
-    (candidate.version === 1 || candidate.version === 2 || candidate.version === 3) &&
+    (candidate.version === 1 || candidate.version === 2 || candidate.version === 3 || candidate.version === 4) &&
     Array.isArray(candidate.plans) &&
     Array.isArray(candidate.consumption) &&
     typeof candidate.chosenOptions === "object" &&
@@ -168,13 +173,13 @@ async function applyCloudSnapshot(row: CloudRow) {
         JSON.stringify(row.payload.gamification ?? createInitialGamificationState())
       ),
       AsyncStorage.setItem(WATER_KEY, JSON.stringify(row.payload.waterByDate ?? {})),
-      row.payload.version === 3
+      row.payload.version >= 3
         ? AsyncStorage.setItem(FOOD_LIBRARY_KEY, JSON.stringify(row.payload.foodLibrary ?? []))
         : Promise.resolve(),
-      row.payload.version === 3
+      row.payload.version >= 3
         ? AsyncStorage.setItem(RECIPES_KEY, JSON.stringify(row.payload.recipes ?? []))
         : Promise.resolve(),
-      row.payload.version === 3
+      row.payload.version >= 3
         ? AsyncStorage.setItem(
             SHOPPING_CONFIG_KEY,
             JSON.stringify(row.payload.shoppingConfig ?? {
@@ -185,8 +190,11 @@ async function applyCloudSnapshot(row: CloudRow) {
             })
           )
         : Promise.resolve(),
-      row.payload.version === 3
+      row.payload.version >= 3
         ? AsyncStorage.setItem(NUTRITION_SEED_KEY, "1")
+        : Promise.resolve(),
+      row.payload.version >= 4 && row.payload.hydrationState
+        ? AsyncStorage.setItem(HYDRATION_STATE_KEY, JSON.stringify(row.payload.hydrationState))
         : Promise.resolve(),
       row.payload.onboardingComplete
         ? AsyncStorage.setItem(ONBOARDING_COMPLETE_KEY, "1")

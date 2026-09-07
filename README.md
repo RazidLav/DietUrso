@@ -1,6 +1,6 @@
 # DietUrso
 
-Aplicativo pessoal de planejamento alimentar, diário de consumo, receitas, lista de compras e conquistas.
+Aplicativo pessoal de planejamento alimentar, diário de consumo, hidratação inteligente, receitas, lista de compras e conquistas.
 
 O projeto usa Expo Router e React Native Web. Os dados são gravados primeiro no armazenamento local para o app continuar rápido e funcionar sem internet. Quando o usuário conecta uma conta, o estado também é sincronizado pelo Supabase.
 
@@ -43,9 +43,21 @@ Ao criar um Blueprint no Render, selecione este repositório e confirme a config
 
 O schema do banco e as políticas de acesso ficam em `supabase/migrations`. A tabela usa Row Level Security: cada usuário só pode ler e alterar o próprio registro.
 
-Sem login, os dados permanecem somente no aparelho. Após entrar com a mesma conta em dois dispositivos, planos, refeições registradas, opções escolhidas, alimentos pessoais, receitas, lista de compras, água, XP e conquistas são sincronizados. Alterações feitas offline são enviadas quando o app volta a ter conexão.
+Sem login, os dados permanecem somente no aparelho. Após entrar com a mesma conta em dois dispositivos, planos, refeições registradas, opções escolhidas, alimentos pessoais, receitas, lista de compras, hidratação, XP e conquistas são sincronizados. Alterações feitas offline são enviadas quando o app volta a ter conexão.
 
-O snapshot sincronizado está na versão 3 e permanece compatível com dados antigos das versões 1 e 2. Plano e consumo são estruturas separadas; novos registros guardam snapshots dos itens e da meta planejada do dia para impedir alterações retroativas no histórico.
+O snapshot sincronizado está na versão 4 e permanece compatível com dados antigos das versões 1, 2 e 3. Plano e consumo são estruturas separadas; novos registros guardam snapshots dos itens e da meta planejada do dia para impedir alterações retroativas no histórico.
+
+## Hidratação inteligente
+
+- Meta, horários de acordar/dormir e fuso configuráveis, sem substituir automaticamente a escolha do usuário.
+- Ritmo esperado proporcional ao horário, com suporte a rotinas que cruzam a meia-noite.
+- Seis atalhos de volume, quantidade manual e recipientes favoritos configuráveis.
+- Registros individuais editáveis e excluíveis, com ação para desfazer o último registro.
+- Histórico diário, semanal e mensal que preserva a meta de cada data.
+- Lembretes internos com intervalo, período silencioso, adiamento e deduplicação.
+- Percentuais acima de 100% são preservados; a interface não pune nem remove XP por ultrapassar a meta.
+
+Detalhes técnicos e critérios da Etapa 3 estão em `docs/HIDRATACAO_ETAPA_3.md`.
 
 ## Alimentação completa
 
@@ -62,6 +74,6 @@ Mais detalhes e instruções da migração estão em `docs/ALIMENTACAO_ETAPA_2.m
 
 ## Gamificação
 
-O catálogo modular de conquistas fica em `frontend/src/gamification/achievements.ts` e os valores de XP, níveis e meta de água ficam em `frontend/src/gamification/config.ts`. O motor usa chaves determinísticas para impedir que marcar e desmarcar a mesma refeição gere XP repetido.
+O catálogo modular de conquistas fica em `frontend/src/gamification/achievements.ts` e os valores de XP e níveis ficam em `frontend/src/gamification/config.ts`. A meta de hidratação é personalizada no próprio módulo. O motor usa chaves determinísticas para impedir XP repetido após edição, sincronização ou reprocessamento.
 
 A sequência considera dias com ao menos um registro alimentar. Nenhuma regra remove XP ou pune o usuário por ultrapassar metas; o sistema recompensa registro, consistência, hidratação, variedade e retorno à rotina.

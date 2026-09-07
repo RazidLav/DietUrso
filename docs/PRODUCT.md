@@ -5,6 +5,7 @@ O DietUrso é um aplicativo pessoal, local-first, para planejamento alimentar. O
 ## Funcionalidades atuais
 
 - Dashboard diário com planejado, consumido, diferença, hidratação, XP e conquistas.
+- Hidratação inteligente com ritmo proporcional, registros individuais, recipientes, lembretes internos e histórico.
 - Banco de alimentos global e pessoal, com nutrientes por quantidade de referência.
 - Receitas com ingredientes, rendimento e cálculo automático por porção.
 - Registro de refeições conforme o plano, com quantidade real, substituição, horário e observação.
@@ -22,7 +23,8 @@ O DietUrso é um aplicativo pessoal, local-first, para planejamento alimentar. O
 - Snapshot por usuário em `public.user_app_state`, protegido por RLS.
 - Hospedagem web estática no Render.
 - Interface em Português do Brasil.
+- Snapshot remoto versão 4, retrocompatível com as versões 1 a 3.
 
 ## Persistência e histórico
 
-Sem autenticação, os dados pertencem ao navegador ou dispositivo. Com a mesma conta conectada, o snapshot é sincronizado entre aparelhos. O plano continua separado do consumo; cada novo registro preserva os itens realmente consumidos e a meta planejada daquele dia.
+Sem autenticação, os dados pertencem ao navegador ou dispositivo. Com a mesma conta conectada, o snapshot é sincronizado entre aparelhos. O plano continua separado do consumo; cada novo registro preserva os itens realmente consumidos e a meta planejada daquele dia. Na hidratação, cada dia também preserva a meta, os horários e o fuso vigentes, evitando que uma preferência futura reescreva o histórico.

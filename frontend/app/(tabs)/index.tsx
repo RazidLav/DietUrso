@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import { ScrollView, StyleSheet, Text, View, RefreshControl, Pressable } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -24,7 +24,8 @@ import WaterCard from "../../src/components/WaterCard";
 import AchievementUnlockModal from "../../src/components/AchievementUnlockModal";
 import { dismissAchievement, evaluateGamification, getPendingAchievement } from "../../src/gamification/engine";
 import type { AchievementDefinition, GamificationSummary } from "../../src/gamification/types";
-import { changeWater, getWater } from "../../src/store/waterStore";
+import { addHydrationRecord, getHydrationSummary } from "../../src/store/hydrationStore";
+import type { HydrationSummary } from "../../src/hydration/types";
 import { createPlanConsumption, dayConsumedNutrients, entryNutrients } from "../../src/nutrition/records";
 import { listFoodCatalog } from "../../src/store/nutritionStore";
 
@@ -36,7 +37,9 @@ export default function HojeScreen() {
   const [chosen, setChosen] = useState<Record<string, string>>({});
   const [refreshing, setRefreshing] = useState(false);
   const [gamification, setGamification] = useState<GamificationSummary | null>(null);
-  const [water, setWater] = useState(0);
+  const [water, setWater] = useState<HydrationSummary | null>(null);
+  const [savingWater, setSavingWater] = useState(false);
+  const waterLock = useRef(false);
   const [pendingAchievement, setPendingAchievement] = useState<AchievementDefinition | null>(null);
 
   const load = useCallback(async () => {
@@ -54,7 +57,7 @@ export default function HojeScreen() {
     }
     const game = await evaluateGamification();
     const [waterAmount, pending] = await Promise.all([
-      getWater(todayISO()),
+      getHydrationSummary(),
       getPendingAchievement(),
     ]);
     setGamification(game);
@@ -88,9 +91,19 @@ export default function HojeScreen() {
     await load();
   };
 
-  const handleWater = async (delta: number) => {
-    await changeWater(today, delta);
-    await load();
+  const handleWater = async () => {
+    if (waterLock.current) return;
+    waterLock.current = true;
+    setSavingWater(true);
+    try {
+      await addHydrationRecord({ amountMl: 250, source: "quick", idempotencyKey: `home-250:${Date.now()}` });
+      await load();
+    } catch {
+      await load();
+    } finally {
+      waterLock.current = false;
+      setSavingWater(false);
+    }
   };
 
   const handleDismissAchievement = async () => {
@@ -166,9 +179,9 @@ export default function HojeScreen() {
         </View>
       </View>
 
-      <View style={styles.section}>
-        <WaterCard amount={water} onChange={handleWater} />
-      </View>
+      {water ? <View style={styles.section}>
+        <WaterCard summary={water} onQuickAdd={handleWater} onPress={() => router.push("/hidratacao")} saving={savingWater} />
+      </View> : null}
 
       {/* Progress ring / counter */}
       <View style={[styles.section, styles.progressCard]}>
