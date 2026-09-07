@@ -1,6 +1,6 @@
 # DietUrso
 
-Aplicativo pessoal de planejamento alimentar, diário de consumo, hidratação inteligente, receitas, lista de compras e conquistas.
+Aplicativo pessoal de planejamento alimentar, diário de consumo, hidratação inteligente, treinos, receitas, lista de compras e conquistas.
 
 O projeto usa Expo Router e React Native Web. Os dados são gravados primeiro no armazenamento local para o app continuar rápido e funcionar sem internet. Quando o usuário conecta uma conta, o estado também é sincronizado pelo Supabase.
 
@@ -43,9 +43,21 @@ Ao criar um Blueprint no Render, selecione este repositório e confirme a config
 
 O schema do banco e as políticas de acesso ficam em `supabase/migrations`. A tabela usa Row Level Security: cada usuário só pode ler e alterar o próprio registro.
 
-Sem login, os dados permanecem somente no aparelho. Após entrar com a mesma conta em dois dispositivos, planos, refeições registradas, opções escolhidas, alimentos pessoais, receitas, lista de compras, hidratação, XP e conquistas são sincronizados. Alterações feitas offline são enviadas quando o app volta a ter conexão.
+Sem login, os dados permanecem somente no aparelho. Após entrar com a mesma conta em dois dispositivos, planos, refeições registradas, opções escolhidas, alimentos pessoais, receitas, lista de compras, hidratação, treinos, XP e conquistas são sincronizados. Alterações feitas offline são enviadas quando o app volta a ter conexão.
 
-O snapshot sincronizado está na versão 4 e permanece compatível com dados antigos das versões 1, 2 e 3. Plano e consumo são estruturas separadas; novos registros guardam snapshots dos itens e da meta planejada do dia para impedir alterações retroativas no histórico.
+O snapshot sincronizado está na versão 5 e permanece compatível com dados antigos das versões 1 a 4. Planos, sessões planejadas e execuções de treino são estruturas separadas; novos registros guardam snapshots para impedir alterações retroativas no histórico.
+
+## Treinos completos
+
+- Sessões independentes de mobilidade, musculação, CrossFit, corrida, bike e atividades personalizadas, inclusive várias no mesmo dia.
+- Planos semanais, sessões avulsas e modelos reutilizáveis com cópia, reordenação, substituição excepcional e arquivamento lógico.
+- Catálogo global somente leitura e exercícios pessoais editáveis, pesquisáveis, favoritos e arquiváveis.
+- Musculação com séries planejadas e executadas, carga opcional, RIR, RPE, descanso, cadência, técnicas intensificadoras e sugestão da última execução.
+- Corrida, bike e CrossFit com blocos próprios; mobilidade com registro separado por movimento e lado.
+- Rascunho recuperável, pausa, conclusão parcial, cronômetro interno, histórico, evolução e recordes pessoais idempotentes.
+- Conquistas e XP de treino processados por chaves determinísticas, sem concluir outra modalidade automaticamente.
+
+Detalhes da arquitetura, persistência e validação estão em `docs/TREINOS_ETAPA_4.md`.
 
 ## Hidratação inteligente
 

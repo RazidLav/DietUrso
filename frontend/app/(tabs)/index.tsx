@@ -28,6 +28,10 @@ import { addHydrationRecord, getHydrationSummary } from "../../src/store/hydrati
 import type { HydrationSummary } from "../../src/hydration/types";
 import { createPlanConsumption, dayConsumedNutrients, entryNutrients } from "../../src/nutrition/records";
 import { listFoodCatalog } from "../../src/store/nutritionStore";
+import TrainingSummaryCard from "../../src/components/TrainingSummaryCard";
+import type { TrainingDayEntry } from "../../src/training/types";
+import { dayEntries } from "../../src/training/calculations";
+import { getTrainingState, prepareTrainingRange } from "../../src/store/trainingStore";
 
 export default function HojeScreen() {
   const insets = useSafeAreaInsets();
@@ -41,8 +45,11 @@ export default function HojeScreen() {
   const [savingWater, setSavingWater] = useState(false);
   const waterLock = useRef(false);
   const [pendingAchievement, setPendingAchievement] = useState<AchievementDefinition | null>(null);
+  const [trainingEntries, setTrainingEntries] = useState<TrainingDayEntry[]>([]);
 
   const load = useCallback(async () => {
+    const currentDate = todayISO();
+    await prepareTrainingRange(currentDate, currentDate);
     const p = await getActivePlan();
     setPlan(p);
     const c = await listConsumption();
@@ -56,13 +63,15 @@ export default function HojeScreen() {
       setChosen(map);
     }
     const game = await evaluateGamification();
-    const [waterAmount, pending] = await Promise.all([
+    const [waterAmount, pending, training] = await Promise.all([
       getHydrationSummary(),
       getPendingAchievement(),
+      getTrainingState(),
     ]);
     setGamification(game);
     setWater(waterAmount);
     setPendingAchievement(pending);
+    setTrainingEntries(dayEntries(training, currentDate));
   }, []);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
@@ -182,6 +191,10 @@ export default function HojeScreen() {
       {water ? <View style={styles.section}>
         <WaterCard summary={water} onQuickAdd={handleWater} onPress={() => router.push("/hidratacao")} saving={savingWater} />
       </View> : null}
+
+      <View style={styles.section}>
+        <TrainingSummaryCard entries={trainingEntries} onPress={() => router.push("/treinos")} />
+      </View>
 
       {/* Progress ring / counter */}
       <View style={[styles.section, styles.progressCard]}>
