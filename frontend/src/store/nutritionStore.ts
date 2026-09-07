@@ -274,8 +274,9 @@ export function createRecipeIngredient(food: FoodCatalogItem, quantity = food.re
 export async function getShoppingConfig(): Promise<ShoppingConfig> {
   await ensureNutritionSeed();
   const stored = await readJson<ShoppingConfig>(SHOPPING_CONFIG_KEY, EMPTY_SHOPPING_CONFIG);
+  const storedPeriod = Number(stored.periodDays);
   return {
-    periodDays: [1, 3, 7, 14, 30].includes(stored.periodDays) ? stored.periodDays : 7,
+    periodDays: Number.isInteger(storedPeriod) && storedPeriod >= 1 && storedPeriod <= 60 ? storedPeriod : 7,
     preferredSubstitutions: stored.preferredSubstitutions ?? {},
     manualItems: Array.isArray(stored.manualItems) ? stored.manualItems : [],
   };

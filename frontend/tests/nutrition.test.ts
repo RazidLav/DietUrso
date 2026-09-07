@@ -128,6 +128,8 @@ test("lista de compras consolida itens iguais e respeita período", () => {
   const result = generateShoppingList(plan, [], "2026-09-07", 3);
   assert.equal(result.length, 1);
   assert.equal(result[0].quantity, 450);
+  const customPeriod = generateShoppingList(plan, [], "2026-09-07", 10);
+  assert.equal(customPeriod[0].quantity, 1500);
 });
 
 test("lista expande receita sem somar alternativas simultaneamente", () => {

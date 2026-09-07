@@ -56,7 +56,7 @@ O snapshot sincronizado está na versão 3 e permanece compatível com dados ant
 - Registro conforme o plano, com quantidade real, substituição, horário, observação ou refeição não realizada.
 - Refeição fora do plano separada da dieta, editável e incluída nos totais e no histórico.
 - Histórico diário e semanal com comparação planejado × consumido.
-- Lista de compras automática por período, com consolidação, expansão de receitas, itens manuais e marcação persistente.
+- Lista de compras automática por período predefinido ou personalizado (1 a 60 dias), com consolidação, expansão de receitas, itens manuais e marcação persistente.
 
 Mais detalhes e instruções da migração estão em `docs/ALIMENTACAO_ETAPA_2.md`.
 
