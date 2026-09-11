@@ -1,7 +1,7 @@
 import MaterialDesignIcons from "@react-native-vector-icons/material-design-icons";
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
-import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useCloudDataRefresh } from "../src/cloud/useCloudDataRefresh";
 import { getSignedInUser } from "../src/cloud/cloudSync";
@@ -9,6 +9,7 @@ import { normalizeNutrients } from "../src/nutrition/calculations";
 import { createPersonalFood, duplicateFood, listFoodCatalog, setFoodArchived, updatePersonalFood } from "../src/store/nutritionStore";
 import { colors, radius, spacing } from "../src/theme";
 import type { FoodCatalogItem, Unit } from "../src/types/plan";
+import { matchesSearch } from "../src/utils/search";
 
 const CATEGORIES = ["Proteínas", "Carboidratos", "Frutas", "Vegetais", "Laticínios", "Gorduras & Temperos", "Outros"];
 const UNITS: { value: Unit; label: string }[] = [
@@ -55,9 +56,8 @@ export default function AlimentosScreen() {
   useCloudDataRefresh(load);
 
   const visible = useMemo(() => {
-    const normalized = query.trim().toLocaleLowerCase("pt-BR");
     return items.filter((item) => {
-      const matchesQuery = !normalized || `${item.name} ${item.brand ?? ""} ${item.category}`.toLocaleLowerCase("pt-BR").includes(normalized);
+      const matchesQuery = matchesSearch(query, item.name, item.brand, item.category, item.source);
       const matchesFilter = filter === "archived" ? item.archived : !item.archived && (filter === "all" || item.scope === filter);
       return matchesQuery && matchesFilter;
     });
@@ -166,10 +166,10 @@ function FoodCard({ item, onEdit, onDuplicate, onArchive }: { item: FoodCatalogI
 function FoodModal({ visible, draft, setDraft, editing, saving, error, onClose, onSave }: { visible: boolean; draft: Draft; setDraft: React.Dispatch<React.SetStateAction<Draft>>; editing: FoodCatalogItem | null; saving: boolean; error: string | null; onClose: () => void; onSave: () => void }) {
   const set = (key: keyof Draft, value: string) => setDraft((current) => ({ ...current, [key]: value }));
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <View style={styles.overlay}><View style={styles.modal}>
-        <View style={styles.modalHeader}><Text style={styles.modalTitle}>{editing ? "Editar alimento" : "Novo alimento"}</Text><Pressable onPress={onClose}><MaterialDesignIcons name="close" size={24} color={colors.onSurface} /></Pressable></View>
-        <ScrollView contentContainerStyle={{ gap: spacing.md, paddingBottom: spacing.xl }}>
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose} statusBarTranslucent>
+      <KeyboardAvoidingView style={styles.overlay} behavior={Platform.OS === "ios" ? "padding" : undefined}><View style={styles.modal} accessibilityViewIsModal>
+        <View style={styles.modalHeader}><Text style={styles.modalTitle}>{editing ? "Editar alimento" : "Novo alimento"}</Text><Pressable accessibilityRole="button" accessibilityLabel="Fechar formulário" onPress={onClose}><MaterialDesignIcons name="close" size={24} color={colors.onSurface} /></Pressable></View>
+        <ScrollView style={styles.modalScroll} keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: spacing.md, paddingBottom: spacing.xl }}>
           <Field label="Nome *" value={draft.name} onChangeText={(value) => set("name", value)} testID="food-form-name" />
           <Field label="Marca (opcional)" value={draft.brand} onChangeText={(value) => set("brand", value)} />
           <Text style={styles.label}>Categoria</Text>
@@ -191,7 +191,7 @@ function FoodModal({ visible, draft, setDraft, editing, saving, error, onClose, 
           {error ? <Text style={styles.error}>{error}</Text> : null}
           <View style={styles.modalActions}><Pressable style={styles.secondaryBtn} onPress={onClose}><Text style={styles.secondaryText}>Cancelar</Text></Pressable><Pressable style={[styles.primaryBtn, saving && { opacity: 0.6 }]} onPress={onSave} disabled={saving} testID="food-form-save"><Text style={styles.primaryText}>{saving ? "Salvando..." : "Salvar alimento"}</Text></Pressable></View>
         </ScrollView>
-      </View></View>
+      </View></KeyboardAvoidingView>
     </Modal>
   );
 }
@@ -217,7 +217,7 @@ const styles = StyleSheet.create({
   actions: { flexDirection: "row", gap: spacing.sm, flexWrap: "wrap" }, action: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radius.pill, backgroundColor: colors.surfaceTertiary }, actionText: { color: colors.onSurfaceSecondary, fontSize: 11, fontWeight: "700" },
   empty: { alignItems: "center", padding: spacing.xxxl, gap: spacing.sm }, emptyTitle: { color: colors.onSurface, fontSize: 17, fontWeight: "800" }, emptyText: { color: colors.onSurfaceTertiary, fontSize: 12, textAlign: "center" },
   error: { color: colors.error, fontSize: 12, marginHorizontal: spacing.lg, marginTop: spacing.sm },
-  overlay: { flex: 1, backgroundColor: "#000A", justifyContent: "flex-end" }, modal: { maxHeight: "92%", width: "100%", maxWidth: 720, alignSelf: "center", backgroundColor: colors.surfaceSecondary, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg, padding: spacing.lg, borderWidth: 1, borderColor: colors.border },
+  overlay: { flex: 1, backgroundColor: "#000A", justifyContent: "flex-end" }, modal: { maxHeight: "92%", minHeight: 0, width: "100%", maxWidth: 720, alignSelf: "center", backgroundColor: colors.surfaceSecondary, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg, padding: spacing.lg, borderWidth: 1, borderColor: colors.border }, modalScroll: { minHeight: 0 },
   modalHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: spacing.lg }, modalTitle: { color: colors.onSurface, fontSize: 20, fontWeight: "800" }, label: { color: colors.onSurfaceSecondary, fontSize: 11, fontWeight: "700", marginBottom: 6 },
   input: { color: colors.onSurface, backgroundColor: colors.surfaceTertiary, borderWidth: 1, borderColor: colors.borderStrong, borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.md },
   row: { flexDirection: "row", gap: spacing.sm }, wrap: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm }, grid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm }, smallField: { flexBasis: "47%", flexGrow: 1 }, sectionLabel: { color: colors.brandPrimary, fontSize: 10, fontWeight: "800", letterSpacing: 1.2 },

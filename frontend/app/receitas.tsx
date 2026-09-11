@@ -9,6 +9,7 @@ import { recipeNutrients } from "../src/nutrition/calculations";
 import { createRecipe, duplicateRecipe, listRecipes, setRecipeArchived } from "../src/store/nutritionStore";
 import { colors, radius, spacing } from "../src/theme";
 import type { Recipe } from "../src/types/plan";
+import { matchesSearch } from "../src/utils/search";
 
 export default function ReceitasScreen() {
   const insets = useSafeAreaInsets();
@@ -28,7 +29,7 @@ export default function ReceitasScreen() {
   useCloudDataRefresh(load);
 
   const visible = useMemo(() => recipes.filter((recipe) =>
-    recipe.archived === showArchived && (!query.trim() || `${recipe.name} ${recipe.category}`.toLocaleLowerCase("pt-BR").includes(query.trim().toLocaleLowerCase("pt-BR")))
+    recipe.archived === showArchived && matchesSearch(query, recipe.name, recipe.category, recipe.description)
   ), [recipes, query, showArchived]);
 
   const add = async () => {

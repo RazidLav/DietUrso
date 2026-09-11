@@ -17,6 +17,8 @@ O DietUrso é um aplicativo pessoal, local-first, para alimentação, hidrataç�
 - Painel diário, calendário, planos e modelos de treino com múltiplas sessões independentes no mesmo dia.
 - Catálogo de exercícios global/pessoal e execução detalhada de musculação, mobilidade, corrida, bike, CrossFit e atividades personalizadas.
 - Histórico esportivo com volume válido, distâncias, duração, frequência e recordes pessoais sem duplicidade.
+- Navegação responsiva com Dock de cinco áreas no mobile, barra contextual e sidebar completa no desktop.
+- Seletores e listas longas adaptativos, com pesquisa normalizada, rolagem independente, foco visível e suporte a teclado.
 
 ## Arquitetura
 
@@ -27,6 +29,7 @@ O DietUrso é um aplicativo pessoal, local-first, para alimentação, hidrataç�
 - Hospedagem web estática no Render.
 - Interface em Português do Brasil.
 - Snapshot remoto versão 5, retrocompatível com as versões 1 a 4.
+- Configuração central de navegação compartilhada entre mobile e desktop.
 
 ## Persistência e histórico
 

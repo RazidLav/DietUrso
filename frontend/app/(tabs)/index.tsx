@@ -1,5 +1,5 @@
 import React, { useCallback, useRef, useState } from "react";
-import { ScrollView, StyleSheet, Text, View, RefreshControl, Pressable } from "react-native";
+import { ScrollView, StyleSheet, Text, View, RefreshControl, Pressable, useWindowDimensions } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import MaterialDesignIcons from "@react-native-vector-icons/material-design-icons";
@@ -35,6 +35,8 @@ import { getTrainingState, prepareTrainingRange } from "../../src/store/training
 
 export default function HojeScreen() {
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+  const desktop = width >= 1024;
   const router = useRouter();
   const [plan, setPlan] = useState<Plan | null>(null);
   const [consumption, setConsumption] = useState<ConsumptionEntry[]>([]);
@@ -146,6 +148,9 @@ export default function HojeScreen() {
       contentContainerStyle={{
         paddingTop: insets.top + spacing.lg,
         paddingBottom: FLOATING_TAB_HEIGHT + Math.max(insets.bottom, FLOATING_TAB_MARGIN) + spacing.xl,
+        width: "100%",
+        maxWidth: 1180,
+        alignSelf: "center",
       }}
       refreshControl={
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.brandPrimary} />
@@ -166,34 +171,28 @@ export default function HojeScreen() {
         </Pressable>
       </View>
 
-      {gamification ? (
-        <View style={styles.section}>
-          <GamificationSummaryCard summary={gamification} onPress={() => router.push("/conquistas")} />
-        </View>
-      ) : null}
-
-      <View style={styles.section}>
-        <MacroSummary
-          title="CONSUMIDO HOJE"
-          kcal={consumedTotals.kcal}
-          protein={consumedTotals.protein}
-          carbs={consumedTotals.carbs}
-          fats={consumedTotals.fats}
-          fiber={consumedTotals.fiber}
-          subtitle={`Planejado: ${Math.round(totals.kcal)} kcal · Diferença: ${consumedTotals.kcal - totals.kcal >= 0 ? "+" : ""}${Math.round(consumedTotals.kcal - totals.kcal)} kcal`}
-        />
-        <View style={styles.quickActions}>
-          <Pressable style={styles.quickAction} onPress={() => router.push("/fora-do-plano")} testID="home-off-plan-btn"><MaterialDesignIcons name="silverware-variant" size={18} color={colors.brandTertiary} /><Text style={styles.quickActionText}>Fora do plano</Text></Pressable>
-          <Pressable style={styles.quickAction} onPress={() => router.push("/historico-alimentar")} testID="home-history-btn"><MaterialDesignIcons name="calendar-search" size={18} color={colors.brandSecondary} /><Text style={styles.quickActionText}>Ver histórico</Text></Pressable>
+      <View style={[styles.overviewGrid, desktop && styles.overviewGridDesktop]}>
+        {gamification ? <View style={[styles.section, desktop && styles.overviewCell]}><GamificationSummaryCard summary={gamification} onPress={() => router.push("/conquistas")} /></View> : null}
+        <View style={[styles.section, desktop && styles.overviewCell]}>
+          <MacroSummary
+            title="CONSUMIDO HOJE"
+            kcal={consumedTotals.kcal}
+            protein={consumedTotals.protein}
+            carbs={consumedTotals.carbs}
+            fats={consumedTotals.fats}
+            fiber={consumedTotals.fiber}
+            subtitle={`Planejado: ${Math.round(totals.kcal)} kcal · Diferença: ${consumedTotals.kcal - totals.kcal >= 0 ? "+" : ""}${Math.round(consumedTotals.kcal - totals.kcal)} kcal`}
+          />
+          <View style={styles.quickActions}>
+            <Pressable style={styles.quickAction} onPress={() => router.push("/fora-do-plano")} testID="home-off-plan-btn"><MaterialDesignIcons name="silverware-variant" size={18} color={colors.brandTertiary} /><Text style={styles.quickActionText}>Fora do plano</Text></Pressable>
+            <Pressable style={styles.quickAction} onPress={() => router.push("/historico-alimentar")} testID="home-history-btn"><MaterialDesignIcons name="calendar-search" size={18} color={colors.brandSecondary} /><Text style={styles.quickActionText}>Ver histórico</Text></Pressable>
+          </View>
         </View>
       </View>
 
-      {water ? <View style={styles.section}>
-        <WaterCard summary={water} onQuickAdd={handleWater} onPress={() => router.push("/hidratacao")} saving={savingWater} />
-      </View> : null}
-
-      <View style={styles.section}>
-        <TrainingSummaryCard entries={trainingEntries} onPress={() => router.push("/treinos")} />
+      <View style={[styles.overviewGrid, desktop && styles.overviewGridDesktop]}>
+        {water ? <View style={[styles.section, desktop && styles.overviewCell]}><WaterCard summary={water} onQuickAdd={handleWater} onPress={() => router.push("/hidratacao")} saving={savingWater} /></View> : null}
+        <View style={[styles.section, desktop && styles.overviewCell]}><TrainingSummaryCard entries={trainingEntries} onPress={() => router.push("/treinos")} /></View>
       </View>
 
       {/* Progress ring / counter */}
@@ -221,15 +220,15 @@ export default function HojeScreen() {
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Refeições do dia</Text>
-        <View style={{ gap: spacing.sm }}>
+        <View style={[styles.mealGrid, desktop && styles.mealGridDesktop]}>
           {dayMeals.map((meal) => {
             const chosenOpt = meal.options.find((o) => o.id === chosen[meal.id]) ?? meal.options[0];
             const mac = chosenOpt ? optionMacros(chosenOpt) : { kcal: 0, protein: 0, carbs: 0, fats: 0, fiber: 0, sodium: 0 };
             const entry = consumption.find((e) => e.date === today && e.mealId === meal.id);
             const status = entry ? (entry.status === "off_plan" ? "modified" : entry.status) : "planned";
             return (
+              <View key={meal.id} style={desktop ? styles.mealCell : undefined}>
               <MealCard
-                key={meal.id}
                 testID={`meal-card-${meal.id}`}
                 title={meal.name}
                 subtitle={entry ? `${entry.status === "as_planned" ? "Conforme o plano" : entry.status === "skipped" ? "Não realizada" : "Com alterações"} · ${meal.suggestedTime ? `${meal.suggestedTime} · ` : ""}${chosenOpt?.name ?? ""}` : `${meal.suggestedTime ? `${meal.suggestedTime} · ` : ""}${chosenOpt?.name ?? "Sem opções"}`}
@@ -239,6 +238,7 @@ export default function HojeScreen() {
                 onPress={() => router.push(`/meal/${plan.id}/${meal.id}?date=${today}`)}
                 onToggleDone={() => toggleQuickDone(meal.id, chosenOpt?.id)}
               />
+              </View>
             );
           })}
         </View>
@@ -267,6 +267,12 @@ const styles = StyleSheet.create({
     alignItems: "center", justifyContent: "center",
   },
   section: { paddingHorizontal: spacing.lg, marginTop: spacing.lg },
+  overviewGrid: { width: "100%" },
+  overviewGridDesktop: { flexDirection: "row", alignItems: "flex-start" },
+  overviewCell: { flex: 1, minWidth: 0 },
+  mealGrid: { gap: spacing.sm },
+  mealGridDesktop: { flexDirection: "row", flexWrap: "wrap" },
+  mealCell: { width: "49%" },
   quickActions: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.sm },
   quickAction: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: spacing.sm, backgroundColor: colors.surfaceSecondary, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, padding: spacing.md },
   quickActionText: { color: colors.onSurfaceSecondary, fontSize: 11, fontWeight: "700" },

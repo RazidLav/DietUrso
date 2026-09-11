@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ScrollView,
   StyleSheet,
@@ -30,6 +30,7 @@ import type { Food, FoodCatalogItem, Meal, MealOption, Plan, Substitution, Unit 
 import { WEEKDAYS_SHORT } from "../../src/utils/date";
 import { listFoodCatalog } from "../../src/store/nutritionStore";
 import { scaleNutrients } from "../../src/nutrition/calculations";
+import FoodCatalogPicker from "../../src/components/FoodCatalogPicker";
 
 const uid = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
 
@@ -411,7 +412,17 @@ function FoodForm({ planId, mealId, optionId, food, onDone, onCancel }: any) {
   const [subs, setSubs] = useState<Substitution[]>(food?.substitutions ?? []);
   const [catalog, setCatalog] = useState<FoodCatalogItem[]>([]);
   const [showCatalog, setShowCatalog] = useState(false);
-  useEffect(() => { void listFoodCatalog().then(setCatalog); }, []);
+  const [catalogLoading, setCatalogLoading] = useState(true);
+  const [catalogError, setCatalogError] = useState<string | null>(null);
+  const catalogButtonRef = useRef<View>(null);
+  useEffect(() => {
+    let mounted = true;
+    void listFoodCatalog()
+      .then((items) => { if (mounted) setCatalog(items); })
+      .catch(() => { if (mounted) setCatalogError("Não foi possível carregar o banco de alimentos."); })
+      .finally(() => { if (mounted) setCatalogLoading(false); });
+    return () => { mounted = false; };
+  }, []);
 
   const chooseCatalogFood = (item: FoodCatalogItem) => {
     setFoodId(item.id); setName(item.name); setQty(String(item.referenceQuantity)); setUnit(item.referenceUnit);
@@ -457,11 +468,19 @@ function FoodForm({ planId, mealId, optionId, food, onDone, onCancel }: any) {
     onDone();
   };
 
+  const closeCatalog = () => {
+    setShowCatalog(false);
+    setTimeout(() => (catalogButtonRef.current as unknown as { focus?: () => void } | null)?.focus?.(), 0);
+  };
+
+  const selectedCatalogFood = catalog.find((item) => item.id === foodId);
+
   return (
-    <ScrollView>
+    <>
+    <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={mStyles.formContent}>
       <Text style={mStyles.title}>{food ? "Editar alimento" : "Novo alimento"}</Text>
-      <Pressable style={mStyles.catalogBtn} onPress={() => setShowCatalog((value) => !value)}><MaterialDesignIcons name="basket-outline" size={17} color={colors.brandPrimary} /><Text style={mStyles.catalogBtnText}>Escolher do banco de alimentos</Text></Pressable>
-      {showCatalog ? <View style={mStyles.catalogList}>{catalog.map((item) => <Pressable key={item.id} style={mStyles.catalogRow} onPress={() => chooseCatalogFood(item)}><View style={{ flex: 1 }}><Text style={mStyles.catalogName}>{item.name}</Text><Text style={mStyles.catalogMeta}>{item.referenceQuantity} {item.referenceUnit} · {Math.round(item.nutrients.kcal)} kcal</Text></View><MaterialDesignIcons name="plus-circle" size={20} color={colors.brandPrimary} /></Pressable>)}</View> : null}
+      <Pressable ref={catalogButtonRef} accessibilityRole="button" accessibilityLabel="Escolher do banco de alimentos" accessibilityState={{ expanded: showCatalog }} style={mStyles.catalogBtn} onPress={() => setShowCatalog(true)} testID="open-food-catalog-picker"><MaterialDesignIcons name="basket-outline" size={17} color={colors.brandPrimary} /><Text style={mStyles.catalogBtnText}>{selectedCatalogFood ? "Trocar alimento do banco" : "Escolher do banco de alimentos"}</Text><MaterialDesignIcons name="chevron-right" size={19} color={colors.brandPrimary} /></Pressable>
+      {selectedCatalogFood ? <View style={mStyles.selectedFood} testID="selected-catalog-food"><View style={mStyles.selectedFoodIcon}><MaterialDesignIcons name="check" size={18} color={colors.onBrandPrimary} /></View><View style={{ flex: 1 }}><Text style={mStyles.catalogName}>{selectedCatalogFood.name}</Text><Text style={mStyles.catalogMeta}>{selectedCatalogFood.brand ? `${selectedCatalogFood.brand} · ` : ""}{selectedCatalogFood.referenceQuantity} {selectedCatalogFood.referenceUnit} · {Math.round(selectedCatalogFood.nutrients.kcal)} kcal</Text></View></View> : null}
       <Text style={mStyles.label}>Nome</Text>
       <TextInput style={mStyles.input} value={name} onChangeText={setName} testID="food-name-input" />
 
@@ -551,6 +570,16 @@ function FoodForm({ planId, mealId, optionId, food, onDone, onCancel }: any) {
 
       <FormActions onCancel={onCancel} onSave={submit} />
     </ScrollView>
+    <FoodCatalogPicker
+      visible={showCatalog}
+      foods={catalog}
+      selectedId={foodId}
+      loading={catalogLoading}
+      error={catalogError}
+      onClose={closeCatalog}
+      onSelect={(item) => { chooseCatalogFood(item); closeCatalog(); }}
+    />
+    </>
   );
 }
 
@@ -667,6 +696,7 @@ const mStyles = StyleSheet.create({
     maxHeight: "90%",
   },
   title: { color: colors.onSurface, fontSize: 18, fontWeight: "800", marginBottom: spacing.md },
+  formContent: { paddingBottom: spacing.sm },
   label: { color: colors.onSurfaceTertiary, fontSize: 11, fontWeight: "700", marginTop: spacing.sm, marginBottom: 4 },
   input: {
     backgroundColor: colors.surfaceTertiary,
@@ -675,10 +705,10 @@ const mStyles = StyleSheet.create({
     borderRadius: radius.sm,
     fontSize: 14,
   },
-  catalogBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: spacing.sm, borderWidth: 1, borderColor: colors.brandPrimary + "55", backgroundColor: colors.brandPrimary + "12", padding: spacing.md, borderRadius: radius.md, marginBottom: spacing.sm },
-  catalogBtnText: { color: colors.brandPrimary, fontSize: 12, fontWeight: "800" },
-  catalogList: { gap: 4, backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.sm, maxHeight: 260, overflow: "hidden" },
-  catalogRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, padding: spacing.sm, backgroundColor: colors.surfaceTertiary, borderRadius: radius.sm },
+  catalogBtn: { minHeight: 48, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: spacing.sm, borderWidth: 1, borderColor: colors.brandPrimary + "66", backgroundColor: colors.brandPrimary + "12", padding: spacing.md, borderRadius: radius.md, marginBottom: spacing.sm },
+  catalogBtnText: { flex: 1, color: colors.brandPrimary, fontSize: 12, fontWeight: "800", textAlign: "center" },
+  selectedFood: { minHeight: 58, flexDirection: "row", alignItems: "center", gap: spacing.sm, padding: spacing.sm, borderRadius: radius.md, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.brandPrimary + "55" },
+  selectedFoodIcon: { width: 34, height: 34, borderRadius: radius.md, alignItems: "center", justifyContent: "center", backgroundColor: colors.brandPrimary },
   catalogName: { color: colors.onSurface, fontSize: 12, fontWeight: "700" },
   catalogMeta: { color: colors.onSurfaceTertiary, fontSize: 10, marginTop: 2 },
   chipRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs, marginTop: 4 },

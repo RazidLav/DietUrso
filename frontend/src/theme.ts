@@ -56,6 +56,27 @@ export const radius = {
   pill: 999,
 };
 
+export const breakpoints = {
+  compact: 320,
+  mobile: 390,
+  tablet: 768,
+  desktop: 1024,
+  wide: 1440,
+};
+
+export const motion = {
+  contextExitMs: 90,
+  contextEnterMs: 130,
+  contextTotalMs: 220,
+};
+
+export const zIndex = {
+  content: 0,
+  navigation: 20,
+  modal: 100,
+  toast: 120,
+};
+
 export const typography = {
   display: "BarlowCondensed_700Bold",
   displayMedium: "BarlowCondensed_600SemiBold",
@@ -67,5 +88,5 @@ export const typography = {
 };
 
 export function useTheme() {
-  return { colors, spacing, radius, typography };
+  return { colors, spacing, radius, typography, breakpoints, motion, zIndex };
 }

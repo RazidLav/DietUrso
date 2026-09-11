@@ -1,7 +1,7 @@
 import MaterialDesignIcons from "@react-native-vector-icons/material-design-icons";
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useCloudDataRefresh } from "../../src/cloud/useCloudDataRefresh";
 import { listConsumption } from "../../src/store/planStore";
@@ -15,6 +15,8 @@ type Counts = { foods: number; recipes: number; today: number; offPlan: number }
 export default function AlimentacaoScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { width } = useWindowDimensions();
+  const desktop = width >= 1024;
   const [counts, setCounts] = useState<Counts>({ foods: 0, recipes: 0, today: 0, offPlan: 0 });
 
   const load = useCallback(async () => {
@@ -41,13 +43,14 @@ export default function AlimentacaoScreen() {
         <Text style={styles.title}>Sua despensa e seu diário</Text>
         <Text style={styles.subtitle}>O plano continua sendo o plano. Aqui fica o que você realmente prepara e consome.</Text>
       </View>
-      <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: FLOATING_TAB_HEIGHT + Math.max(insets.bottom, FLOATING_TAB_MARGIN) + spacing.xl, gap: spacing.md }}>
+      <ScrollView contentContainerStyle={{ width: "100%", maxWidth: 1060, alignSelf: "center", padding: spacing.lg, paddingBottom: FLOATING_TAB_HEIGHT + Math.max(insets.bottom, FLOATING_TAB_MARGIN) + spacing.xl, gap: spacing.md }}>
         <View style={styles.summaryRow}>
           <Summary value={counts.foods} label="alimentos" />
           <Summary value={counts.recipes} label="receitas" />
           <Summary value={counts.today} label="registros hoje" />
         </View>
 
+        <View style={[styles.featureGrid, desktop && styles.featureGridDesktop]}>
         <FeatureCard
           icon="food-apple"
           title="Banco de alimentos"
@@ -55,6 +58,7 @@ export default function AlimentacaoScreen() {
           meta={`${counts.foods} disponíveis`}
           onPress={() => router.push("/alimentos")}
           testID="open-foods-btn"
+          desktop={desktop}
         />
         <FeatureCard
           icon="chef-hat"
@@ -63,6 +67,7 @@ export default function AlimentacaoScreen() {
           meta={`${counts.recipes} salvas`}
           onPress={() => router.push("/receitas")}
           testID="open-recipes-btn"
+          desktop={desktop}
         />
         <FeatureCard
           icon="silverware-variant"
@@ -72,6 +77,7 @@ export default function AlimentacaoScreen() {
           accent={colors.brandTertiary}
           onPress={() => router.push("/fora-do-plano")}
           testID="open-off-plan-btn"
+          desktop={desktop}
         />
         <FeatureCard
           icon="calendar-search"
@@ -81,7 +87,9 @@ export default function AlimentacaoScreen() {
           accent={colors.brandSecondary}
           onPress={() => router.push("/historico-alimentar")}
           testID="open-history-btn"
+          desktop={desktop}
         />
+        </View>
       </ScrollView>
     </View>
   );
@@ -91,11 +99,11 @@ function Summary({ value, label }: { value: number; label: string }) {
   return <View style={styles.summary}><Text style={styles.summaryValue}>{value}</Text><Text style={styles.summaryLabel}>{label}</Text></View>;
 }
 
-function FeatureCard({ icon, title, description, meta, onPress, accent = colors.brandPrimary, testID }: {
-  icon: string; title: string; description: string; meta: string; onPress: () => void; accent?: string; testID: string;
+function FeatureCard({ icon, title, description, meta, onPress, accent = colors.brandPrimary, testID, desktop }: {
+  icon: string; title: string; description: string; meta: string; onPress: () => void; accent?: string; testID: string; desktop: boolean;
 }) {
   return (
-    <Pressable style={({ pressed }) => [styles.card, pressed && { opacity: 0.85 }]} onPress={onPress} testID={testID}>
+    <Pressable style={({ pressed }) => [styles.card, desktop && styles.cardDesktop, pressed && { opacity: 0.85 }]} onPress={onPress} testID={testID}>
       <View style={[styles.icon, { backgroundColor: accent + "22" }]}><MaterialDesignIcons name={icon as any} size={25} color={accent} /></View>
       <View style={{ flex: 1 }}>
         <Text style={styles.cardTitle}>{title}</Text>
@@ -114,10 +122,13 @@ const styles = StyleSheet.create({
   title: { color: colors.onSurface, fontSize: 25, fontWeight: "800", marginTop: 3 },
   subtitle: { color: colors.onSurfaceTertiary, fontSize: 13, lineHeight: 19, marginTop: spacing.sm, maxWidth: 620 },
   summaryRow: { flexDirection: "row", gap: spacing.sm },
+  featureGrid: { gap: spacing.md },
+  featureGridDesktop: { flexDirection: "row", flexWrap: "wrap" },
   summary: { flex: 1, backgroundColor: colors.surfaceSecondary, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, padding: spacing.md },
   summaryValue: { color: colors.onSurface, fontSize: 22, fontWeight: "800" },
   summaryLabel: { color: colors.onSurfaceTertiary, fontSize: 10, marginTop: 2 },
-  card: { flexDirection: "row", alignItems: "center", gap: spacing.md, padding: spacing.lg, borderRadius: radius.lg, backgroundColor: colors.surfaceSecondary, borderWidth: 1, borderColor: colors.border },
+  card: { minWidth: 0, flexDirection: "row", alignItems: "center", gap: spacing.md, padding: spacing.lg, borderRadius: radius.lg, backgroundColor: colors.surfaceSecondary, borderWidth: 1, borderColor: colors.border },
+  cardDesktop: { flexGrow: 1, flexBasis: "47%" },
   icon: { width: 48, height: 48, borderRadius: radius.md, alignItems: "center", justifyContent: "center" },
   cardTitle: { color: colors.onSurface, fontSize: 16, fontWeight: "800" },
   cardDescription: { color: colors.onSurfaceTertiary, fontSize: 12, lineHeight: 17, marginTop: 4 },

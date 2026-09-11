@@ -9,6 +9,7 @@ import { initializeCloudSync, syncCloudNow } from "../src/cloud/cloudSync";
 import { ensureNutritionSeed } from "../src/store/nutritionStore";
 import { ensureHydrationSeed } from "../src/store/hydrationStore";
 import { ensureTrainingSeed } from "../src/store/trainingStore";
+import AppNavigation from "../src/components/AppNavigation";
 
 export default function RootLayout() {
   const [storeState, setStoreState] = useState<"loading" | "ready" | "error">(
@@ -51,13 +52,15 @@ export default function RootLayout() {
         <StatusBar barStyle="light-content" backgroundColor={colors.surface} />
         <View style={{ flex: 1, backgroundColor: colors.surface }}>
           {storeState === "ready" ? (
-            <Stack
-              screenOptions={{
-                headerShown: false,
-                contentStyle: { backgroundColor: colors.surface },
-                animation: "slide_from_right",
-              }}
-            />
+            <AppNavigation>
+              <Stack
+                screenOptions={{
+                  headerShown: false,
+                  contentStyle: { backgroundColor: colors.surface },
+                  animation: "slide_from_right",
+                }}
+              />
+            </AppNavigation>
           ) : (
             <View
               style={{

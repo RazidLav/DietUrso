@@ -8,6 +8,7 @@ import { createId, createRecipeIngredient, listFoodCatalog, listRecipes, saveRec
 import { getActivePlan, upsertFood } from "../../src/store/planStore";
 import { colors, radius, spacing } from "../../src/theme";
 import type { Food, FoodCatalogItem, Plan, Recipe } from "../../src/types/plan";
+import FoodCatalogPicker from "../../src/components/FoodCatalogPicker";
 
 const parse = (value: string) => Number(value.replace(",", "."));
 
@@ -19,7 +20,6 @@ export default function RecipeEditorScreen() {
   const [foods, setFoods] = useState<FoodCatalogItem[]>([]);
   const [plan, setPlan] = useState<Plan | null>(null);
   const [picker, setPicker] = useState<"food" | "plan" | null>(null);
-  const [query, setQuery] = useState("");
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -32,14 +32,12 @@ export default function RecipeEditorScreen() {
   useFocusEffect(useCallback(() => { void load(); }, [load]));
 
   const nutrition = useMemo(() => recipe ? recipeNutrients(recipe) : null, [recipe]);
-  const filteredFoods = useMemo(() => foods.filter((food) => !query.trim() || `${food.name} ${food.brand ?? ""}`.toLocaleLowerCase("pt-BR").includes(query.trim().toLocaleLowerCase("pt-BR"))), [foods, query]);
-
   if (!recipe) return <View style={styles.loading}><ActivityIndicator color={colors.brandPrimary} /><Text style={styles.muted}>Carregando receita...</Text></View>;
 
   const patchRecipe = (patch: Partial<Recipe>) => setRecipe((current) => current ? { ...current, ...patch } : current);
   const addIngredient = (food: FoodCatalogItem) => {
     patchRecipe({ ingredients: [...recipe.ingredients, createRecipeIngredient(food)] });
-    setPicker(null); setQuery("");
+    setPicker(null);
   };
   const updateIngredientQuantity = (id: string, value: string) => patchRecipe({ ingredients: recipe.ingredients.map((ingredient) => ingredient.id === id ? { ...ingredient, quantity: Math.max(0, parse(value) || 0) } : ingredient) });
   const removeIngredient = (id: string) => patchRecipe({ ingredients: recipe.ingredients.filter((ingredient) => ingredient.id !== id) });
@@ -98,10 +96,7 @@ export default function RecipeEditorScreen() {
         <View style={styles.bottomActions}><Pressable style={styles.secondaryBtn} onPress={() => setPicker("plan")} disabled={!plan || !recipe.ingredients.length}><MaterialDesignIcons name="calendar-plus" size={18} color={colors.onSurface} /><Text style={styles.secondaryText}>Adicionar ao plano</Text></Pressable><Pressable style={styles.primaryBtn} onPress={() => router.push(`/fora-do-plano?recipeId=${recipe.id}`)} disabled={!recipe.ingredients.length}><MaterialDesignIcons name="silverware" size={18} color={colors.onBrandPrimary} /><Text style={styles.primaryText}>Registrar consumo</Text></Pressable></View>
       </ScrollView>
 
-      <PickerModal visible={picker === "food"} title="Adicionar ingrediente" onClose={() => setPicker(null)}>
-        <View style={styles.searchWrap}><MaterialDesignIcons name="magnify" size={19} color={colors.onSurfaceTertiary} /><TextInput value={query} onChangeText={setQuery} placeholder="Pesquisar alimento" placeholderTextColor={colors.onSurfaceTertiary} style={styles.search} /></View>
-        {filteredFoods.map((food) => <Pressable key={food.id} style={styles.pickRow} onPress={() => addIngredient(food)}><View style={{ flex: 1 }}><Text style={styles.ingredientName}>{food.name}</Text><Text style={styles.muted}>{food.referenceQuantity} {food.referenceUnit} · {Math.round(food.nutrients.kcal)} kcal</Text></View><MaterialDesignIcons name="plus-circle" size={23} color={colors.brandPrimary} /></Pressable>)}
-      </PickerModal>
+      <FoodCatalogPicker visible={picker === "food"} foods={foods} title="Adicionar ingrediente" onClose={() => setPicker(null)} onSelect={addIngredient} />
       <PickerModal visible={picker === "plan"} title="Adicionar ao plano ativo" onClose={() => setPicker(null)}>
         {(plan?.meals ?? []).filter((meal) => !meal.archived).map((meal) => <View key={meal.id}><Text style={styles.pickMeal}>{meal.name}</Text>{meal.options.map((option) => <Pressable key={option.id} style={styles.pickRow} onPress={() => void addToPlan(meal.id, option.id)}><Text style={[styles.ingredientName, { flex: 1 }]}>{option.name}</Text><MaterialDesignIcons name="plus-circle" size={23} color={colors.brandPrimary} /></Pressable>)}</View>)}
         {!plan ? <Text style={styles.muted}>Nenhum plano ativo.</Text> : null}
