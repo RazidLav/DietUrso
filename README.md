@@ -27,6 +27,16 @@ O build web é gerado em `frontend/dist`.
 
 Copie `frontend/.env.example` para `frontend/.env.local` para habilitar a sincronização durante o desenvolvimento.
 
+## Interface responsiva
+
+- No celular e tablet, o Dock possui cinco destinos fixos: Home, Plano alimentar, Hidratação, Treino e Perfil.
+- Cada área possui uma navegação contextual horizontal com estado ativo e suporte a redução de movimento.
+- No desktop, uma sidebar flutuante reúne todas as seções e o conteúdo aproveita melhor o espaço disponível.
+- O seletor do banco de alimentos possui busca sem diferença entre acentos e maiúsculas, rolagem independente e comportamento adaptado a mobile e desktop.
+- Formulários, modais e listas longas preservam o foco, o rascunho e a navegação por teclado.
+
+Auditoria, mapa das rotas, breakpoints e capturas da Etapa 5 estão em `docs/INTERFACE_ETAPA_5.md`.
+
 ## Render Static Site
 
 O arquivo `render.yaml` configura o serviço com:

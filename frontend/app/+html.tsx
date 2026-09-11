@@ -27,21 +27,13 @@ export default function Root({ children }: PropsWithChildren) {
         <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
         <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
         <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+        <link rel="stylesheet" href="/global.css" />
         {/*
           Disable body scrolling on web to make ScrollView components work correctly.
           If you want to enable scrolling, remove `ScrollViewStyleReset` and
           set `overflow: auto` on the body style below.
         */}
         <ScrollViewStyleReset />
-        <style
-          dangerouslySetInnerHTML={{
-            __html: `
-              body > div:first-child { position: fixed !important; top: 0; left: 0; right: 0; bottom: 0; }
-              [role="tablist"] [role="tab"] * { overflow: visible !important; }
-              [role="heading"], [role="heading"] * { overflow: visible !important; }
-            `,
-          }}
-        />
       </head>
       <body
         style={{
