@@ -9,15 +9,17 @@ export default function Root({ children }: PropsWithChildren) {
         <meta charSet="utf-8" />
         <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
         <meta name="theme-color" content="#121214" />
-        <meta name="application-name" content="DietUrso" />
+        <meta name="application-name" content="UrsoFit" />
+        <meta property="og:title" content="UrsoFit" />
+        <meta property="og:description" content="Alimentação, hidratação, treinos e conquistas no seu ritmo." />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-title" content="DietUrso" />
+        <meta name="apple-mobile-web-app-title" content="UrsoFit" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black" />
         <meta name="format-detection" content="telephone=no" />
         <meta
           name="description"
-          content="Planejador alimentar pessoal com acompanhamento de refeições e lista de compras."
+          content="Alimentação, hidratação, treinos e conquistas no seu ritmo."
         />
         <meta
           name="viewport"

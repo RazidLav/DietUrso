@@ -2,7 +2,7 @@
 
 ## Arquitetura adotada
 
-A hidratação segue a arquitetura local-first já usada pelo DietUrso. O estado completo é salvo no AsyncStorage sob `urso:hydration_v1` e incluído no snapshot remoto versão 4 de `public.user_app_state`.
+A hidratação segue a arquitetura local-first já usada pelo UrsoFit. O estado completo é salvo no AsyncStorage sob `urso:hydration_v1` e incluído no snapshot remoto versão 4 de `public.user_app_state`.
 
 Não foi criada uma segunda tabela no Supabase. A tabela existente já armazena o snapshot JSONB por usuário e já está protegida por Row Level Security, políticas por `auth.uid()` e índice de atualização entregues na Etapa 2. Reutilizar essa estrutura mantém a sincronização atômica, evita duas fontes de verdade e não exige mudança no banco de produção.
 

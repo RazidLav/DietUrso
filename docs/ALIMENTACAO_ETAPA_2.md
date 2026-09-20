@@ -2,7 +2,7 @@
 
 ## Arquitetura adotada
 
-O DietUrso continua local-first. Alimentos, receitas, diário e lista de compras são gravados primeiro no AsyncStorage e entram no snapshot versão 3 sincronizado em `public.user_app_state`. Essa decisão reaproveita a sincronização atômica já existente e evita criar duas fontes de verdade.
+O UrsoFit continua local-first. Alimentos, receitas, diário e lista de compras são gravados primeiro no AsyncStorage e entram no snapshot versão 3 sincronizado em `public.user_app_state`. Essa decisão reaproveita a sincronização atômica já existente e evita criar duas fontes de verdade.
 
 A lista de compras aceita atalhos de período e um intervalo personalizado de 1 a 60 dias, sempre contado a partir da data atual. Preferências de substituição, ajustes explícitos de quantidade, itens manuais e marcações também fazem parte do snapshot sincronizado.
 

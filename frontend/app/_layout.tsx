@@ -20,16 +20,14 @@ export default function RootLayout() {
     let mounted = true;
 
     ensureSeed()
-      .then(() => ensureNutritionSeed())
-      .then(() => ensureHydrationSeed())
-      .then(() => ensureTrainingSeed())
+      .then(() => Promise.all([ensureNutritionSeed(), ensureHydrationSeed(), ensureTrainingSeed()]))
       .then(async () => {
-        if (mounted) setStoreState("ready");
         try {
           await initializeCloudSync();
         } catch {
           // O armazenamento local continua disponível mesmo sem conexão.
         }
+        if (mounted) setStoreState("ready");
       })
       .catch((error) => {
         console.error("Falha ao inicializar os dados locais", error);

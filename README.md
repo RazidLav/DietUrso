@@ -1,6 +1,6 @@
-# DietUrso
+# UrsoFit
 
-Aplicativo pessoal de planejamento alimentar, diário de consumo, hidratação inteligente, treinos, receitas, lista de compras e conquistas.
+Aplicativo pessoal de alimentação, hidratação, treinos e conquistas. O repositório mantém o nome histórico `DietUrso` para preservar integrações já existentes.
 
 O projeto usa Expo Router e React Native Web. Os dados são gravados primeiro no armazenamento local para o app continuar rápido e funcionar sem internet. Quando o usuário conecta uma conta, o estado também é sincronizado pelo Supabase.
 
@@ -29,13 +29,15 @@ Copie `frontend/.env.example` para `frontend/.env.local` para habilitar a sincro
 
 ## Interface responsiva
 
-- No celular e tablet, o Dock possui cinco destinos fixos: Home, Plano alimentar, Hidratação, Treino e Perfil.
+- No celular e tablet, o Dock possui cinco destinos fixos: Home, Dieta, Hidratação, Treino e Perfil.
 - Cada área possui uma navegação contextual horizontal com estado ativo e suporte a redução de movimento.
 - No desktop, uma sidebar flutuante reúne todas as seções e o conteúdo aproveita melhor o espaço disponível.
 - O seletor do banco de alimentos possui busca sem diferença entre acentos e maiúsculas, rolagem independente e comportamento adaptado a mobile e desktop.
 - Formulários, modais e listas longas preservam o foco, o rascunho e a navegação por teclado.
 
 Auditoria, mapa das rotas, breakpoints e capturas da Etapa 5 estão em `docs/INTERFACE_ETAPA_5.md`.
+
+A auditoria de autenticação, simplificação dos planos, marca e carregamento está em `docs/CONSOLIDACAO_URSOFIT.md`.
 
 ## Render Static Site
 

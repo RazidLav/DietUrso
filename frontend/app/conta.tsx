@@ -1,6 +1,6 @@
 import MaterialDesignIcons from "@react-native-vector-icons/material-design-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
@@ -8,56 +8,80 @@ import {
   signInToCloud,
   signOutFromCloud,
   signUpForCloud,
+  sendPasswordReset,
+  resendConfirmation,
+  updateCloudPassword,
   subscribeCloudStatus,
   type CloudStatus,
 } from "../src/cloud/cloudSync";
 import { completeOnboarding } from "../src/store/onboardingStore";
+import { authErrorMessage, normalizeEmail } from "../src/cloud/authFlow";
 import { colors, radius, spacing } from "../src/theme";
-
-function friendlyError(error: unknown) {
-  const message = error instanceof Error ? error.message : String(error);
-  if (/invalid login credentials/i.test(message)) return "E-mail ou senha incorretos.";
-  if (/email not confirmed/i.test(message)) return "Confirme seu e-mail antes de entrar.";
-  if (/password should be at least/i.test(message)) return "Use uma senha com pelo menos 6 caracteres.";
-  if (/user already registered/i.test(message)) return "Esta conta já existe. Escolha Entrar.";
-  return "Não foi possível concluir agora. Seus dados locais continuam seguros.";
-}
 
 export default function AccountScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { onboarding } = useLocalSearchParams<{ onboarding?: string }>();
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const { onboarding, auth_callback, recovery } = useLocalSearchParams<{ onboarding?: string; auth_callback?: string; recovery?: string }>();
+  const [mode, setMode] = useState<"signin" | "signup" | "forgot">("signin");
   const [cloud, setCloud] = useState<CloudStatus>(getCloudStatus());
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const submitLock = useRef(false);
 
   useEffect(() => subscribeCloudStatus(setCloud), []);
-  const signedIn = Boolean(cloud.email && cloud.phase !== "confirmation_required");
+  const signedIn = cloud.authenticated;
+  const recovering = signedIn && (cloud.passwordRecovery || recovery === "1");
 
-  const finish = async () => {
+  const finish = useCallback(async () => {
     await completeOnboarding();
     router.replace("/(tabs)");
-  };
+  }, [router]);
+
+  useEffect(() => {
+    if (auth_callback === "1" && signedIn && cloud.readyForData && !recovering) void finish();
+    // A confirmação por e-mail volta a esta rota; outras visitas mantêm o painel da conta.
+  }, [auth_callback, signedIn, cloud.readyForData, recovering, finish]);
 
   const submit = async () => {
+    if (submitLock.current) return;
+    submitLock.current = true;
     setBusy(true);
     setNotice(null);
     try {
-      if (mode === "signin") {
+      if (recovering) {
+        if (password.length < 6) throw new Error("Password should be at least 6 characters");
+        await updateCloudPassword(password);
+        setPassword("");
+        router.replace("/conta");
+        setNotice("Senha atualizada. Você já pode usar o UrsoFit.");
+      } else if (mode === "forgot") {
+        if (!normalizeEmail(email).includes("@")) throw new Error("Informe um e-mail válido.");
+        await sendPasswordReset(email);
+        setNotice("Se esta conta existir, enviaremos um link de recuperação para seu e-mail.");
+      } else if (mode === "signin") {
         await signInToCloud(email, password);
         await finish();
       } else {
         const result = await signUpForCloud(email, password);
         if (!result.needsEmailConfirmation) await finish();
+        else setNotice("Solicitação enviada. Confirme o link no seu e-mail antes de entrar. Se não chegar, tente reenviar ou recuperar a senha.");
       }
     } catch (error) {
-      setNotice(friendlyError(error));
+      setNotice(authErrorMessage(error));
     } finally {
       setBusy(false);
+      submitLock.current = false;
     }
+  };
+
+  const resend = async () => {
+    if (submitLock.current) return;
+    submitLock.current = true; setBusy(true); setNotice(null);
+    try { await resendConfirmation(email || cloud.email || ""); setNotice("Se esta conta aguarda confirmação, enviaremos um novo link."); }
+    catch (error) { setNotice(authErrorMessage(error)); }
+    finally { setBusy(false); submitLock.current = false; }
   };
 
   return (
@@ -68,37 +92,41 @@ export default function AccountScreen() {
         </Pressable>
 
         <Image source={require("../assets/images/mascot-whey.jpg")} style={styles.mascot} />
-        <Text style={styles.eyebrow}>SUA CONTA DIETURSO</Text>
-        <Text style={styles.title}>{signedIn ? "A caverna está conectada." : "Seu progresso em todos os aparelhos."}</Text>
+        <Text style={styles.eyebrow}>SUA CONTA URSOFIT</Text>
+        <Text style={styles.title}>{recovering ? "Crie uma nova senha." : signedIn ? "A caverna está conectada." : "Seu progresso em todos os aparelhos."}</Text>
         <Text style={styles.description}>
           {signedIn ? `Conectado como ${cloud.email}` : "Use a mesma conta no iPhone e no iPad. O app continua funcionando offline."}
         </Text>
 
         {!cloud.configured ? (
           <View style={styles.noticeBox}><Text style={styles.notice}>Sincronização ainda não configurada neste build.</Text></View>
-        ) : signedIn ? (
+        ) : signedIn && !recovering ? (
           <View style={styles.signedCard} testID="account-connected-card">
             <View style={styles.connectedIcon}><MaterialDesignIcons name="cloud-check" size={28} color={colors.brandPrimary} /></View>
             <Text style={styles.connectedTitle}>Tudo pronto</Text>
             <Text style={styles.connectedText}>Planos, refeições, água, XP e conquistas serão sincronizados.</Text>
-            <Pressable style={styles.primaryButton} onPress={finish}><Text style={styles.primaryText}>Ir para o DietUrso</Text></Pressable>
-            <Pressable style={styles.linkButton} onPress={() => signOutFromCloud()}><Text style={styles.linkText}>Sair desta conta</Text></Pressable>
+            <Pressable style={[styles.primaryButton, !cloud.readyForData && styles.disabled]} disabled={!cloud.readyForData} onPress={finish}><Text style={styles.primaryText}>{cloud.readyForData ? "Ir para o UrsoFit" : "Preparando seus dados…"}</Text></Pressable>
+            <Pressable style={styles.linkButton} onPress={() => void signOutFromCloud()}><Text style={styles.linkText}>Sair desta conta</Text></Pressable>
           </View>
         ) : (
           <View style={styles.form} testID="account-auth-form">
-            <View style={styles.segmented}>
+            {!recovering ? <View style={styles.segmented}>
               <Pressable style={[styles.segment, mode === "signin" && styles.segmentActive]} onPress={() => setMode("signin")}>
                 <Text style={[styles.segmentText, mode === "signin" && styles.segmentTextActive]}>Entrar</Text>
               </Pressable>
               <Pressable style={[styles.segment, mode === "signup" && styles.segmentActive]} onPress={() => setMode("signup")}>
                 <Text style={[styles.segmentText, mode === "signup" && styles.segmentTextActive]}>Criar conta</Text>
               </Pressable>
-            </View>
-            <TextInput style={styles.input} placeholder="Seu e-mail" placeholderTextColor={colors.muted} value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" autoCorrect={false} textContentType="emailAddress" testID="account-email-input" />
-            <TextInput style={styles.input} placeholder="Senha (mínimo 6 caracteres)" placeholderTextColor={colors.muted} value={password} onChangeText={setPassword} secureTextEntry textContentType={mode === "signup" ? "newPassword" : "password"} testID="account-password-input" />
-            <Pressable style={[styles.primaryButton, (busy || !email.trim() || password.length < 6) && styles.disabled]} disabled={busy || !email.trim() || password.length < 6} onPress={submit} testID="account-submit-btn">
-              {busy ? <ActivityIndicator color={colors.onBrandPrimary} /> : <Text style={styles.primaryText}>{mode === "signin" ? "Entrar" : "Criar minha conta"}</Text>}
+            </View> : null}
+            {!recovering ? <TextInput style={styles.input} placeholder="Seu e-mail" placeholderTextColor={colors.muted} value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" autoCorrect={false} textContentType="emailAddress" testID="account-email-input" /> : null}
+            {mode !== "forgot" || recovering ? <TextInput style={styles.input} placeholder={recovering ? "Nova senha (mínimo 6 caracteres)" : "Senha (mínimo 6 caracteres)"} placeholderTextColor={colors.muted} value={password} onChangeText={setPassword} secureTextEntry textContentType={mode === "signup" || recovering ? "newPassword" : "password"} testID="account-password-input" /> : null}
+            <Pressable style={[styles.primaryButton, (busy || (!recovering && !email.trim()) || ((mode !== "forgot" || recovering) && password.length < 6)) && styles.disabled]} disabled={busy || (!recovering && !email.trim()) || ((mode !== "forgot" || recovering) && password.length < 6)} onPress={() => void submit()} testID="account-submit-btn">
+              {busy ? <ActivityIndicator color={colors.onBrandPrimary} /> : <Text style={styles.primaryText}>{recovering ? "Salvar nova senha" : mode === "signin" ? "Entrar" : mode === "signup" ? "Criar minha conta" : "Enviar link de recuperação"}</Text>}
             </Pressable>
+            {!recovering ? <View style={styles.extraActions}>
+              <Pressable style={styles.linkButton} onPress={() => { setMode(mode === "forgot" ? "signin" : "forgot"); setNotice(null); }}><Text style={styles.linkText}>{mode === "forgot" ? "Voltar ao login" : "Esqueci minha senha"}</Text></Pressable>
+              {mode !== "forgot" ? <Pressable style={styles.linkButton} disabled={busy || !(email.trim() || cloud.email)} onPress={() => void resend()}><Text style={styles.linkText}>Reenviar confirmação</Text></Pressable> : null}
+            </View> : null}
             {notice || cloud.phase === "confirmation_required" ? (
               <View style={styles.noticeBox}><Text style={styles.notice}>{notice ?? cloud.message}</Text></View>
             ) : null}
@@ -146,5 +174,6 @@ const styles = StyleSheet.create({
   connectedTitle: { color: colors.onSurface, fontSize: 20, fontWeight: "900" },
   connectedText: { color: colors.onSurfaceTertiary, fontSize: 12, lineHeight: 18, textAlign: "center" },
   linkButton: { padding: spacing.sm },
+  extraActions: { flexDirection: "row", justifyContent: "space-between", flexWrap: "wrap" },
   linkText: { color: colors.onSurfaceTertiary, fontSize: 12, fontWeight: "700" },
 });

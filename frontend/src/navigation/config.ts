@@ -36,7 +36,7 @@ export const NAVIGATION: NavigationSection[] = [
   {
     ...item(
       "food",
-      "Plano alimentar",
+      "Dieta",
       "silverware-fork-knife",
       "/alimentacao",
       ["/alimentacao", "/plano", "/historico-alimentar", "/alimentos", "/receitas", "/receita", "/compras", "/editor", "/meal", "/fora-do-plano"],

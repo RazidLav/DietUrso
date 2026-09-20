@@ -23,9 +23,11 @@ import {
   WATER_KEY,
 } from "../store/storageKeys";
 import { isCloudConfigured, supabase } from "./supabase";
+import { authRedirectUrl, normalizeEmail, registerWithPassword, requestPasswordReset, resendEmailConfirmation, signInWithPassword } from "./authFlow";
 
 type CloudPhase =
   | "disabled"
+  | "initializing"
   | "signed_out"
   | "confirmation_required"
   | "syncing"
@@ -35,6 +37,9 @@ type CloudPhase =
 export interface CloudStatus {
   configured: boolean;
   phase: CloudPhase;
+  authenticated: boolean;
+  readyForData: boolean;
+  passwordRecovery: boolean;
   email: string | null;
   lastSyncAt: string | null;
   message: string | null;
@@ -67,7 +72,10 @@ const dataListeners = new Set<() => void>();
 
 let status: CloudStatus = {
   configured: isCloudConfigured,
-  phase: isCloudConfigured ? "signed_out" : "disabled",
+  phase: isCloudConfigured ? "initializing" : "disabled",
+  authenticated: false,
+  readyForData: !isCloudConfigured,
+  passwordRecovery: false,
   email: null,
   lastSyncAt: null,
   message: isCloudConfigured ? null : "Sincronização não configurada.",
@@ -230,7 +238,7 @@ async function pushLocalState(session?: Session): Promise<void> {
   if (!supabase) return;
   const currentSession = session ?? (await getSession());
   if (!currentSession) {
-    updateStatus({ phase: "signed_out", email: null });
+    updateStatus({ phase: "signed_out", authenticated: false, readyForData: true, email: null });
     return;
   }
 
@@ -247,6 +255,8 @@ async function pushLocalState(session?: Session): Promise<void> {
   await AsyncStorage.setItem(LOCAL_CHANGED_AT_KEY, updatedAt);
   updateStatus({
     phase: "synced",
+    authenticated: true,
+    readyForData: true,
     email: currentSession.user.email ?? null,
     lastSyncAt: updatedAt,
     message: null,
@@ -257,7 +267,7 @@ async function performSync(): Promise<void> {
   if (!supabase) return;
   const session = await getSession();
   if (!session) {
-    updateStatus({ phase: "signed_out", email: null, message: null });
+    updateStatus({ phase: "signed_out", authenticated: false, readyForData: true, email: null, message: null });
     return;
   }
 
@@ -289,6 +299,8 @@ async function performSync(): Promise<void> {
   await applyCloudSnapshot(data);
   updateStatus({
     phase: "synced",
+    authenticated: true,
+    readyForData: true,
     email: session.user.email ?? null,
     lastSyncAt: data.updated_at,
     message: null,
@@ -340,6 +352,7 @@ export function syncCloudNow(): Promise<void> {
       console.error("Falha ao sincronizar dados", error);
       updateStatus({
         phase: "error",
+        readyForData: true,
         message:
           "Não foi possível sincronizar agora. Os dados continuam salvos neste aparelho.",
       });
@@ -357,55 +370,91 @@ export async function initializeCloudSync(): Promise<void> {
   if (!supabase || initialized) return;
   initialized = true;
 
-  supabase.auth.onAuthStateChange((_event, session) => {
-    if (!session) {
-      updateStatus({ phase: "signed_out", email: null, message: null });
+  const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    if (event === "INITIAL_SESSION") return;
+    if (event === "PASSWORD_RECOVERY") {
+      updateStatus({ passwordRecovery: true, authenticated: true, readyForData: true, email: session?.user.email ?? null });
       return;
     }
-    updateStatus({ email: session.user.email ?? null });
+    if (!session) {
+      updateStatus({ phase: "signed_out", authenticated: false, readyForData: true, passwordRecovery: false, email: null, message: null });
+      return;
+    }
+    const sameUser = status.authenticated && status.email === (session.user.email ?? null);
+    updateStatus({ phase: "syncing", authenticated: true, readyForData: sameUser ? status.readyForData : false, email: session.user.email ?? null });
     setTimeout(() => void syncCloudNow().catch(() => undefined), 0);
   });
 
-  await syncCloudNow();
+  try {
+    const session = await getSession();
+    if (!session) {
+      updateStatus({ phase: "signed_out", authenticated: false, readyForData: true, email: null, message: null });
+      return;
+    }
+    updateStatus({ phase: "syncing", authenticated: true, readyForData: false, email: session.user.email ?? null });
+    void syncCloudNow().catch(() => undefined);
+  } catch (error) {
+    subscription.unsubscribe();
+    initialized = false;
+    updateStatus({ phase: "error", readyForData: true, message: "Não foi possível recuperar a sessão. Tente novamente." });
+    throw error;
+  }
 }
 
 export async function signInToCloud(email: string, password: string) {
   if (!supabase) throw new Error("Sincronização não configurada.");
   updateStatus({ phase: "syncing", message: null });
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email: email.trim(),
-    password,
-  });
-  if (error) throw error;
-  await syncCloudNow();
-  return data.user;
+  try {
+    const user = await signInWithPassword(supabase.auth, email, password);
+    updateStatus({ phase: "syncing", authenticated: true, readyForData: false, email: user.email ?? null });
+    void syncCloudNow().catch(() => undefined);
+    return user;
+  } catch (error) {
+    updateStatus({ phase: "signed_out", authenticated: false, readyForData: true });
+    throw error;
+  }
 }
 
 export async function signUpForCloud(email: string, password: string) {
   if (!supabase) throw new Error("Sincronização não configurada.");
   updateStatus({ phase: "syncing", message: null });
-  const redirectTo =
-    typeof window === "undefined"
-      ? undefined
-      : `${window.location.origin}${window.location.pathname}`;
-  const { data, error } = await supabase.auth.signUp({
-    email: email.trim(),
-    password,
-    options: { emailRedirectTo: redirectTo },
-  });
-  if (error) throw error;
-
-  if (data.session) {
-    await syncCloudNow();
-  } else {
-    updateStatus({
-      phase: "confirmation_required",
-      email: email.trim(),
-      message: "Confira seu e-mail para confirmar a conta e depois entre no app.",
-    });
+  try {
+    const redirectTo = typeof window === "undefined" ? undefined : authRedirectUrl(window.location.origin);
+    const result = await registerWithPassword(supabase.auth, email, password, redirectTo);
+    if (!result.needsEmailConfirmation) {
+      updateStatus({ phase: "syncing", authenticated: true, readyForData: false, email: normalizeEmail(email) });
+      void syncCloudNow().catch(() => undefined);
+    } else {
+      updateStatus({
+        phase: "confirmation_required",
+        authenticated: false,
+        readyForData: true,
+        email: normalizeEmail(email),
+        message: "Confira seu e-mail para confirmar a conta e depois entre no app.",
+      });
+    }
+    return { needsEmailConfirmation: result.needsEmailConfirmation };
+  } catch (error) {
+    updateStatus({ phase: "signed_out", authenticated: false, readyForData: true });
+    throw error;
   }
+}
 
-  return { needsEmailConfirmation: !data.session };
+export async function sendPasswordReset(email: string) {
+  if (!supabase) throw new Error("Sincronização não configurada.");
+  await requestPasswordReset(supabase.auth, email, typeof window === "undefined" ? undefined : authRedirectUrl(window.location.origin, true));
+}
+
+export async function resendConfirmation(email: string) {
+  if (!supabase) throw new Error("Sincronização não configurada.");
+  await resendEmailConfirmation(supabase.auth, email, typeof window === "undefined" ? undefined : authRedirectUrl(window.location.origin));
+}
+
+export async function updateCloudPassword(password: string) {
+  if (!supabase) throw new Error("Sincronização não configurada.");
+  const { error } = await supabase.auth.updateUser({ password });
+  if (error) throw error;
+  updateStatus({ passwordRecovery: false });
 }
 
 export async function signOutFromCloud(): Promise<void> {
@@ -414,6 +463,9 @@ export async function signOutFromCloud(): Promise<void> {
   if (error) throw error;
   updateStatus({
     phase: "signed_out",
+    authenticated: false,
+    readyForData: true,
+    passwordRecovery: false,
     email: null,
     lastSyncAt: null,
     message: null,

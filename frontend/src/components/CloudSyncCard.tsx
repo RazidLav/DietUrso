@@ -50,7 +50,7 @@ export default function CloudSyncCard({ onSynced }: { onSynced?: () => void | Pr
     );
   }
 
-  const signedIn = Boolean(cloud.email && cloud.phase !== "confirmation_required");
+  const signedIn = cloud.authenticated;
   const syncing = busy || cloud.phase === "syncing";
 
   return (

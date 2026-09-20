@@ -4,6 +4,7 @@ import { evaluateGamification } from "../gamification/engine";
 import {
   beginSession,
   clonePrescription,
+  copyTrainingPlanDayState,
   createDefaultPrescription,
   createInitialTrainingState,
   finishSession,
@@ -104,6 +105,7 @@ export interface SaveTrainingPlanInput {
   id?: string;
   name: string;
   description?: string;
+  generalNotes?: string;
   validFrom?: string;
   validUntil?: string;
   repeatWeekly?: boolean;
@@ -120,6 +122,7 @@ export async function saveTrainingPlan(input: SaveTrainingPlanInput) {
       ownerId,
       name: input.name.trim(),
       description: input.description?.trim() || undefined,
+      generalNotes: input.generalNotes?.trim() || undefined,
       validFrom: input.validFrom || undefined,
       validUntil: input.validUntil || undefined,
       repeatWeekly: input.repeatWeekly ?? current?.repeatWeekly ?? true,
@@ -168,6 +171,8 @@ export async function saveTrainingPlanItem(planId: string, weekday: number, inpu
       activityType: input.activityType,
       scheduledTime: input.scheduledTime || undefined,
       estimatedDurationMinutes: input.estimatedDurationMinutes ? Math.max(1, Math.round(input.estimatedDurationMinutes)) : undefined,
+      notes: input.notes?.trim() || undefined,
+      isDraft: input.isDraft ?? current?.isDraft ?? false,
       prescription: clonePrescription(input.prescription ?? current?.prescription ?? createDefaultPrescription(input.activityType)),
       order: current?.order ?? day.items.length,
     };
@@ -188,6 +193,23 @@ export async function removeTrainingPlanItem(planId: string, weekday: number, it
       days: plan.days.map((day) => day.weekday !== weekday ? day : { ...day, items: day.items.filter((item) => item.id !== itemId).map((item, order) => ({ ...item, order })) }),
     }),
   }));
+}
+
+export async function copyTrainingPlanDay(planId: string, sourceWeekday: number, targetWeekday: number) {
+  return mutate((state) => copyTrainingPlanDayState(state, planId, sourceWeekday, targetWeekday));
+}
+
+export async function deleteTrainingPlanIfUnused(id: string) {
+  return mutate((state) => {
+    if (state.plannedSessions.some((session) => session.planId === id)) {
+      throw new Error("Este plano já possui sessões no histórico. Arquive-o para preservar seus registros.");
+    }
+    return {
+      ...state,
+      plans: state.plans.filter((plan) => plan.id !== id),
+      activePlanId: state.activePlanId === id ? state.plans.find((plan) => plan.id !== id && !plan.archivedAt)?.id : state.activePlanId,
+    };
+  });
 }
 
 export async function moveTrainingPlanItem(planId: string, weekday: number, itemId: string, direction: -1 | 1) {
@@ -493,7 +515,7 @@ export async function addStrengthExerciseToPrescription(
       exercises: [...current, {
         id: exercisePlanId,
         exerciseId: exercise.id,
-        exerciseSnapshot: { id: exercise.id, name: exercise.name, primaryMuscle: exercise.primaryMuscle, equipment: exercise.equipment, laterality: exercise.laterality },
+        exerciseSnapshot: { id: exercise.id, name: exercise.name, primaryMuscle: exercise.primaryMuscle, equipment: exercise.equipment, laterality: exercise.laterality, instructions: exercise.instructions },
         order: current.length,
         sets: [
           { id: uid("set"), kind: "working" as const, plannedRepMin: 8, plannedRepMax: 12, loadUnit: "kg" as const, restSeconds: 90, technique: "normal" as const, toFailure: false },

@@ -1,9 +1,10 @@
 import MaterialDesignIcons from "@react-native-vector-icons/material-design-icons";
 import { useFocusEffect, useRouter } from "expo-router";
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ACTIVITY_COLORS, ACTIVITY_ICONS, ACTIVITY_LABELS } from "../src/training/catalog";
+import { getCloudStatus, subscribeCloudStatus } from "../src/cloud/cloudSync";
 import type { ActivityType, ExerciseDefinition, TrainingState } from "../src/training/types";
 import { createPersonalExerciseVariant, getTrainingState, savePersonalExercise, setPersonalExerciseArchived, toggleExerciseFavorite } from "../src/store/trainingStore";
 import { colors, radius, spacing } from "../src/theme";
@@ -14,12 +15,17 @@ type ExerciseDraft = Partial<ExerciseDefinition> & { name: string; activityType:
 
 export default function ExerciseCatalogScreen() {
   const router = useRouter(); const insets = useSafeAreaInsets(); const [state, setState] = useState<TrainingState | null>(null); const [query, setQuery] = useState(""); const [type, setType] = useState<ActivityType | "all">("all"); const [scope, setScope] = useState<"all" | "global" | "personal">("all"); const [detail, setDetail] = useState<ExerciseDefinition | null>(null); const [draft, setDraft] = useState<ExerciseDraft | null>(null); const [message, setMessage] = useState<string | null>(null);
-  const load = useCallback(async () => setState(await getTrainingState()), []); useFocusEffect(useCallback(() => { void load(); }, [load]));
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [cloudReady, setCloudReady] = useState(getCloudStatus().readyForData);
+  useEffect(() => subscribeCloudStatus((next) => setCloudReady(next.readyForData)), []);
+  const load = useCallback(async () => { if (!getCloudStatus().readyForData) return; try { setState(await getTrainingState()); setLoadError(null); } catch (cause) { setLoadError(cause instanceof Error ? cause.message : "Não foi possível carregar os exercícios."); } }, []);
+  useFocusEffect(useCallback(() => { if (cloudReady) void load(); }, [cloudReady, load]));
   const exercises = useMemo(() => state?.exercises.filter((exercise) => matchesSearch(query, exercise.name, exercise.primaryMuscle, exercise.secondaryMuscles.join(" "), exercise.equipment) && (type === "all" || exercise.activityType === type) && (scope === "all" || exercise.scope === scope)).sort((a, b) => Number(b.favorite) - Number(a.favorite) || a.name.localeCompare(b.name)) ?? [], [state, query, type, scope]);
   const save = async () => { if (!draft?.name) return; try { await savePersonalExercise({ ...draft, secondaryMuscles: typeof draft.secondaryMuscles === "string" ? String(draft.secondaryMuscles).split(",").map((item) => item.trim()).filter(Boolean) : draft.secondaryMuscles }); setDraft(null); setMessage("Exercício pessoal salvo."); await load(); } catch (cause) { setMessage(cause instanceof Error ? cause.message : "Não foi possível salvar."); } };
-  if (!state) return <View style={styles.loading}><Text style={styles.muted}>Carregando exercícios…</Text></View>;
+  if (!state) return <View style={styles.loading}><Text style={styles.muted}>{loadError ?? "Carregando exercícios…"}</Text>{loadError ? <Pressable onPress={() => void load()}><Text style={styles.message}>Tentar novamente</Text></Pressable> : null}</View>;
   return <View style={styles.screen}><ScrollView contentContainerStyle={[styles.content, { paddingTop: insets.top + spacing.lg }]} keyboardShouldPersistTaps="handled">
     <View style={styles.header}><Pressable style={styles.back} onPress={() => router.back()}><MaterialDesignIcons name="arrow-left" size={23} color={colors.onSurface} /></Pressable><View style={{ flex: 1 }}><Text style={styles.eyebrow}>BIBLIOTECA URSOFIT</Text><Text style={styles.title}>Banco de exercícios</Text></View><Pressable style={styles.new} onPress={() => setDraft({ name: "", activityType: "strength", laterality: "bilateral", secondaryMuscles: [], alternativeExerciseIds: [] })}><MaterialDesignIcons name="plus" size={19} color={colors.onBrandPrimary} /><Text style={styles.newText}>Criar</Text></Pressable></View>
+    {loadError ? <Pressable onPress={() => void load()}><Text style={styles.message}>{loadError} · Tentar novamente</Text></Pressable> : null}
     <View style={styles.search}><MaterialDesignIcons name="magnify" size={21} color={colors.onSurfaceTertiary} /><TextInput style={styles.searchInput} value={query} onChangeText={setQuery} placeholder="Nome, músculo ou equipamento" placeholderTextColor={colors.muted} /></View>
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>{TYPES.map((value) => <Chip key={value} label={value === "all" ? "Todas" : ACTIVITY_LABELS[value]} active={type === value} onPress={() => setType(value)} />)}</ScrollView>
     <View style={styles.filters}><Chip label="Todos" active={scope === "all"} onPress={() => setScope("all")} /><Chip label="Globais" active={scope === "global"} onPress={() => setScope("global")} /><Chip label="Meus" active={scope === "personal"} onPress={() => setScope("personal")} /></View>

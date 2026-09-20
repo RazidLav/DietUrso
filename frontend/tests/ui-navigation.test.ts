@@ -5,7 +5,7 @@ import { motion } from "../src/theme";
 import { matchesSearch, normalizeSearchText } from "../src/utils/search";
 
 test("a dock central possui exatamente as cinco áreas na ordem definida", () => {
-  assert.deepEqual(NAVIGATION.map((section) => section.label), ["Home", "Plano alimentar", "Hidratação", "Treino", "Perfil"]);
+  assert.deepEqual(NAVIGATION.map((section) => section.label), ["Home", "Dieta", "Hidratação", "Treino", "Perfil"]);
   assert.deepEqual(NAVIGATION.map((section) => section.order), [0, 1, 2, 3, 4]);
   assert.equal(new Set(NAVIGATION.map((section) => section.href)).size, 5);
 });

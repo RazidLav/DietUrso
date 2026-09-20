@@ -1,9 +1,10 @@
 import MaterialDesignIcons from "@react-native-vector-icons/material-design-icons";
 import { useFocusEffect, useRouter } from "expo-router";
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import TrainingSessionCard from "../src/components/TrainingSessionCard";
+import { getCloudStatus, subscribeCloudStatus } from "../src/cloud/cloudSync";
 import { useCloudDataRefresh } from "../src/cloud/useCloudDataRefresh";
 import { addDays, dayEntries, localDate, startOfWeek } from "../src/training/calculations";
 import { ACTIVITY_COLORS } from "../src/training/catalog";
@@ -34,8 +35,11 @@ export default function TreinosScreen() {
   const [mode, setMode] = useState<ViewMode>("day");
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [cloudReady, setCloudReady] = useState(getCloudStatus().readyForData);
+  useEffect(() => subscribeCloudStatus((next) => setCloudReady(next.readyForData)), []);
 
   const load = useCallback(async () => {
+    if (!getCloudStatus().readyForData) return;
     try {
       const bounds = monthBounds(selectedDate);
       await prepareTrainingRange(addDays(bounds.first, -7), addDays(bounds.last, 7));
@@ -46,7 +50,7 @@ export default function TreinosScreen() {
     }
   }, [selectedDate]);
 
-  useFocusEffect(useCallback(() => { void load(); }, [load]));
+  useFocusEffect(useCallback(() => { if (cloudReady) void load(); }, [cloudReady, load]));
   useCloudDataRefresh(load);
 
   const entries = useMemo(() => state ? dayEntries(state, selectedDate) : [], [state, selectedDate]);
@@ -72,7 +76,7 @@ export default function TreinosScreen() {
 
   const refresh = async () => { setRefreshing(true); await load(); setRefreshing(false); };
 
-  if (!state) return <View style={styles.loading}><ActivityIndicator color={colors.brandPrimary} /><Text style={styles.muted}>Preparando seus treinos…</Text></View>;
+  if (!state) return <View style={styles.loading}>{error ? <><Text style={styles.muted}>{error}</Text><Pressable onPress={() => void load()}><Text style={styles.retry}>Tentar novamente</Text></Pressable></> : <><ActivityIndicator color={colors.brandPrimary} /><Text style={styles.muted}>Preparando seus treinos…</Text></>}</View>;
 
   return (
     <View style={styles.screen}>
