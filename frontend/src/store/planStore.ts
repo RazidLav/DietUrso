@@ -57,7 +57,7 @@ export async function getActivePlan(): Promise<Plan | null> {
   const id = await getActivePlanId();
   const plans = await listPlans();
   if (!id) return plans.find((p) => !p.archived) ?? null;
-  return plans.find((p) => p.id === id) ?? null;
+  return plans.find((p) => p.id === id && !p.archived) ?? plans.find((p) => !p.archived) ?? null;
 }
 export async function updatePlan(updated: Plan): Promise<void> {
   const plans = await listPlans();

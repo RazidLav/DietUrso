@@ -28,7 +28,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="alimentacao"
         options={{
-          title: "Alimentação",
+          title: "Dieta",
         }}
       />
       <Tabs.Screen

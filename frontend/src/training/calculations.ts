@@ -39,6 +39,17 @@ export function startOfWeek(date: string) {
   return addDays(date, -distance);
 }
 
+export function trainingPlanEndDate(start: string, weeks: number) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(start) || !Number.isInteger(weeks) || weeks < 1 || weeks > 104) {
+    throw new Error("Informe uma data inicial e um período de 1 a 104 semanas.");
+  }
+  const parsed = new Date(`${start}T12:00:00`);
+  if (Number.isNaN(parsed.getTime()) || localDate(parsed) !== start) {
+    throw new Error("Informe uma data inicial válida.");
+  }
+  return addDays(start, weeks * 7 - 1);
+}
+
 export function clonePrescription<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
@@ -139,6 +150,29 @@ export function duplicateTrainingPlanState(
   return { state: { ...state, plans: [...state.plans, plan] }, plan };
 }
 
+export function copyTrainingPlanDayState(state: TrainingState, planId: string, sourceWeekday: number, targetWeekday: number): TrainingState {
+  return {
+    ...state,
+    plans: state.plans.map((plan) => {
+      if (plan.id !== planId) return plan;
+      const source = plan.days.find((day) => day.weekday === sourceWeekday);
+      if (!source?.items.length) return plan;
+      return {
+        ...plan,
+        updatedAt: new Date().toISOString(),
+        days: plan.days.map((day) => day.weekday !== targetWeekday ? day : {
+          ...day,
+          items: [...day.items, ...source.items.map((item, index) => ({
+            ...clonePrescription(item),
+            id: uid("plan-item"),
+            order: day.items.length + index,
+          }))],
+        }),
+      };
+    }),
+  };
+}
+
 export function upsertExerciseState(state: TrainingState, exercise: ExerciseDefinition): TrainingState {
   const existing = state.exercises.find((candidate) => candidate.id === exercise.id);
   if (existing?.scope === "global") throw new Error("Exercícios globais são somente leitura.");
@@ -152,10 +186,12 @@ function dateInPlan(date: string, plan: TrainingPlan) {
 export function materializePlans(state: TrainingState, from: string, to: string, now = new Date()): TrainingState {
   const existingKeys = new Set(state.plannedSessions.map((session) => session.idempotencyKey).filter(Boolean));
   const created: PlannedSession[] = [];
+  const activePlanId = state.plans.find((plan) => plan.id === state.activePlanId && !plan.archivedAt)?.id ?? state.plans.find((plan) => !plan.archivedAt)?.id;
   for (let date = from; date <= to; date = addDays(date, 1)) {
     const weekday = new Date(`${date}T12:00:00`).getDay();
-    for (const plan of state.plans.filter((candidate) => !candidate.archivedAt && candidate.repeatWeekly && dateInPlan(date, candidate))) {
+    for (const plan of state.plans.filter((candidate) => candidate.id === activePlanId && candidate.repeatWeekly && dateInPlan(date, candidate))) {
       for (const item of plan.days.find((day) => day.weekday === weekday)?.items ?? []) {
+        if (item.isDraft) continue;
         const idempotencyKey = `plan:${plan.id}:${item.id}:${date}`;
         if (existingKeys.has(idempotencyKey)) continue;
         const timestamp = now.toISOString();
@@ -170,6 +206,7 @@ export function materializePlans(state: TrainingState, from: string, to: string,
           date,
           scheduledTime: item.scheduledTime,
           estimatedDurationMinutes: item.estimatedDurationMinutes,
+          notes: item.notes,
           status: "planned",
           prescriptionSnapshot: clonePrescription(item.prescription),
           sortOrder: item.order,

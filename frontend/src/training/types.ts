@@ -60,11 +60,12 @@ export interface StrengthSetPlan {
 export interface StrengthExercisePlan {
   id: string;
   exerciseId?: string;
-  exerciseSnapshot: Pick<ExerciseDefinition, "id" | "name" | "primaryMuscle" | "equipment" | "laterality">;
+  exerciseSnapshot: Pick<ExerciseDefinition, "id" | "name" | "primaryMuscle" | "equipment" | "laterality" | "instructions">;
   order: number;
   groupId?: string;
   groupTechnique?: StrengthTechnique;
   executionNotes?: string;
+  planNotes?: string;
   alternativeExerciseId?: string;
   sets: StrengthSetPlan[];
 }
@@ -172,6 +173,8 @@ export interface TrainingPlanItem {
   activityType: ActivityType;
   scheduledTime?: string;
   estimatedDurationMinutes?: number;
+  notes?: string;
+  isDraft?: boolean;
   prescription: WorkoutPrescription;
   order: number;
 }
@@ -186,6 +189,7 @@ export interface TrainingPlan {
   ownerId?: string;
   name: string;
   description?: string;
+  generalNotes?: string;
   validFrom?: string;
   validUntil?: string;
   repeatWeekly: boolean;

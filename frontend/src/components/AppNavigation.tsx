@@ -64,7 +64,7 @@ function DesktopSidebar({ pathname, topInset, bottomInset }: { pathname: string;
     <View style={[styles.sidebarFrame, { marginTop: Math.max(topInset, spacing.lg), marginBottom: Math.max(bottomInset, spacing.lg) }]} testID="desktop-sidebar">
       <View style={styles.brandRow}>
         <View style={styles.brandMark}><MaterialDesignIcons name="paw" size={21} color={colors.onBrandPrimary} /></View>
-        <View><Text style={styles.brandName}>DietUrso</Text><Text style={styles.brandTag}>ROTINA COM FORÇA</Text></View>
+        <View><Text style={styles.brandName}>UrsoFit</Text><Text style={styles.brandTag}>ROTINA COM FORÇA</Text></View>
       </View>
       <ScrollView style={styles.sidebarScroll} contentContainerStyle={styles.sidebarContent} showsVerticalScrollIndicator={false}>
         {NAVIGATION.map((section) => {

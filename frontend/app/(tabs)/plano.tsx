@@ -1,5 +1,5 @@
-import React, { useCallback, useState } from "react";
-import { Modal, ScrollView, StyleSheet, Text, View, Pressable } from "react-native";
+import React, { useCallback, useRef, useState } from "react";
+import { ActivityIndicator, Modal, ScrollView, StyleSheet, Text, View, Pressable } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import MaterialDesignIcons from "@react-native-vector-icons/material-design-icons";
@@ -11,26 +11,56 @@ import { WEEKDAYS_SHORT } from "../../src/utils/date";
 import type { Plan } from "../../src/types/plan";
 import { FLOATING_TAB_HEIGHT, FLOATING_TAB_MARGIN } from "./_layout";
 import { useCloudDataRefresh } from "../../src/cloud/useCloudDataRefresh";
+import { getCloudStatus, subscribeCloudStatus, syncCloudNow } from "../../src/cloud/cloudSync";
+import { resolvePlanView, type DataLoadState } from "../../src/cloud/planViewState";
 
 export default function PlanoScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const [plan, setPlan] = useState<Plan | null>(null);
+  const [loadState, setLoadState] = useState<DataLoadState>("idle");
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [cloudReady, setCloudReady] = useState(getCloudStatus().readyForData);
+  const [cloudError, setCloudError] = useState(getCloudStatus().phase === "error" ? getCloudStatus().message : null);
+  const loadId = useRef(0);
   const [selectedDay, setSelectedDay] = useState(new Date().getDay());
   const [copyOpen, setCopyOpen] = useState(false);
 
+  React.useEffect(() => subscribeCloudStatus((status) => { setCloudReady(status.readyForData); setCloudError(status.phase === "error" ? status.message : null); }), []);
+
   const load = useCallback(async () => {
-    setPlan(await getActivePlan());
+    if (!getCloudStatus().readyForData) return;
+    const request = ++loadId.current;
+    setLoadState((current) => current === "success" ? current : "loading");
+    try {
+      const next = await getActivePlan();
+      if (request !== loadId.current) return;
+      setPlan(next);
+      setLoadState(next ? "success" : "empty");
+      setLoadError(null);
+    } catch (cause) {
+      if (request === loadId.current) { setLoadState("error"); setLoadError(cause instanceof Error ? cause.message : "Não foi possível carregar o plano."); }
+    }
   }, []);
 
   useFocusEffect(
     useCallback(() => {
-      load();
-    }, [load])
+      if (cloudReady) void load();
+    }, [cloudReady, load])
   );
   useCloudDataRefresh(load);
 
-  if (!plan) {
+  const planView = resolvePlanView(cloudReady, loadState, Boolean(plan), Boolean(cloudError));
+  const retry = async () => { if (cloudError) { try { await syncCloudNow(); } catch { /* O estado de erro continua visível. */ } } await load(); };
+  if (planView === "loading") {
+    return <View style={[styles.empty, { paddingTop: insets.top + spacing.xxl }]}><ActivityIndicator color={colors.brandPrimary} /><Text style={styles.emptyDesc}>{cloudReady ? "Carregando seu plano…" : "Preparando sua conta e seus dados…"}</Text></View>;
+  }
+
+  if (planView === "error") {
+    return <View style={[styles.empty, { paddingTop: insets.top + spacing.xxl }]}><Text style={styles.emptyTitle}>Não foi possível carregar o plano</Text><Text style={styles.emptyDesc}>{loadError ?? cloudError}</Text><Pressable style={styles.emptyCta} onPress={() => void retry()}><Text style={styles.emptyCtaText}>Tentar novamente</Text></Pressable></View>;
+  }
+
+  if (planView === "empty" || !plan) {
     return (
       <View style={[styles.empty, { paddingTop: insets.top + spacing.xxl }]}>
         <Text style={styles.emptyTitle}>Nenhum plano ativo</Text>

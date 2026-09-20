@@ -7,7 +7,7 @@ import { colors, radius, spacing } from "../src/theme";
 
 const STEPS = [
   {
-    eyebrow: "BEM-VINDO AO DIETURSO",
+    eyebrow: "BEM-VINDO AO URSOFIT",
     title: "Seu plano. Seu ritmo. Seu progresso.",
     description: "Um companheiro leve para registrar refeições, acompanhar metas e construir constância sem culpa.",
     icon: "paw",
@@ -20,7 +20,7 @@ const STEPS = [
   },
   {
     eyebrow: "SUA CAVERNA, SUAS REGRAS",
-    title: "Leve o DietUrso com você.",
+    title: "Leve o UrsoFit com você.",
     description: "Crie uma conta para sincronizar entre aparelhos ou continue usando tudo localmente. Seus registros existentes estão preservados.",
     icon: "cloud-check-outline",
   },
@@ -41,7 +41,7 @@ export default function WelcomeScreen() {
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.brandRow}>
           <View style={styles.brandDot} />
-          <Text style={styles.brand}>DIETURSO</Text>
+          <Text style={styles.brand}>URSOFIT</Text>
         </View>
 
         <View style={styles.heroWrap}>

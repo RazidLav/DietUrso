@@ -86,7 +86,7 @@ function catalogFromPlanFood(food: Food): FoodCatalogItem | null {
     referenceUnit: food.unit,
     nutrients: scaleNutrients(sourceNutrients, quantity, referenceQuantity),
     notes: food.notes,
-    source: "Plano original do DietUrso",
+    source: "Plano original do UrsoFit",
     scope: "global",
     archived: false,
     createdAt: now,

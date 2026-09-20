@@ -1,8 +1,8 @@
 {
   "id": "/",
-  "name": "DietUrso",
-  "short_name": "DietUrso",
-  "description": "Planejador alimentar pessoal com acompanhamento de refeições e lista de compras.",
+  "name": "UrsoFit",
+  "short_name": "UrsoFit",
+  "description": "Alimentação, hidratação, treinos e conquistas no seu ritmo.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

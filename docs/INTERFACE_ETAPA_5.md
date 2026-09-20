@@ -2,7 +2,7 @@
 
 ## Objetivo
 
-Esta etapa consolida a navegação do DietUrso, melhora o aproveitamento de telas grandes e corrige fluxos que ficavam difíceis de usar em telas pequenas. Nenhuma regra de alimentação, hidratação, treino, sincronização ou gamificação foi alterada.
+Esta etapa consolida a navegação do UrsoFit, melhora o aproveitamento de telas grandes e corrige fluxos que ficavam difíceis de usar em telas pequenas. Nenhuma regra de alimentação, hidratação, treino, sincronização ou gamificação foi alterada.
 
 ## Auditoria inicial
 

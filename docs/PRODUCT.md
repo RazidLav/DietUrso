@@ -1,6 +1,6 @@
-# DietUrso — visão do produto
+# UrsoFit — visão do produto
 
-O DietUrso é um aplicativo pessoal, local-first, para alimentação, hidratação e treinos. Prescrições permanecem separadas dos registros efetivamente realizados.
+O UrsoFit é um aplicativo pessoal, local-first, para alimentação, hidratação e treinos. Prescrições permanecem separadas dos registros efetivamente realizados.
 
 ## Funcionalidades atuais
 

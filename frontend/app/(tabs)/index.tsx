@@ -1,5 +1,5 @@
 import React, { useCallback, useRef, useState } from "react";
-import { ScrollView, StyleSheet, Text, View, RefreshControl, Pressable, useWindowDimensions } from "react-native";
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View, RefreshControl, Pressable, useWindowDimensions } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import MaterialDesignIcons from "@react-native-vector-icons/material-design-icons";
@@ -19,6 +19,8 @@ import { todayISO, WEEKDAYS_LONG } from "../../src/utils/date";
 import type { ConsumptionEntry, Plan } from "../../src/types/plan";
 import { FLOATING_TAB_HEIGHT, FLOATING_TAB_MARGIN } from "./_layout";
 import { useCloudDataRefresh } from "../../src/cloud/useCloudDataRefresh";
+import { getCloudStatus, subscribeCloudStatus, syncCloudNow } from "../../src/cloud/cloudSync";
+import { resolvePlanView, type DataLoadState } from "../../src/cloud/planViewState";
 import GamificationSummaryCard from "../../src/components/GamificationSummaryCard";
 import WaterCard from "../../src/components/WaterCard";
 import AchievementUnlockModal from "../../src/components/AchievementUnlockModal";
@@ -39,6 +41,11 @@ export default function HojeScreen() {
   const desktop = width >= 1024;
   const router = useRouter();
   const [plan, setPlan] = useState<Plan | null>(null);
+  const [loadState, setLoadState] = useState<DataLoadState>("idle");
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [cloudReady, setCloudReady] = useState(getCloudStatus().readyForData);
+  const [cloudError, setCloudError] = useState(getCloudStatus().phase === "error" ? getCloudStatus().message : null);
+  const loadId = useRef(0);
   const [consumption, setConsumption] = useState<ConsumptionEntry[]>([]);
   const [chosen, setChosen] = useState<Record<string, string>>({});
   const [refreshing, setRefreshing] = useState(false);
@@ -49,34 +56,45 @@ export default function HojeScreen() {
   const [pendingAchievement, setPendingAchievement] = useState<AchievementDefinition | null>(null);
   const [trainingEntries, setTrainingEntries] = useState<TrainingDayEntry[]>([]);
 
+  React.useEffect(() => subscribeCloudStatus((status) => { setCloudReady(status.readyForData); setCloudError(status.phase === "error" ? status.message : null); }), []);
+
   const load = useCallback(async () => {
+    if (!getCloudStatus().readyForData) return;
+    const request = ++loadId.current;
+    setLoadState((current) => current === "success" ? current : "loading");
+    try {
     const currentDate = todayISO();
     await prepareTrainingRange(currentDate, currentDate);
-    const p = await getActivePlan();
-    setPlan(p);
-    const c = await listConsumption();
-    setConsumption(c);
-    if (p) {
-      const map: Record<string, string> = {};
-      for (const meal of p.meals) {
-        const chosenId = await getChosenOption(todayISO(), meal.id);
-        if (chosenId) map[meal.id] = chosenId;
-      }
-      setChosen(map);
-    }
-    const game = await evaluateGamification();
-    const [waterAmount, pending, training] = await Promise.all([
-      getHydrationSummary(),
-      getPendingAchievement(),
-      getTrainingState(),
+    const [p, c, game, waterAmount, pending, training] = await Promise.all([
+      getActivePlan(), listConsumption(), evaluateGamification(), getHydrationSummary(), getPendingAchievement(), getTrainingState(),
     ]);
+    const map: Record<string, string> = {};
+    if (p) {
+      const chosenIds = await Promise.all(p.meals.map((meal) => getChosenOption(currentDate, meal.id)));
+      p.meals.forEach((meal, index) => {
+        const chosenId = chosenIds[index];
+        if (chosenId) map[meal.id] = chosenId;
+      });
+    }
+    if (request !== loadId.current) return;
+    setPlan(p);
+    setConsumption(c);
+    setChosen(map);
     setGamification(game);
     setWater(waterAmount);
     setPendingAchievement(pending);
     setTrainingEntries(dayEntries(training, currentDate));
+    setLoadState(p ? "success" : "empty");
+    setLoadError(null);
+    } catch (cause) {
+      if (request === loadId.current) {
+        setLoadState("error");
+        setLoadError(cause instanceof Error ? cause.message : "Não foi possível carregar seu plano.");
+      }
+    }
   }, []);
 
-  useFocusEffect(useCallback(() => { load(); }, [load]));
+  useFocusEffect(useCallback(() => { if (cloudReady) void load(); }, [cloudReady, load]));
   useCloudDataRefresh(load);
 
   const onRefresh = async () => {
@@ -123,7 +141,17 @@ export default function HojeScreen() {
     setPendingAchievement(await getPendingAchievement());
   };
 
-  if (!plan) {
+  const planView = resolvePlanView(cloudReady, loadState, Boolean(plan), Boolean(cloudError));
+  const retry = async () => { if (cloudError) { try { await syncCloudNow(); } catch { /* O estado de erro continua visível. */ } } await load(); };
+  if (planView === "loading") {
+    return <View style={[styles.empty, { paddingTop: insets.top + spacing.xxl }]}><ActivityIndicator color={colors.brandPrimary} /><Text style={styles.emptyDesc}>{cloudReady ? "Carregando seu plano…" : "Preparando sua conta e seus dados…"}</Text></View>;
+  }
+
+  if (planView === "error") {
+    return <View style={[styles.empty, { paddingTop: insets.top + spacing.xxl }]}><Text style={styles.emptyTitle}>Não foi possível carregar o plano</Text><Text style={styles.emptyDesc}>{loadError ?? cloudError}</Text><Pressable style={{ padding: spacing.md }} onPress={() => void retry()}><Text style={{ color: colors.brandPrimary, fontWeight: "800" }}>Tentar novamente</Text></Pressable></View>;
+  }
+
+  if (planView === "empty" || !plan) {
     return (
       <View style={[styles.empty, { paddingTop: insets.top + spacing.xxl }]}>
         <Text style={styles.emptyTitle}>Nenhum plano ativo</Text>
