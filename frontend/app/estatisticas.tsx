@@ -3,7 +3,7 @@ import { ScrollView, StyleSheet, Text, View, Pressable } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import MaterialDesignIcons from "@react-native-vector-icons/material-design-icons";
-import { colors, radius, spacing } from "../src/theme";
+import { colors, withAlpha, radius, spacing } from "../src/theme";
 import { getActivePlan, listConsumption } from "../src/store/planStore";
 import { computeStats, type Stats } from "../src/utils/stats";
 import { WEEKDAYS_SHORT } from "../src/utils/date";
@@ -201,7 +201,7 @@ const styles = StyleSheet.create({
   flameWrap: {
     width: 64, height: 64,
     borderRadius: radius.pill,
-    backgroundColor: colors.brandTertiary + "22",
+    backgroundColor: withAlpha(colors.brandTertiary, "22"),
     alignItems: "center", justifyContent: "center",
   },
   streakLabel: { color: colors.onSurfaceTertiary, fontSize: 10, fontWeight: "800", letterSpacing: 1.5 },

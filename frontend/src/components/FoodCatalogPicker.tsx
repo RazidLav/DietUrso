@@ -4,7 +4,7 @@ import { ActivityIndicator, KeyboardAvoidingView, Modal, Platform, Pressable, Sc
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { FoodCatalogItem } from "../types/plan";
 import { matchesSearch } from "../utils/search";
-import { breakpoints, colors, radius, spacing } from "../theme";
+import { breakpoints, colors, withAlpha, radius, spacing } from "../theme";
 
 export function filterFoodCatalog(items: FoodCatalogItem[], query: string) {
   return items.filter((food) => matchesSearch(query, food.name, food.brand, food.category, food.source));
@@ -147,8 +147,8 @@ const styles = StyleSheet.create({
   list: { flex: 1, minHeight: 0 },
   listContent: { padding: spacing.sm, gap: spacing.xs, paddingBottom: spacing.lg },
   result: { minHeight: 66, flexDirection: "row", alignItems: "center", gap: spacing.md, padding: spacing.md, borderRadius: radius.md, backgroundColor: colors.surfaceTertiary, borderWidth: 1, borderColor: "transparent" },
-  resultSelected: { borderColor: colors.brandPrimary, backgroundColor: colors.brandPrimary + "12" },
-  foodIcon: { width: 40, height: 40, borderRadius: radius.md, alignItems: "center", justifyContent: "center", backgroundColor: colors.brandPrimary + "18" },
+  resultSelected: { borderColor: colors.brandPrimary, backgroundColor: withAlpha(colors.brandPrimary, "12") },
+  foodIcon: { width: 40, height: 40, borderRadius: radius.md, alignItems: "center", justifyContent: "center", backgroundColor: withAlpha(colors.brandPrimary, "18") },
   foodIconSelected: { backgroundColor: colors.brandPrimary },
   foodName: { color: colors.onSurface, fontSize: 13, fontWeight: "800" },
   foodMeta: { color: colors.onSurfaceTertiary, fontSize: 10.5, lineHeight: 15, marginTop: 3 },

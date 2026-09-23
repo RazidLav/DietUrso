@@ -13,7 +13,7 @@ import {
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import MaterialDesignIcons from "@react-native-vector-icons/material-design-icons";
-import { colors, radius, spacing } from "../../src/theme";
+import { colors, withAlpha, radius, spacing } from "../../src/theme";
 import {
   deleteFood,
   deleteOption,
@@ -705,9 +705,9 @@ const mStyles = StyleSheet.create({
     borderRadius: radius.sm,
     fontSize: 14,
   },
-  catalogBtn: { minHeight: 48, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: spacing.sm, borderWidth: 1, borderColor: colors.brandPrimary + "66", backgroundColor: colors.brandPrimary + "12", padding: spacing.md, borderRadius: radius.md, marginBottom: spacing.sm },
+  catalogBtn: { minHeight: 48, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: spacing.sm, borderWidth: 1, borderColor: withAlpha(colors.brandPrimary, "66"), backgroundColor: withAlpha(colors.brandPrimary, "12"), padding: spacing.md, borderRadius: radius.md, marginBottom: spacing.sm },
   catalogBtnText: { flex: 1, color: colors.brandPrimary, fontSize: 12, fontWeight: "800", textAlign: "center" },
-  selectedFood: { minHeight: 58, flexDirection: "row", alignItems: "center", gap: spacing.sm, padding: spacing.sm, borderRadius: radius.md, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.brandPrimary + "55" },
+  selectedFood: { minHeight: 58, flexDirection: "row", alignItems: "center", gap: spacing.sm, padding: spacing.sm, borderRadius: radius.md, backgroundColor: colors.surface, borderWidth: 1, borderColor: withAlpha(colors.brandPrimary, "55") },
   selectedFoodIcon: { width: 34, height: 34, borderRadius: radius.md, alignItems: "center", justifyContent: "center", backgroundColor: colors.brandPrimary },
   catalogName: { color: colors.onSurface, fontSize: 12, fontWeight: "700" },
   catalogMeta: { color: colors.onSurfaceTertiary, fontSize: 10, marginTop: 2 },

@@ -3,7 +3,7 @@ import { ScrollView, StyleSheet, Text, View, Pressable, TextInput, Modal } from 
 import { useFocusEffect, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import MaterialDesignIcons from "@react-native-vector-icons/material-design-icons";
-import { colors, radius, spacing } from "../../src/theme";
+import { colors, withAlpha, radius, spacing, themePalettes, type ThemePreference } from "../../src/theme";
 import {
   createEmptyPlan,
   deletePlan,
@@ -17,10 +17,12 @@ import type { Plan } from "../../src/types/plan";
 import { FLOATING_TAB_HEIGHT, FLOATING_TAB_MARGIN } from "./_layout";
 import CloudSyncCard from "../../src/components/CloudSyncCard";
 import { useCloudDataRefresh } from "../../src/cloud/useCloudDataRefresh";
+import { useAppTheme } from "../../src/components/ThemeProvider";
 
 export default function AjustesScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { preference, setPreference } = useAppTheme();
   const [plans, setPlans] = useState<Plan[]>([]);
   const [activeId, setActiveIdState] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
@@ -72,7 +74,7 @@ export default function AjustesScreen() {
       <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
         <Text style={styles.eyebrow}>AJUSTES</Text>
         <View style={styles.headerRow}>
-          <Text style={styles.title}>Meus planos</Text>
+          <Text style={styles.title}>Configurações</Text>
           <Pressable
             style={styles.newBtn}
             onPress={() => setShowCreate(true)}
@@ -91,12 +93,23 @@ export default function AjustesScreen() {
       }}>
         <CloudSyncCard onSynced={load} />
 
+        <View style={styles.appearance} testID="appearance-settings">
+          <View style={styles.appearanceHeader}>
+            <View style={styles.appearanceIcon}><MaterialDesignIcons name="palette-outline" size={21} color={colors.brandPrimary} /></View>
+            <View style={{ flex: 1 }}><Text style={styles.statsTitle}>Aparência</Text><Text style={styles.statsDesc}>Escolha o clima da sua caverna.</Text></View>
+          </View>
+          <View style={styles.themeGrid} accessibilityRole="radiogroup" accessibilityLabel="Tema do aplicativo">
+            {(["emo", "gratiluz"] as ThemePreference[]).map((theme) => <ThemeChoice key={theme} theme={theme} selected={preference === theme} onPress={() => void setPreference(theme)} />)}
+          </View>
+          <Text style={styles.themeSyncHint}>A escolha é aplicada agora, salva neste aparelho e sincronizada com sua conta.</Text>
+        </View>
+
         <Pressable
           style={styles.statsShortcut}
           onPress={() => router.push("/conquistas")}
           testID="ajustes-achievements-shortcut"
         >
-          <View style={[styles.statsIconWrap, { backgroundColor: colors.brandTertiary + "22" }]}>
+          <View style={[styles.statsIconWrap, { backgroundColor: withAlpha(colors.brandTertiary, "22") }]}>
             <MaterialDesignIcons name="trophy-outline" size={22} color={colors.brandTertiary} />
           </View>
           <View style={{ flex: 1 }}>
@@ -126,7 +139,7 @@ export default function AjustesScreen() {
           onPress={() => router.push("/treinos")}
           testID="ajustes-training-shortcut"
         >
-          <View style={[styles.statsIconWrap, { backgroundColor: colors.brandPrimary + "22" }]}>
+          <View style={[styles.statsIconWrap, { backgroundColor: withAlpha(colors.brandPrimary, "22") }]}>
             <MaterialDesignIcons name="arm-flex-outline" size={22} color={colors.brandPrimary} />
           </View>
           <View style={{ flex: 1 }}>
@@ -258,6 +271,23 @@ export default function AjustesScreen() {
   );
 }
 
+function ThemeChoice({ theme, selected, onPress }: { theme: ThemePreference; selected: boolean; onPress: () => void }) {
+  const palette = themePalettes[theme];
+  const label = theme === "emo" ? "Emo" : "Gratiluz";
+  return (
+    <Pressable accessibilityRole="radio" accessibilityState={{ checked: selected }} accessibilityLabel={`Usar tema ${label}`} onPress={onPress} style={[styles.themeChoice, selected && styles.themeChoiceSelected]} testID={`theme-choice-${theme}`}>
+      <View style={[styles.themePreview, { backgroundColor: palette.surface, borderColor: palette.borderStrong }]}>
+        <View style={[styles.previewRail, { backgroundColor: palette.surfaceSecondary }]} />
+        <View style={styles.previewContent}>
+          <View style={[styles.previewHero, { backgroundColor: palette.brandPrimary }]} />
+          <View style={styles.previewRows}><View style={[styles.previewCard, { backgroundColor: palette.surfaceSecondary }]} /><View style={[styles.previewCard, { backgroundColor: palette.surfaceTertiary }]} /></View>
+        </View>
+      </View>
+      <View style={styles.themeChoiceLabel}><MaterialDesignIcons name={theme === "emo" ? "weather-night" : "white-balance-sunny"} size={17} color={selected ? colors.brandPrimary : colors.onSurfaceTertiary} /><Text style={[styles.themeChoiceText, selected && styles.themeChoiceTextSelected]}>{label}</Text>{selected ? <MaterialDesignIcons name="check-circle" size={17} color={colors.brandPrimary} /> : null}</View>
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
   header: {
     paddingHorizontal: spacing.lg,
@@ -324,11 +354,27 @@ const styles = StyleSheet.create({
   },
   statsIconWrap: {
     width: 44, height: 44, borderRadius: radius.md,
-    backgroundColor: colors.brandPrimary + "22",
+    backgroundColor: withAlpha(colors.brandPrimary, "22"),
     alignItems: "center", justifyContent: "center",
   },
   statsTitle: { color: colors.onSurface, fontSize: 16, fontWeight: "700" },
   statsDesc: { color: colors.onSurfaceTertiary, fontSize: 12, marginTop: 2 },
+  appearance: { gap: spacing.md, padding: spacing.lg, borderRadius: radius.lg, backgroundColor: colors.surfaceSecondary, borderWidth: 1, borderColor: colors.border },
+  appearanceHeader: { flexDirection: "row", alignItems: "center", gap: spacing.md },
+  appearanceIcon: { width: 44, height: 44, borderRadius: radius.md, alignItems: "center", justifyContent: "center", backgroundColor: withAlpha(colors.brandPrimary, 0.13) },
+  themeGrid: { flexDirection: "row", gap: spacing.sm },
+  themeChoice: { flex: 1, minWidth: 0, gap: spacing.sm, padding: spacing.sm, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border },
+  themeChoiceSelected: { borderColor: colors.brandPrimary, backgroundColor: withAlpha(colors.brandPrimary, 0.06) },
+  themePreview: { height: 92, flexDirection: "row", overflow: "hidden", borderRadius: radius.sm, borderWidth: 1, padding: 7, gap: 6 },
+  previewRail: { width: 15, borderRadius: 5 },
+  previewContent: { flex: 1, gap: 6 },
+  previewHero: { height: 25, borderRadius: 7 },
+  previewRows: { flex: 1, flexDirection: "row", gap: 5 },
+  previewCard: { flex: 1, borderRadius: 7 },
+  themeChoiceLabel: { minHeight: 28, flexDirection: "row", alignItems: "center", gap: spacing.xs },
+  themeChoiceText: { flex: 1, color: colors.onSurfaceSecondary, fontSize: 12, fontWeight: "800" },
+  themeChoiceTextSelected: { color: colors.onSurface },
+  themeSyncHint: { color: colors.onSurfaceTertiary, fontSize: 10, lineHeight: 15 },
   sectionLabel: {
     color: colors.onSurfaceTertiary,
     fontSize: 11,

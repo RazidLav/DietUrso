@@ -4,9 +4,84 @@
   box-sizing: border-box;
 }
 
+:root,
+:root[data-urso-theme="emo"] {
+  --uf-surface: #101114;
+  --uf-on-surface: #f3f5ef;
+  --uf-surface-secondary: #1a1c20;
+  --uf-on-surface-secondary: #dee2d9;
+  --uf-surface-tertiary: #25282d;
+  --uf-on-surface-tertiary: #a8aea4;
+  --uf-surface-elevated: #202329;
+  --uf-surface-inverse: #f3f5ef;
+  --uf-on-surface-inverse: #151712;
+  --uf-brand: #b7ff2a;
+  --uf-on-brand: #182000;
+  --uf-brand-primary: #b7ff2a;
+  --uf-on-brand-primary: #182000;
+  --uf-brand-secondary: #79afff;
+  --uf-on-brand-secondary: #101a2d;
+  --uf-brand-tertiary: #ffad5b;
+  --uf-on-brand-tertiary: #2a1707;
+  --uf-success: #65d982;
+  --uf-on-success: #0b2512;
+  --uf-warning: #ffad5b;
+  --uf-on-warning: #2a1707;
+  --uf-error: #ff6f6a;
+  --uf-on-error: #2b0908;
+  --uf-info: #79afff;
+  --uf-on-info: #101a2d;
+  --uf-border: #30343b;
+  --uf-border-strong: #454b55;
+  --uf-divider: #30343b;
+  --uf-muted: #8c938a;
+  --uf-overlay: rgba(4, 5, 7, 0.76);
+  --uf-focus-ring: #b7ff2a;
+  --uf-protein: #65d982;
+  --uf-carbs: #79afff;
+  --uf-fats: #ffad5b;
+}
+
+:root[data-urso-theme="gratiluz"] {
+  --uf-surface: #f7f3ea;
+  --uf-on-surface: #22251f;
+  --uf-surface-secondary: #fffdf8;
+  --uf-on-surface-secondary: #3e433a;
+  --uf-surface-tertiary: #ece7dc;
+  --uf-on-surface-tertiary: #6e736a;
+  --uf-surface-elevated: #ffffff;
+  --uf-surface-inverse: #22251f;
+  --uf-on-surface-inverse: #fffdf8;
+  --uf-brand: #579b2e;
+  --uf-on-brand: #ffffff;
+  --uf-brand-primary: #579b2e;
+  --uf-on-brand-primary: #ffffff;
+  --uf-brand-secondary: #6376c8;
+  --uf-on-brand-secondary: #ffffff;
+  --uf-brand-tertiary: #c97937;
+  --uf-on-brand-tertiary: #ffffff;
+  --uf-success: #39884e;
+  --uf-on-success: #ffffff;
+  --uf-warning: #b86d27;
+  --uf-on-warning: #ffffff;
+  --uf-error: #c64c49;
+  --uf-on-error: #ffffff;
+  --uf-info: #536bc1;
+  --uf-on-info: #ffffff;
+  --uf-border: #ded7c9;
+  --uf-border-strong: #c7beae;
+  --uf-divider: #ded7c9;
+  --uf-muted: #777b72;
+  --uf-overlay: rgba(34, 37, 31, 0.46);
+  --uf-focus-ring: #579b2e;
+  --uf-protein: #39884e;
+  --uf-carbs: #536bc1;
+  --uf-fats: #c97937;
+}
+
 * {
   scrollbar-width: thin;
-  scrollbar-color: #3e3e4a transparent;
+  scrollbar-color: var(--uf-border-strong) transparent;
 }
 
 *::-webkit-scrollbar {
@@ -23,12 +98,12 @@
   min-height: 36px;
   border: 2px solid transparent;
   border-radius: 999px;
-  background-color: #3e3e4a;
+  background-color: var(--uf-border-strong);
   background-clip: padding-box;
 }
 
 *::-webkit-scrollbar-thumb:hover {
-  background-color: #34c759;
+  background-color: var(--uf-brand-primary);
 }
 
 html,
@@ -60,7 +135,7 @@ body > div:first-child {
 [role="tab"]:focus-visible,
 input:focus-visible,
 textarea:focus-visible {
-  outline: 3px solid #34c759 !important;
+  outline: 3px solid var(--uf-focus-ring) !important;
   outline-offset: 2px !important;
 }
 

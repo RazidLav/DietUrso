@@ -2,7 +2,7 @@ import MaterialDesignIcons from "@react-native-vector-icons/material-design-icon
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import type { GamificationSummary } from "../gamification/types";
 import { STREAK_MILESTONES } from "../gamification/config";
-import { colors, radius, spacing } from "../theme";
+import { colors, withAlpha, radius, spacing } from "../theme";
 
 export default function GamificationSummaryCard({
   summary,
@@ -64,7 +64,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceSecondary,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colors.brandPrimary + "66",
+    borderColor: withAlpha(colors.brandPrimary, "66"),
     padding: spacing.lg,
     gap: spacing.md,
   },

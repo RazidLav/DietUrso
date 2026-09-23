@@ -23,7 +23,7 @@ test("rotas antigas continuam associadas à seção e subseção corretas", () =
 });
 
 test("formulários de tela cheia preservam o rascunho ao ocultar a navegação global", () => {
-  for (const path of ["/editor/1", "/meal/1/2", "/fora-do-plano", "/receita/1", "/treino/1", "/treino-planejado/1"]) {
+  for (const path of ["/conta", "/editor/1", "/meal/1/2", "/fora-do-plano", "/receita/1", "/treino/1", "/treino-planejado/1"]) {
     assert.equal(shouldHideNavigation(path), true, path);
   }
   assert.equal(shouldHideNavigation("/alimentos"), false);

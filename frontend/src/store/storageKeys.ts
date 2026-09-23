@@ -14,3 +14,4 @@ export const FOOD_LIBRARY_KEY = "urso:foodLibrary_v1";
 export const RECIPES_KEY = "urso:recipes_v1";
 export const NUTRITION_SEED_KEY = "urso:nutritionSeeded_v1";
 export const SHOPPING_CONFIG_KEY = "urso:shoppingConfig_v1";
+export const THEME_PREFERENCE_KEY = "urso:themePreference";
