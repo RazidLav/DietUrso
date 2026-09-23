@@ -1,126 +1,128 @@
 import MaterialDesignIcons from "@react-native-vector-icons/material-design-icons";
 import { useRouter } from "expo-router";
-import { useState } from "react";
-import { Image, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Image, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { completeOnboarding } from "../src/store/onboardingStore";
-import { colors, radius, spacing } from "../src/theme";
-
-const STEPS = [
-  {
-    eyebrow: "BEM-VINDO AO URSOFIT",
-    title: "Seu plano. Seu ritmo. Seu progresso.",
-    description: "Um companheiro leve para registrar refeições, acompanhar metas e construir constância sem culpa.",
-    icon: "paw",
-  },
-  {
-    eyebrow: "CONSISTÊNCIA, NÃO PERFEIÇÃO",
-    title: "Cada registro alimenta sua evolução.",
-    description: "Ganhe XP, mantenha sequências e desbloqueie conquistas por hábitos positivos — nunca por restrição extrema.",
-    icon: "star-four-points",
-  },
-  {
-    eyebrow: "SUA CAVERNA, SUAS REGRAS",
-    title: "Leve o UrsoFit com você.",
-    description: "Crie uma conta para sincronizar entre aparelhos ou continue usando tudo localmente. Seus registros existentes estão preservados.",
-    icon: "cloud-check-outline",
-  },
-] as const;
+import { colors, radius, spacing, withAlpha } from "../src/theme";
+import { useAppTheme } from "../src/components/ThemeProvider";
 
 export default function WelcomeScreen() {
   const router = useRouter();
-  const [step, setStep] = useState(0);
-  const current = STEPS[step];
+  const { width } = useWindowDimensions();
+  const desktop = width >= 900;
+  const { preference, setPreference } = useAppTheme();
 
   const continueOffline = async () => {
     await completeOnboarding();
     router.replace("/(tabs)");
   };
 
+  const openAccount = (mode: "signin" | "signup") => router.push(`/conta?onboarding=1&mode=${mode}`);
+
   return (
     <SafeAreaView style={styles.screen} testID="onboarding-screen">
-      <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.brandRow}>
-          <View style={styles.brandDot} />
-          <Text style={styles.brand}>URSOFIT</Text>
-        </View>
-
-        <View style={styles.heroWrap}>
-          <Image source={require("../assets/images/mascot-whey.jpg")} style={styles.hero} resizeMode="cover" />
-          <View style={styles.heroBadge}>
-            <MaterialDesignIcons name={current.icon as any} size={20} color={colors.onBrandPrimary} />
+      <ScrollView contentContainerStyle={[styles.viewport, desktop && styles.viewportDesktop]}>
+        <View style={[styles.visualPanel, desktop && styles.visualPanelDesktop]}>
+          <View style={styles.brandRow}>
+            <View style={styles.brandMark}><MaterialDesignIcons name="paw" size={23} color={colors.onBrandPrimary} /></View>
+            <Text style={styles.brand}>UrsoFit</Text>
+          </View>
+          <View style={styles.orbitOne} />
+          <View style={styles.orbitTwo} />
+          <Image source={require("../assets/images/mascot-whey.jpg")} style={[styles.hero, desktop && styles.heroDesktop]} resizeMode="cover" accessibilityLabel="Mascote UrsoFit segurando um shaker" />
+          <View style={styles.visualBadge}>
+            <MaterialDesignIcons name="heart-pulse" size={18} color={colors.onBrandPrimary} />
+            <Text style={styles.visualBadgeText}>ROTINA COM FORÇA</Text>
           </View>
         </View>
 
-        <View style={styles.copy}>
-          <Text style={styles.eyebrow}>{current.eyebrow}</Text>
-          <Text style={styles.title}>{current.title}</Text>
-          <Text style={styles.description}>{current.description}</Text>
-        </View>
-
-        {step === 1 ? (
-          <View style={styles.features}>
-            <Feature icon="silverware-fork-knife" label="Registre" />
-            <Feature icon="star" label="Ganhe XP" />
-            <Feature icon="trophy" label="Conquiste" />
+        <View style={[styles.contentPanel, desktop && styles.contentPanelDesktop]}>
+          <View style={styles.themeToggle} accessibilityRole="radiogroup" accessibilityLabel="Tema visual">
+            {(["emo", "gratiluz"] as const).map((theme) => (
+              <Pressable
+                key={theme}
+                accessibilityRole="radio"
+                accessibilityState={{ checked: preference === theme }}
+                accessibilityLabel={`Usar tema ${theme === "emo" ? "Emo" : "Gratiluz"}`}
+                onPress={() => void setPreference(theme)}
+                style={[styles.themeOption, preference === theme && styles.themeOptionActive]}
+                testID={`welcome-theme-${theme}`}
+              >
+                <MaterialDesignIcons name={theme === "emo" ? "weather-night" : "white-balance-sunny"} size={16} color={preference === theme ? colors.onBrandPrimary : colors.onSurfaceTertiary} />
+                <Text style={[styles.themeText, preference === theme && styles.themeTextActive]}>{theme === "emo" ? "Emo" : "Gratiluz"}</Text>
+              </Pressable>
+            ))}
           </View>
-        ) : null}
 
-        <View style={styles.dots}>
-          {STEPS.map((_, index) => <View key={index} style={[styles.dot, index === step && styles.dotActive]} />)}
-        </View>
+          <View style={styles.copy}>
+            <Text style={styles.eyebrow}>SEU ESPAÇO DE CUIDADO</Text>
+            <Text style={styles.title}>Seu treino, sua dieta e seu progresso em um só lugar.</Text>
+            <Text style={styles.description}>Organize sua rotina com leveza, acompanhe cada avanço e deixe o ursinho cuidar do resto com você.</Text>
+          </View>
 
-        {step < STEPS.length - 1 ? (
-          <Pressable style={styles.primaryButton} onPress={() => setStep((value) => value + 1)} testID="onboarding-next-btn">
-            <Text style={styles.primaryText}>Continuar</Text>
-            <MaterialDesignIcons name="arrow-right" size={18} color={colors.onBrandPrimary} />
-          </Pressable>
-        ) : (
+          <View style={styles.highlights}>
+            <Highlight icon="food-apple-outline" label="Dieta" />
+            <Highlight icon="water-outline" label="Hidratação" />
+            <Highlight icon="dumbbell" label="Treinos" />
+          </View>
+
           <View style={styles.actions}>
-            <Pressable style={styles.primaryButton} onPress={() => router.push("/conta?onboarding=1")} testID="onboarding-account-btn">
-              <MaterialDesignIcons name="account-circle-outline" size={19} color={colors.onBrandPrimary} />
-              <Text style={styles.primaryText}>Entrar ou criar conta</Text>
+            <Pressable accessibilityRole="button" accessibilityLabel="Criar minha conta" style={styles.primaryButton} onPress={() => openAccount("signup")} testID="welcome-signup-btn">
+              <Text style={styles.primaryText}>Criar minha conta</Text>
+              <MaterialDesignIcons name="arrow-right" size={19} color={colors.onBrandPrimary} />
             </Pressable>
-            <Pressable style={styles.secondaryButton} onPress={continueOffline} testID="onboarding-skip-btn">
-              <Text style={styles.secondaryText}>Continuar só neste aparelho</Text>
+            <Pressable accessibilityRole="button" accessibilityLabel="Entrar em uma conta existente" style={styles.loginButton} onPress={() => openAccount("signin")} testID="welcome-login-btn">
+              <Text style={styles.loginLead}>Já tem uma conta?</Text><Text style={styles.loginText}> Entrar</Text>
+            </Pressable>
+            <Pressable accessibilityRole="button" accessibilityLabel="Continuar sem conta neste aparelho" style={styles.offlineButton} onPress={continueOffline} testID="onboarding-skip-btn">
+              <MaterialDesignIcons name="cellphone" size={16} color={colors.onSurfaceTertiary} />
+              <Text style={styles.offlineText}>Continuar só neste aparelho</Text>
             </Pressable>
           </View>
-        )}
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-function Feature({ icon, label }: { icon: string; label: string }) {
-  return (
-    <View style={styles.feature}>
-      <MaterialDesignIcons name={icon as any} size={20} color={colors.brandPrimary} />
-      <Text style={styles.featureLabel}>{label}</Text>
-    </View>
-  );
+function Highlight({ icon, label }: { icon: string; label: string }) {
+  return <View style={styles.highlight}><MaterialDesignIcons name={icon as never} size={18} color={colors.brandPrimary} /><Text style={styles.highlightText}>{label}</Text></View>;
 }
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.surface },
-  content: { flexGrow: 1, width: "100%", maxWidth: 520, alignSelf: "center", padding: spacing.xl, justifyContent: "center", gap: spacing.xl },
-  brandRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: spacing.sm },
-  brandDot: { width: 9, height: 9, borderRadius: 9, backgroundColor: colors.brandPrimary },
-  brand: { color: colors.onSurface, fontWeight: "900", letterSpacing: 3, fontSize: 14 },
-  heroWrap: { width: "100%", maxWidth: 330, aspectRatio: 1.45, alignSelf: "center", borderRadius: 34, overflow: "hidden", borderWidth: 1, borderColor: colors.brandPrimary + "55" },
-  hero: { width: "100%", height: "100%" },
-  heroBadge: { position: "absolute", right: spacing.md, bottom: spacing.md, width: 44, height: 44, borderRadius: radius.pill, backgroundColor: colors.brandPrimary, alignItems: "center", justifyContent: "center" },
+  viewport: { flexGrow: 1, width: "100%", maxWidth: 1240, alignSelf: "center" },
+  viewportDesktop: { minHeight: 720, flexDirection: "row", alignItems: "stretch", padding: spacing.xl, gap: spacing.xl },
+  visualPanel: { minHeight: 370, padding: spacing.xl, overflow: "hidden", backgroundColor: withAlpha(colors.brandPrimary, 0.13), justifyContent: "center" },
+  visualPanelDesktop: { flex: 1.08, borderRadius: 36, minHeight: 0 },
+  brandRow: { position: "absolute", top: spacing.xl, left: spacing.xl, zIndex: 3, flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  brandMark: { width: 42, height: 42, borderRadius: radius.md, alignItems: "center", justifyContent: "center", backgroundColor: colors.brandPrimary },
+  brand: { color: colors.onSurface, fontSize: 22, fontWeight: "900", letterSpacing: -0.5 },
+  hero: { width: 276, height: 276, borderRadius: 138, alignSelf: "center", borderWidth: 8, borderColor: withAlpha(colors.surfaceElevated, 0.68) },
+  heroDesktop: { width: 430, height: 430, borderRadius: 215 },
+  orbitOne: { position: "absolute", width: 410, height: 410, borderRadius: 205, borderWidth: 1, borderColor: withAlpha(colors.brandPrimary, 0.32), alignSelf: "center" },
+  orbitTwo: { position: "absolute", width: 320, height: 320, borderRadius: 160, backgroundColor: withAlpha(colors.brandSecondary, 0.1), alignSelf: "center", transform: [{ translateX: 54 }] },
+  visualBadge: { position: "absolute", right: spacing.xl, bottom: spacing.xl, flexDirection: "row", alignItems: "center", gap: spacing.sm, paddingHorizontal: spacing.md, minHeight: 40, borderRadius: radius.pill, backgroundColor: colors.brandPrimary },
+  visualBadgeText: { color: colors.onBrandPrimary, fontSize: 9, fontWeight: "900", letterSpacing: 1.1 },
+  contentPanel: { flex: 1, marginTop: -28, borderTopLeftRadius: 32, borderTopRightRadius: 32, backgroundColor: colors.surface, padding: spacing.xl, gap: spacing.xl },
+  contentPanelDesktop: { maxWidth: 510, marginTop: 0, borderRadius: 36, justifyContent: "center", paddingHorizontal: spacing.xxl, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surfaceSecondary },
+  themeToggle: { alignSelf: "flex-end", flexDirection: "row", padding: 4, borderRadius: radius.pill, backgroundColor: colors.surfaceTertiary, borderWidth: 1, borderColor: colors.border },
+  themeOption: { minHeight: 36, flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: spacing.md, borderRadius: radius.pill },
+  themeOptionActive: { backgroundColor: colors.brandPrimary },
+  themeText: { color: colors.onSurfaceTertiary, fontSize: 11, fontWeight: "800" },
+  themeTextActive: { color: colors.onBrandPrimary },
   copy: { gap: spacing.md },
-  eyebrow: { color: colors.brandPrimary, fontSize: 11, fontWeight: "900", letterSpacing: 1.5, textAlign: "center" },
-  title: { color: colors.onSurface, fontSize: 29, lineHeight: 34, fontWeight: "900", textAlign: "center", letterSpacing: -0.6 },
-  description: { color: colors.onSurfaceTertiary, fontSize: 14, lineHeight: 21, textAlign: "center" },
-  features: { flexDirection: "row", gap: spacing.sm },
-  feature: { flex: 1, minHeight: 70, alignItems: "center", justifyContent: "center", gap: spacing.xs, backgroundColor: colors.surfaceSecondary, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border },
-  featureLabel: { color: colors.onSurfaceSecondary, fontSize: 11, fontWeight: "700" },
-  dots: { flexDirection: "row", justifyContent: "center", gap: spacing.sm },
-  dot: { width: 7, height: 7, borderRadius: 7, backgroundColor: colors.surfaceTertiary },
-  dotActive: { width: 24, backgroundColor: colors.brandPrimary },
+  eyebrow: { color: colors.brandPrimary, fontSize: 10, fontWeight: "900", letterSpacing: 1.6 },
+  title: { color: colors.onSurface, fontSize: 34, lineHeight: 39, fontWeight: "900", letterSpacing: -1.1 },
+  description: { color: colors.onSurfaceTertiary, fontSize: 14, lineHeight: 21 },
+  highlights: { flexDirection: "row", gap: spacing.sm },
+  highlight: { flex: 1, minHeight: 70, alignItems: "center", justifyContent: "center", gap: 5, borderRadius: radius.md, backgroundColor: colors.surfaceTertiary },
+  highlightText: { color: colors.onSurfaceSecondary, fontSize: 10, fontWeight: "800" },
   actions: { gap: spacing.sm },
-  primaryButton: { minHeight: 52, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: spacing.sm, backgroundColor: colors.brandPrimary, borderRadius: radius.pill, paddingHorizontal: spacing.lg },
+  primaryButton: { minHeight: 56, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: spacing.sm, paddingHorizontal: spacing.lg, borderRadius: radius.pill, backgroundColor: colors.brandPrimary },
   primaryText: { color: colors.onBrandPrimary, fontSize: 14, fontWeight: "900" },
-  secondaryButton: { minHeight: 48, alignItems: "center", justifyContent: "center", backgroundColor: colors.surfaceSecondary, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.border },
-  secondaryText: { color: colors.onSurfaceSecondary, fontSize: 13, fontWeight: "700" },
+  loginButton: { minHeight: 46, flexDirection: "row", alignItems: "center", justifyContent: "center" },
+  loginLead: { color: colors.onSurfaceTertiary, fontSize: 12 },
+  loginText: { color: colors.brandPrimary, fontSize: 12, fontWeight: "900" },
+  offlineButton: { minHeight: 44, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: spacing.sm },
+  offlineText: { color: colors.onSurfaceTertiary, fontSize: 11, fontWeight: "700" },
 });

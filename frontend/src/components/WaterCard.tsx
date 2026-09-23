@@ -2,7 +2,7 @@ import MaterialDesignIcons from "@react-native-vector-icons/material-design-icon
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { formatHydrationVolume, summaryMessage } from "../hydration/calculations";
 import type { HydrationSummary } from "../hydration/types";
-import { colors, radius, spacing } from "../theme";
+import { colors, withAlpha, radius, spacing } from "../theme";
 
 export default function WaterCard({ summary, onQuickAdd, onPress, saving = false }: { summary: HydrationSummary; onQuickAdd: () => void; onPress: () => void; saving?: boolean }) {
   const progress = Math.min(summary.percentage, 100);
@@ -33,7 +33,7 @@ export default function WaterCard({ summary, onQuickAdd, onPress, saving = false
 const styles = StyleSheet.create({
   card: { backgroundColor: colors.surfaceSecondary, borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, padding: spacing.lg, gap: spacing.md },
   mainRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
-  iconWrap: { width: 42, height: 42, borderRadius: radius.md, backgroundColor: colors.brandSecondary + "22", alignItems: "center", justifyContent: "center" },
+  iconWrap: { width: 42, height: 42, borderRadius: radius.md, backgroundColor: withAlpha(colors.brandSecondary, "22"), alignItems: "center", justifyContent: "center" },
   titleRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   title: { color: colors.onSurface, fontSize: 14, fontWeight: "800" },
   pace: { fontSize: 8, fontWeight: "900", letterSpacing: 0.8 },

@@ -2,7 +2,7 @@ import MaterialDesignIcons from "@react-native-vector-icons/material-design-icon
 import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import type { TrainingDayEntry } from "../training/types";
-import { colors, radius, spacing } from "../theme";
+import { colors, withAlpha, radius, spacing } from "../theme";
 
 export default function TrainingSummaryCard({ entries, onPress }: { entries: TrainingDayEntry[]; onPress: () => void }) {
   const completed = entries.filter((entry) => entry.status === "completed").length;
@@ -18,7 +18,7 @@ export default function TrainingSummaryCard({ entries, onPress }: { entries: Tra
 const styles = StyleSheet.create({
   card: { backgroundColor: colors.surfaceSecondary, borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, padding: spacing.lg, gap: spacing.md },
   top: { flexDirection: "row", alignItems: "center", gap: spacing.md },
-  icon: { width: 48, height: 48, borderRadius: radius.md, backgroundColor: `${colors.brandPrimary}20`, alignItems: "center", justifyContent: "center" },
+  icon: { width: 48, height: 48, borderRadius: radius.md, backgroundColor: withAlpha(colors.brandPrimary, "20"), alignItems: "center", justifyContent: "center" },
   eyebrow: { color: colors.brandPrimary, fontSize: 10, letterSpacing: 1, fontWeight: "900" },
   title: { color: colors.onSurface, fontSize: 17, fontWeight: "800", marginTop: 2 },
   bottom: { flexDirection: "row", alignItems: "center", gap: spacing.md },

@@ -13,7 +13,7 @@ import {
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import MaterialDesignIcons from "@react-native-vector-icons/material-design-icons";
-import { colors, radius, spacing } from "../../../src/theme";
+import { colors, withAlpha, radius, spacing } from "../../../src/theme";
 import MacroSummary from "../../../src/components/MacroSummary";
 import {
   addConsumption,
@@ -620,7 +620,7 @@ const styles = StyleSheet.create({
   extraLink: { flexDirection: "row", alignItems: "center", gap: spacing.sm, padding: spacing.sm },
   extraLinkText: { color: colors.brandSecondary, fontSize: 11, fontWeight: "700" },
   freeMealToggle: { flexDirection: "row", alignItems: "center", gap: spacing.sm, padding: spacing.md, backgroundColor: colors.surfaceTertiary, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border },
-  freeMealToggleActive: { borderColor: colors.brandPrimary + "88", backgroundColor: colors.brandPrimary + "12" },
+  freeMealToggleActive: { borderColor: withAlpha(colors.brandPrimary, "88"), backgroundColor: withAlpha(colors.brandPrimary, "12") },
   freeMealTitle: { color: colors.onSurface, fontSize: 13, fontWeight: "800" },
   freeMealDescription: { color: colors.onSurfaceTertiary, fontSize: 10, lineHeight: 14, marginTop: 2 },
   modalActions: { flexDirection: "row", justifyContent: "flex-end", gap: spacing.sm },

@@ -10,7 +10,7 @@ import { addDays, dayEntries, localDate, startOfWeek } from "../src/training/cal
 import { ACTIVITY_COLORS } from "../src/training/catalog";
 import type { TrainingState } from "../src/training/types";
 import { getTrainingState, movePlannedSession, prepareTrainingRange } from "../src/store/trainingStore";
-import { colors, radius, spacing } from "../src/theme";
+import { colors, withAlpha, radius, spacing } from "../src/theme";
 
 type ViewMode = "day" | "week" | "month";
 const DAY_NAMES = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
@@ -129,5 +129,5 @@ const styles = StyleSheet.create({
   modalityGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm }, modality: { width: "48%", minHeight: 48, flexGrow: 1, flexDirection: "row", alignItems: "center", gap: spacing.sm, padding: spacing.md, backgroundColor: colors.surfaceSecondary, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border }, dot: { width: 9, height: 9, borderRadius: 9 }, modalityText: { flex: 1, color: colors.onSurfaceSecondary, fontWeight: "700", fontSize: 12 }, count: { color: colors.onSurface, fontWeight: "900" },
   weekGrid: { gap: spacing.sm }, weekGridDesktop: { flexDirection: "row" }, weekDay: { flex: 1, minHeight: 96, backgroundColor: colors.surfaceSecondary, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, padding: spacing.md }, selected: { borderColor: colors.brandPrimary }, weekName: { color: colors.onSurfaceTertiary, fontSize: 10, fontWeight: "800" }, weekNumber: { color: colors.onSurface, fontSize: 22, fontWeight: "900" }, weekCount: { color: colors.onSurfaceSecondary, fontSize: 10, marginBottom: spacing.xs }, miniBar: { height: 3, borderRadius: radius.pill, marginTop: 3 },
   monthGrid: { flexDirection: "row", flexWrap: "wrap", gap: 4 }, monthDay: { width: "13.5%", minHeight: 58, backgroundColor: colors.surfaceSecondary, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, padding: spacing.xs }, monthNumber: { color: colors.onSurface, fontWeight: "800" }, monthDots: { flexDirection: "row", flexWrap: "wrap", gap: 3, marginTop: spacing.sm }, monthDot: { width: 6, height: 6, borderRadius: 6 },
-  error: { padding: spacing.md, borderRadius: radius.md, backgroundColor: `${colors.error}18`, borderWidth: 1, borderColor: colors.error }, errorText: { color: colors.onSurfaceSecondary }, retry: { color: colors.error, fontWeight: "800", marginTop: spacing.sm },
+  error: { padding: spacing.md, borderRadius: radius.md, backgroundColor: withAlpha(colors.error, "18"), borderWidth: 1, borderColor: colors.error }, errorText: { color: colors.onSurfaceSecondary }, retry: { color: colors.error, fontWeight: "800", marginTop: spacing.sm },
 });

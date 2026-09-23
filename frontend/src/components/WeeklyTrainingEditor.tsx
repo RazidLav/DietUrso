@@ -9,7 +9,7 @@ import { ACTIVITY_COLORS, ACTIVITY_LABELS } from "../training/catalog";
 import { clonePrescription, createDefaultPrescription } from "../training/calculations";
 import type { ActivityType, TrainingPlanItem, TrainingState, WorkoutPrescription } from "../training/types";
 import { addStrengthExerciseToPrescription, copyTrainingPlanDay, getTrainingState, moveTrainingPlanItem, removeTrainingPlanItem, savePersonalExercise, saveTrainingPlanItem } from "../store/trainingStore";
-import { colors, radius, spacing } from "../theme";
+import { colors, withAlpha, radius, spacing } from "../theme";
 
 const DAYS = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
 const ORDER = [1, 2, 3, 4, 5, 6, 0];
@@ -165,7 +165,7 @@ const styles = StyleSheet.create({
   daysDesktop: { gap: spacing.xs },
   daysMobile: { gap: spacing.xs, paddingVertical: spacing.sm },
   dayChip: { minWidth: 105, padding: spacing.md, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surfaceSecondary },
-  dayChipActive: { borderColor: colors.brandPrimary, backgroundColor: colors.brandPrimary + "18" },
+  dayChipActive: { borderColor: colors.brandPrimary, backgroundColor: withAlpha(colors.brandPrimary, "18") },
   dayName: { color: colors.onSurfaceSecondary, fontWeight: "800", fontSize: 12 },
   dayNameActive: { color: colors.brandPrimary },
   dayCount: { color: colors.onSurfaceTertiary, fontSize: 10, marginTop: 3 },

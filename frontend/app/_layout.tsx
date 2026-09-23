@@ -10,6 +10,8 @@ import { ensureNutritionSeed } from "../src/store/nutritionStore";
 import { ensureHydrationSeed } from "../src/store/hydrationStore";
 import { ensureTrainingSeed } from "../src/store/trainingStore";
 import AppNavigation from "../src/components/AppNavigation";
+import ThemeProvider, { useAppTheme } from "../src/components/ThemeProvider";
+import { loadThemePreference } from "../src/store/themeStore";
 
 export default function RootLayout() {
   const [storeState, setStoreState] = useState<"loading" | "ready" | "error">(
@@ -19,7 +21,8 @@ export default function RootLayout() {
   useEffect(() => {
     let mounted = true;
 
-    ensureSeed()
+    loadThemePreference()
+      .then(() => ensureSeed())
       .then(() => Promise.all([ensureNutritionSeed(), ensureHydrationSeed(), ensureTrainingSeed()]))
       .then(async () => {
         try {
@@ -47,7 +50,8 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.surface }}>
       <SafeAreaProvider>
-        <StatusBar barStyle="light-content" backgroundColor={colors.surface} />
+        <ThemeProvider>
+        <ThemedStatusBar />
         <View style={{ flex: 1, backgroundColor: colors.surface }}>
           {storeState === "ready" ? (
             <AppNavigation>
@@ -78,7 +82,13 @@ export default function RootLayout() {
             </View>
           )}
         </View>
+        </ThemeProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
+}
+
+function ThemedStatusBar() {
+  const { preference, palette } = useAppTheme();
+  return <StatusBar barStyle={preference === "emo" ? "light-content" : "dark-content"} backgroundColor={palette.surface} />;
 }

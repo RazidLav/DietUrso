@@ -8,7 +8,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import MaterialDesignIcons from "@react-native-vector-icons/material-design-icons";
-import { colors, radius, spacing } from "../theme";
+import { colors, withAlpha, radius, spacing } from "../theme";
 import {
   getCloudStatus,
   signOutFromCloud,
@@ -131,7 +131,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: radius.md,
-    backgroundColor: colors.brandPrimary + "22",
+    backgroundColor: withAlpha(colors.brandPrimary, "22"),
     alignItems: "center",
     justifyContent: "center",
   },

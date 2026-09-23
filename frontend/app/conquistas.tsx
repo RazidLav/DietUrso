@@ -8,7 +8,7 @@ import { ACHIEVEMENTS, RARITY_COLORS } from "../src/gamification/achievements";
 import { evaluateGamification } from "../src/gamification/engine";
 import { MASCOT_QUOTES } from "../src/gamification/config";
 import type { AchievementCategory, AchievementDefinition, GamificationSummary } from "../src/gamification/types";
-import { colors, radius, spacing } from "../src/theme";
+import { colors, withAlpha, radius, spacing } from "../src/theme";
 
 const FILTERS: ("Todas" | AchievementCategory)[] = ["Todas", "Primeiros passos", "Proteína", "Alimentação", "Água", "Secretas"];
 
@@ -124,7 +124,7 @@ const styles = StyleSheet.create({
   backButton: { width: 40, height: 40, borderRadius: radius.md, backgroundColor: colors.surfaceSecondary, alignItems: "center", justifyContent: "center" },
   eyebrow: { color: colors.brandPrimary, fontSize: 10, fontWeight: "900", letterSpacing: 1.5 },
   headerTitle: { color: colors.onSurface, fontSize: 20, fontWeight: "900" },
-  hero: { margin: spacing.lg, borderRadius: radius.lg, overflow: "hidden", borderWidth: 1, borderColor: colors.brandPrimary + "66", backgroundColor: colors.surfaceSecondary },
+  hero: { margin: spacing.lg, borderRadius: radius.lg, overflow: "hidden", borderWidth: 1, borderColor: withAlpha(colors.brandPrimary, "66"), backgroundColor: colors.surfaceSecondary },
   mascot: { width: "100%", height: 210, backgroundColor: "#B7FF2A" },
   heroOverlay: { padding: spacing.lg, backgroundColor: colors.surfaceSecondary },
   heroTitle: { color: colors.onSurface, fontSize: 19, fontWeight: "900" },

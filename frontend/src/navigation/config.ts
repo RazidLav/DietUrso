@@ -111,6 +111,7 @@ export function getActiveChild(section: NavigationSection, pathname: string) {
 
 export const FULL_SCREEN_PATHS = [
   "/boas-vindas",
+  "/conta",
   "/editor",
   "/meal",
   "/fora-do-plano",

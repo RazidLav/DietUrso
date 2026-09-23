@@ -1,6 +1,6 @@
 import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { colors, radius, spacing } from "../theme";
+import { colors, withAlpha, radius, spacing } from "../theme";
 import MaterialDesignIcons from "@react-native-vector-icons/material-design-icons";
 
 interface Props {
@@ -97,7 +97,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   cardPressed: { opacity: 0.85 },
-  cardDone: { borderColor: colors.brandPrimary + "55" },
+  cardDone: { borderColor: withAlpha(colors.brandPrimary, "55") },
   left: { flexDirection: "row", alignItems: "center", gap: spacing.md, flex: 1 },
   iconWrap: {
     width: 44,

@@ -15,7 +15,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { NAVIGATION, getActiveChild, getActiveSection, normalizePathname, shouldHideNavigation, type NavigationItem, type NavigationSection } from "../navigation/config";
-import { breakpoints, colors, motion, radius, spacing, zIndex } from "../theme";
+import { breakpoints, colors, withAlpha, motion, radius, spacing, zIndex } from "../theme";
 
 export const DESKTOP_BREAKPOINT = breakpoints.desktop;
 export const MOBILE_DOCK_HEIGHT = 68;
@@ -237,10 +237,10 @@ const styles = StyleSheet.create({
   contextFrame: { height: 50, justifyContent: "center", backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: colors.border },
   contextContent: { paddingHorizontal: spacing.md, alignItems: "center", gap: spacing.xs, paddingRight: spacing.xxl },
   contextItem: { minHeight: 36, justifyContent: "center", paddingHorizontal: spacing.md, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surfaceSecondary },
-  contextItemActive: { backgroundColor: colors.brandPrimary + "18", borderColor: colors.brandPrimary },
+  contextItemActive: { backgroundColor: withAlpha(colors.brandPrimary, "18"), borderColor: colors.brandPrimary },
   contextText: { color: colors.onSurfaceTertiary, fontSize: 11, fontWeight: "700" },
   contextTextActive: { color: colors.brandPrimary, fontWeight: "900" },
-  contextFade: { position: "absolute", right: 0, top: 0, bottom: 0, width: 28, alignItems: "center", justifyContent: "center", backgroundColor: colors.surface + "EE" },
+  contextFade: { position: "absolute", right: 0, top: 0, bottom: 0, width: 28, alignItems: "center", justifyContent: "center", backgroundColor: withAlpha(colors.surface, "EE") },
   dock: {
     minHeight: MOBILE_DOCK_HEIGHT,
     flexDirection: "row",
@@ -259,7 +259,7 @@ const styles = StyleSheet.create({
       : { shadowColor: "#000000", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.38, shadowRadius: 16, elevation: 12 }),
   },
   dockItem: { flex: 1, minWidth: 0, minHeight: 58, alignItems: "center", justifyContent: "center", gap: 2, paddingHorizontal: 2, borderRadius: radius.md },
-  dockItemActive: { backgroundColor: colors.brandPrimary + "12" },
+  dockItemActive: { backgroundColor: withAlpha(colors.brandPrimary, "12") },
   dockIcon: { width: 34, height: 28, alignItems: "center", justifyContent: "center", borderRadius: radius.pill },
   dockIconActive: { backgroundColor: colors.brandPrimary },
   dockLabel: { width: "100%", color: colors.onSurfaceTertiary, fontSize: 8.5, fontWeight: "700", textAlign: "center" },
@@ -275,10 +275,10 @@ const styles = StyleSheet.create({
   desktopGroup: { gap: 2 },
   sidebarSection: { minHeight: 44, flexDirection: "row", alignItems: "center", gap: spacing.sm, paddingHorizontal: spacing.md, borderRadius: radius.md },
   sidebarSectionContext: { backgroundColor: colors.surfaceTertiary },
-  sidebarSectionActive: { backgroundColor: colors.brandPrimary + "1F" },
+  sidebarSectionActive: { backgroundColor: withAlpha(colors.brandPrimary, "1F") },
   sidebarSectionText: { flex: 1, color: colors.onSurfaceSecondary, fontSize: 12, fontWeight: "800" },
   sidebarChild: { minHeight: 34, flexDirection: "row", alignItems: "center", gap: spacing.sm, paddingLeft: spacing.xl, paddingRight: spacing.md, borderRadius: radius.sm },
-  sidebarChildActive: { backgroundColor: colors.brandPrimary + "14" },
+  sidebarChildActive: { backgroundColor: withAlpha(colors.brandPrimary, "14") },
   sidebarChildText: { flex: 1, color: colors.onSurfaceTertiary, fontSize: 10.5, fontWeight: "650" as never },
   navTextActive: { color: colors.onSurface, fontWeight: "900" },
   activeDot: { width: 6, height: 6, borderRadius: radius.pill, backgroundColor: colors.brandPrimary },

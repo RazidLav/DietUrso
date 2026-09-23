@@ -4,7 +4,7 @@ import type { PropsWithChildren } from "react";
 
 export default function Root({ children }: PropsWithChildren) {
   return (
-    <html lang="pt-BR" style={{ height: "100%" }}>
+    <html lang="pt-BR" style={{ height: "100%" }} suppressHydrationWarning>
       <head>
         <meta charSet="utf-8" />
         <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
@@ -30,6 +30,7 @@ export default function Root({ children }: PropsWithChildren) {
         <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
         <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
         <link rel="stylesheet" href="/global.css" />
+        <script dangerouslySetInnerHTML={{ __html: `(function(){try{var t=localStorage.getItem('urso:themePreference');document.documentElement.dataset.ursoTheme=t==='gratiluz'?'gratiluz':'emo';document.documentElement.style.colorScheme=t==='gratiluz'?'light':'dark'}catch(e){document.documentElement.dataset.ursoTheme='emo'}})();` }} />
         {/*
           Disable body scrolling on web to make ScrollView components work correctly.
           If you want to enable scrolling, remove `ScrollViewStyleReset` and

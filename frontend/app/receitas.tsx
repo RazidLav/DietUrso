@@ -7,7 +7,7 @@ import { useCloudDataRefresh } from "../src/cloud/useCloudDataRefresh";
 import { getSignedInUser } from "../src/cloud/cloudSync";
 import { recipeNutrients } from "../src/nutrition/calculations";
 import { createRecipe, duplicateRecipe, listRecipes, setRecipeArchived } from "../src/store/nutritionStore";
-import { colors, radius, spacing } from "../src/theme";
+import { colors, withAlpha, radius, spacing } from "../src/theme";
 import type { Recipe } from "../src/types/plan";
 import { matchesSearch } from "../src/utils/search";
 
@@ -79,7 +79,7 @@ const styles = StyleSheet.create({
   eyebrow: { color: colors.brandPrimary, fontSize: 10, fontWeight: "800", letterSpacing: 1.5 }, title: { color: colors.onSurface, fontSize: 22, fontWeight: "800" },
   searchWrap: { margin: spacing.lg, marginBottom: spacing.sm, flexDirection: "row", alignItems: "center", gap: spacing.sm, backgroundColor: colors.surfaceSecondary, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingHorizontal: spacing.md }, search: { flex: 1, color: colors.onSurface, paddingVertical: spacing.md, outlineStyle: "none" } as any,
   filterRow: { flexDirection: "row", paddingHorizontal: spacing.lg, gap: spacing.sm }, chip: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radius.pill, backgroundColor: colors.surfaceTertiary }, chipOn: { backgroundColor: colors.brandPrimary }, chipText: { color: colors.onSurfaceSecondary, fontSize: 12, fontWeight: "700" }, chipTextOn: { color: colors.onBrandPrimary },
-  error: { color: colors.error, fontSize: 12, marginHorizontal: spacing.lg, marginTop: spacing.sm }, card: { backgroundColor: colors.surfaceSecondary, borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, padding: spacing.md, gap: spacing.md }, cardMain: { flexDirection: "row", alignItems: "center", gap: spacing.md }, chef: { width: 44, height: 44, borderRadius: radius.md, backgroundColor: colors.brandPrimary + "22", alignItems: "center", justifyContent: "center" }, cardTitle: { color: colors.onSurface, fontSize: 16, fontWeight: "800" }, meta: { color: colors.onSurfaceTertiary, fontSize: 11, marginTop: 3 }, macros: { color: colors.onSurfaceSecondary, fontSize: 11, marginTop: spacing.sm },
+  error: { color: colors.error, fontSize: 12, marginHorizontal: spacing.lg, marginTop: spacing.sm }, card: { backgroundColor: colors.surfaceSecondary, borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, padding: spacing.md, gap: spacing.md }, cardMain: { flexDirection: "row", alignItems: "center", gap: spacing.md }, chef: { width: 44, height: 44, borderRadius: radius.md, backgroundColor: withAlpha(colors.brandPrimary, "22"), alignItems: "center", justifyContent: "center" }, cardTitle: { color: colors.onSurface, fontSize: 16, fontWeight: "800" }, meta: { color: colors.onSurfaceTertiary, fontSize: 11, marginTop: 3 }, macros: { color: colors.onSurfaceSecondary, fontSize: 11, marginTop: spacing.sm },
   actions: { flexDirection: "row", gap: spacing.sm, flexWrap: "wrap" }, action: { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: colors.surfaceTertiary, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radius.pill }, actionText: { color: colors.onSurfaceSecondary, fontSize: 11, fontWeight: "700" },
   empty: { alignItems: "center", padding: spacing.xxxl, gap: spacing.sm }, emptyTitle: { color: colors.onSurface, fontSize: 17, fontWeight: "800" }, emptyText: { color: colors.onSurfaceTertiary, fontSize: 12, textAlign: "center", maxWidth: 350 },
 });
