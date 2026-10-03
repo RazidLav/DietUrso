@@ -1,3 +1,5 @@
+import { getLevelDefinition, levelFromXp, XP_CURVE, xpForLevel } from "./journey";
+
 export const XP_REWARDS = {
   mealLogged: 10,
   dayCompleted: 45,
@@ -14,13 +16,9 @@ export const XP_REWARDS = {
 export const WATER_GOAL_ML = 2500;
 export const WATER_STEP_ML = 250;
 
-export const LEVEL_CONFIG = {
-  baseXp: 180,
-  growthPerLevel: 45,
-  maxLevel: 999,
-} as const;
+export const LEVEL_CONFIG = XP_CURVE;
 
-const TITLE_MILESTONES = [
+export const LEGACY_TITLE_MILESTONES = [
   { level: 75, title: "Urso Cósmico" },
   { level: 50, title: "Urso Anabolizado Naturalmente™" },
   { level: 40, title: "Rei da Floresta Proteica" },
@@ -52,31 +50,8 @@ export const STREAK_MILESTONES = [
   { days: 100, title: "Lendário da Floresta" },
 ] as const;
 
-export function xpForLevel(level: number) {
-  return LEVEL_CONFIG.baseXp + Math.max(0, level - 1) * LEVEL_CONFIG.growthPerLevel;
-}
-
 export function titleForLevel(level: number) {
-  return TITLE_MILESTONES.find((milestone) => level >= milestone.level)?.title ?? TITLE_MILESTONES.at(-1)!.title;
+  return getLevelDefinition(level).title;
 }
 
-export function levelFromXp(totalXp: number) {
-  let level = 1;
-  let remaining = Math.max(0, totalXp);
-
-  while (level < LEVEL_CONFIG.maxLevel) {
-    const required = xpForLevel(level);
-    if (remaining < required) break;
-    remaining -= required;
-    level += 1;
-  }
-
-  const required = xpForLevel(level);
-  return {
-    level,
-    title: titleForLevel(level),
-    xpIntoLevel: remaining,
-    xpForNextLevel: required,
-    progress: required > 0 ? Math.min(remaining / required, 1) : 1,
-  };
-}
+export { levelFromXp, xpForLevel };

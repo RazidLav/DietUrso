@@ -36,6 +36,7 @@ export default function HomeScreen() {
   const { width } = useWindowDimensions();
   const desktop = width >= 1024;
   const tablet = width >= 700;
+  const stackHero = width < 520;
   const router = useRouter();
   const [selectedDate, setSelectedDate] = useState(todayISO());
   const [plan, setPlan] = useState<Plan | null>(null);
@@ -167,14 +168,16 @@ export default function HomeScreen() {
 
         <WeekSelector days={weekDays} selectedDate={selectedDate} activityDates={activityDates} onSelect={setSelectedDate} onShift={(amount) => setSelectedDate(toISO(addDays(selected, amount * 7)))} />
 
-        <Pressable style={[styles.hero, desktop && styles.heroDesktop]} onPress={() => router.push(trainingEntries.length ? "/treinos" : "/conquistas")} accessibilityRole="button" testID="home-main-highlight">
-          <View style={styles.heroCopy}>
+        <Pressable style={[styles.hero, stackHero && styles.heroStacked, desktop && styles.heroDesktop]} onPress={() => router.push(trainingEntries.length ? "/treinos" : "/conquistas")} accessibilityRole="button" testID="home-main-highlight">
+          <View style={[styles.heroCopy, stackHero && styles.heroCopyStacked]} testID="home-highlight-copy">
             <Text style={styles.heroEyebrow}>{trainingEntries.length ? "SEU MOVIMENTO DE HOJE" : "PROGRESSO DA SEMANA"}</Text>
             <Text style={styles.heroTitle}>{trainingEntries.length ? `${trainingEntries.length} ${trainingEntries.length === 1 ? "sessão planejada" : "sessões planejadas"}` : "Um passo por vez já conta."}</Text>
             <Text style={styles.heroText}>{trainingEntries.length ? "Cada modalidade tem seu próprio ritmo e status." : "Registre o que fizer e acompanhe a constância sem cobrança."}</Text>
             <View style={styles.heroCta}><Text style={styles.heroCtaText}>{trainingEntries.length ? "Ver treinos" : "Ver progresso"}</Text><MaterialDesignIcons name="arrow-right" size={16} color={colors.onBrandPrimary} /></View>
           </View>
-          <Image source={require("../../assets/images/mascot-trophy.jpg")} style={styles.heroMascot} resizeMode="cover" accessibilityLabel="Mascote UrsoFit celebrando" />
+          <View style={[styles.heroArtwork, stackHero && styles.heroArtworkStacked]} testID="home-highlight-artwork">
+            <Image source={require("../../assets/images/home-progress-v2.png")} style={styles.heroMascot} resizeMode="contain" accessibilityLabel="Mascote UrsoFit celebrando o progresso" />
+          </View>
         </Pressable>
 
         <View style={styles.quickRow}>
@@ -273,15 +276,19 @@ const styles = StyleSheet.create({
   dayDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: "transparent" },
   dayDotOn: { backgroundColor: colors.brandSecondary },
   dayDotActive: { backgroundColor: colors.onBrandPrimary },
-  hero: { minHeight: 210, flexDirection: "row", overflow: "hidden", borderRadius: 30, backgroundColor: withAlpha(colors.brandSecondary, 0.18), borderWidth: 1, borderColor: withAlpha(colors.brandSecondary, 0.3) },
+  hero: { minHeight: 210, flexDirection: "row", alignItems: "stretch", overflow: "hidden", borderRadius: 30, backgroundColor: withAlpha(colors.brandSecondary, 0.18), borderWidth: 1, borderColor: withAlpha(colors.brandSecondary, 0.3) },
+  heroStacked: { flexDirection: "column", minHeight: 390 },
   heroDesktop: { minHeight: 260 },
-  heroCopy: { flex: 1.1, zIndex: 2, justifyContent: "center", alignItems: "flex-start", padding: spacing.xl },
+  heroCopy: { flex: 1.15, minWidth: 0, justifyContent: "center", alignItems: "flex-start", padding: spacing.xl },
+  heroCopyStacked: { flexGrow: 0, flexBasis: "auto", width: "100%", padding: spacing.lg, paddingBottom: spacing.md },
   heroEyebrow: { color: colors.brandSecondary, fontSize: 9, fontWeight: "900", letterSpacing: 1.3 },
-  heroTitle: { color: colors.onSurface, fontSize: 25, lineHeight: 30, fontWeight: "900", letterSpacing: -0.7, marginTop: spacing.sm },
+  heroTitle: { maxWidth: "100%", flexShrink: 1, color: colors.onSurface, fontSize: 25, lineHeight: 30, fontWeight: "900", letterSpacing: -0.7, marginTop: spacing.sm },
   heroText: { color: colors.onSurfaceSecondary, fontSize: 11, lineHeight: 17, marginTop: spacing.sm, maxWidth: 470 },
   heroCta: { minHeight: 38, flexDirection: "row", alignItems: "center", gap: spacing.sm, marginTop: spacing.lg, paddingHorizontal: spacing.md, borderRadius: radius.pill, backgroundColor: colors.brandPrimary },
   heroCtaText: { color: colors.onBrandPrimary, fontSize: 10, fontWeight: "900" },
-  heroMascot: { width: "38%", minWidth: 130, height: "100%", position: "absolute", right: 0, top: 0 },
+  heroArtwork: { flex: 0.85, minWidth: 150, alignItems: "stretch", justifyContent: "center", overflow: "hidden", padding: spacing.sm },
+  heroArtworkStacked: { flexGrow: 1, width: "100%", minHeight: 180, paddingTop: 0 },
+  heroMascot: { width: "100%", height: "100%" },
   quickRow: { flexDirection: "row", gap: spacing.sm },
   quickAction: { flex: 1, minHeight: 70, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: spacing.sm, paddingHorizontal: spacing.sm, borderRadius: radius.md, backgroundColor: colors.surfaceSecondary, borderWidth: 1, borderColor: colors.border },
   quickIcon: { width: 34, height: 34, borderRadius: radius.sm, alignItems: "center", justifyContent: "center", backgroundColor: withAlpha(colors.brandPrimary, 0.12) },

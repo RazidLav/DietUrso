@@ -75,11 +75,11 @@ export const NAVIGATION: NavigationSection[] = [
     ],
   },
   {
-    ...item("profile", "Perfil", "account-circle-outline", "/ajustes", ["/ajustes", "/conta", "/conquistas", "/estatisticas"]),
+    ...item("profile", "Perfil", "account-circle-outline", "/perfil", ["/perfil", "/meu-urso", "/ajustes", "/conta", "/conquistas", "/estatisticas"]),
     id: "profile",
     order: 4,
     children: [
-      item("profile-account", "Meu perfil", "account-outline", "/conta", ["/conta"], "Perfil"),
+      item("profile-account", "Meu perfil", "account-outline", "/perfil", ["/perfil", "/meu-urso"], "Perfil"),
       item("profile-achievements", "Conquistas", "trophy-outline", "/conquistas"),
       item("profile-progress", "Progresso", "chart-box-outline", "/estatisticas"),
       item("profile-settings", "Configurações", "cog-outline", "/ajustes", ["/ajustes"], "Ajustes"),
