@@ -14,7 +14,7 @@ export interface JourneyAssetEntry {
 // Inventário estável. Os 100 slots nunca reutilizam uma chave, mesmo enquanto
 // uma ilustração oficial ainda usa o fallback aprovado do mascote canônico.
 export const JOURNEY_ASSET_MANIFEST: readonly JourneyAssetEntry[] = [
-  { key: "brand-ursofit-mark", ownerType: "brand", ownerId: "ursofit", status: "ready", source: "assets/images/ursofit-mark.png", description: "Marca transparente usada em splash e ícone adaptativo." },
+  { key: "brand-ursofit-mark", ownerType: "brand", ownerId: "ursofit", status: "ready", source: "assets/images/ursofit-logo.png", description: "Logo oficial usado na interface, splash e ícones do aplicativo." },
   { key: "journey-horizontal-mascot", ownerType: "journey", ownerId: "journey-home", status: "ready", source: "assets/images/home-progress-v2.png", description: "Mascote horizontal compacto da jornada, com espaço negativo para texto." },
   ...LEVEL_DEFINITIONS.map((level): JourneyAssetEntry => ({
     key: level.assetKey,

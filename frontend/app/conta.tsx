@@ -84,7 +84,7 @@ export default function AccountScreen() {
       <ScrollView contentContainerStyle={[styles.viewport, desktop && styles.viewportDesktop, { paddingTop: Math.max(insets.top, spacing.lg), paddingBottom: Math.max(insets.bottom, spacing.lg) }]} keyboardShouldPersistTaps="handled">
         <View style={[styles.visual, desktop && styles.visualDesktop]}>
           <Pressable accessibilityRole="button" style={styles.backButton} onPress={() => router.back()} accessibilityLabel="Voltar"><MaterialDesignIcons name="chevron-left" size={26} color={colors.onSurface} /></Pressable>
-          <View style={styles.brandRow}><View style={styles.brandMark}><MaterialDesignIcons name="paw" size={21} color={colors.onBrandPrimary} /></View><Text style={styles.brand}>UrsoFit</Text></View>
+          <View style={styles.brandRow}><View style={styles.brandMark}><Image source={require("../assets/images/ursofit-logo.png")} style={styles.brandLogo} accessibilityLabel="Logo do UrsoFit" /></View><Text style={styles.brand}>UrsoFit</Text></View>
           <Image source={require("../assets/images/mascot-whey.jpg")} style={[styles.mascot, desktop && styles.mascotDesktop]} accessibilityLabel="Mascote do UrsoFit com shaker" />
           {desktop ? <><Text style={styles.visualTitle}>Constância cabe na sua rotina.</Text><Text style={styles.visualText}>Dieta, água, treino e conquistas reunidos com clareza — sem culpa e sem ruído.</Text></> : null}
         </View>
@@ -153,7 +153,8 @@ const styles = StyleSheet.create({
   visualDesktop: { flex: 1.05, minHeight: 680 },
   backButton: { position: "absolute", zIndex: 3, left: spacing.lg, top: spacing.lg, width: 44, height: 44, borderRadius: radius.md, backgroundColor: withAlpha(colors.surface, 0.74), alignItems: "center", justifyContent: "center" },
   brandRow: { position: "absolute", left: spacing.xl, bottom: spacing.xl, zIndex: 3, flexDirection: "row", alignItems: "center", gap: spacing.sm },
-  brandMark: { width: 40, height: 40, borderRadius: radius.md, alignItems: "center", justifyContent: "center", backgroundColor: colors.brandPrimary },
+  brandMark: { width: 40, height: 40, borderRadius: radius.md, overflow: "hidden", backgroundColor: colors.brandPrimary },
+  brandLogo: { width: "100%", height: "100%" },
   brand: { color: colors.onSurface, fontSize: 22, fontWeight: "900" },
   mascot: { width: 170, height: 170, borderRadius: 85, borderWidth: 6, borderColor: withAlpha(colors.surfaceElevated, 0.72) },
   mascotDesktop: { width: 330, height: 330, borderRadius: 165 },

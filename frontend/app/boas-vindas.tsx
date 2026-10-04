@@ -23,7 +23,7 @@ export default function WelcomeScreen() {
       <ScrollView contentContainerStyle={[styles.viewport, desktop && styles.viewportDesktop]}>
         <View style={[styles.visualPanel, desktop && styles.visualPanelDesktop]}>
           <View style={styles.brandRow}>
-            <View style={styles.brandMark}><MaterialDesignIcons name="paw" size={23} color={colors.onBrandPrimary} /></View>
+            <View style={styles.brandMark}><Image source={require("../assets/images/ursofit-logo.png")} style={styles.brandLogo} accessibilityLabel="Logo do UrsoFit" /></View>
             <Text style={styles.brand}>UrsoFit</Text>
           </View>
           <View style={styles.orbitOne} />
@@ -95,7 +95,8 @@ const styles = StyleSheet.create({
   visualPanel: { minHeight: 370, padding: spacing.xl, overflow: "hidden", backgroundColor: withAlpha(colors.brandPrimary, 0.13), justifyContent: "center" },
   visualPanelDesktop: { flex: 1.08, borderRadius: 36, minHeight: 0 },
   brandRow: { position: "absolute", top: spacing.xl, left: spacing.xl, zIndex: 3, flexDirection: "row", alignItems: "center", gap: spacing.sm },
-  brandMark: { width: 42, height: 42, borderRadius: radius.md, alignItems: "center", justifyContent: "center", backgroundColor: colors.brandPrimary },
+  brandMark: { width: 42, height: 42, borderRadius: radius.md, overflow: "hidden", backgroundColor: colors.brandPrimary },
+  brandLogo: { width: "100%", height: "100%" },
   brand: { color: colors.onSurface, fontSize: 22, fontWeight: "900", letterSpacing: -0.5 },
   hero: { width: 276, height: 276, borderRadius: 138, alignSelf: "center", borderWidth: 8, borderColor: withAlpha(colors.surfaceElevated, 0.68) },
   heroDesktop: { width: 430, height: 430, borderRadius: 215 },

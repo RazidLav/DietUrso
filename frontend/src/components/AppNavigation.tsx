@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   AccessibilityInfo,
   Animated,
+  Image,
   Keyboard,
   Platform,
   Pressable,
@@ -63,7 +64,7 @@ function DesktopSidebar({ pathname, topInset, bottomInset }: { pathname: string;
   return (
     <View style={[styles.sidebarFrame, { marginTop: Math.max(topInset, spacing.lg), marginBottom: Math.max(bottomInset, spacing.lg) }]} testID="desktop-sidebar">
       <View style={styles.brandRow}>
-        <View style={styles.brandMark}><MaterialDesignIcons name="paw" size={21} color={colors.onBrandPrimary} /></View>
+        <View style={styles.brandMark}><Image source={require("../../assets/images/ursofit-logo.png")} style={styles.brandLogo} accessibilityLabel="Logo do UrsoFit" /></View>
         <View><Text style={styles.brandName}>UrsoFit</Text><Text style={styles.brandTag}>ROTINA COM FORÇA</Text></View>
       </View>
       <ScrollView style={styles.sidebarScroll} contentContainerStyle={styles.sidebarContent} showsVerticalScrollIndicator={false}>
@@ -267,7 +268,8 @@ const styles = StyleSheet.create({
   desktopShell: { flex: 1, flexDirection: "row", backgroundColor: colors.surface },
   sidebarFrame: { width: 248, marginLeft: spacing.lg, borderRadius: radius.lg, backgroundColor: colors.surfaceSecondary, borderWidth: 1, borderColor: colors.borderStrong, overflow: "hidden", ...(Platform.OS === "web" ? ({ boxShadow: "0 16px 48px rgba(0,0,0,.35)" } as never) : {}) },
   brandRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, padding: spacing.lg, borderBottomWidth: 1, borderBottomColor: colors.border },
-  brandMark: { width: 38, height: 38, borderRadius: radius.md, alignItems: "center", justifyContent: "center", backgroundColor: colors.brandPrimary },
+  brandMark: { width: 38, height: 38, borderRadius: radius.md, overflow: "hidden", backgroundColor: colors.brandPrimary },
+  brandLogo: { width: "100%", height: "100%" },
   brandName: { color: colors.onSurface, fontSize: 18, fontWeight: "900" },
   brandTag: { color: colors.brandPrimary, fontSize: 7, fontWeight: "900", letterSpacing: 1.2, marginTop: 1 },
   sidebarScroll: { flex: 1 },
