@@ -1,3 +1,5 @@
+import { OFFICIAL_LEVEL_CONTENT } from "./journeyContent";
+
 export const JOURNEY_VERSION = 1;
 
 export const XP_CURVE = {
@@ -11,6 +13,7 @@ export interface ChapterDefinition {
   id: string;
   number: number;
   title: string;
+  description: string;
   firstLevel: number;
   lastLevel: number;
   assetKey: string;
@@ -35,27 +38,17 @@ export interface LevelDefinition {
 }
 
 export const CHAPTERS: readonly ChapterDefinition[] = [
-  { id: "chapter-01", number: 1, title: "O Despertar", firstLevel: 1, lastLevel: 10, assetKey: "chapter-01-o-despertar" },
-  { id: "chapter-02", number: 2, title: "Criando Raízes", firstLevel: 11, lastLevel: 20, assetKey: "chapter-02-criando-raizes" },
-  { id: "chapter-03", number: 3, title: "Explorando o Caminho", firstLevel: 21, lastLevel: 30, assetKey: "chapter-03-explorando-o-caminho" },
-  { id: "chapter-04", number: 4, title: "Força em Construção", firstLevel: 31, lastLevel: 40, assetKey: "chapter-04-forca-em-construcao" },
-  { id: "chapter-05", number: 5, title: "A Jornada Fica Séria", firstLevel: 41, lastLevel: 50, assetKey: "chapter-05-a-jornada-fica-seria" },
-  { id: "chapter-06", number: 6, title: "Subindo a Montanha", firstLevel: 51, lastLevel: 60, assetKey: "chapter-06-subindo-a-montanha" },
-  { id: "chapter-07", number: 7, title: "Provação", firstLevel: 61, lastLevel: 70, assetKey: "chapter-07-provacao" },
-  { id: "chapter-08", number: 8, title: "Maestria", firstLevel: 71, lastLevel: 80, assetKey: "chapter-08-maestria" },
-  { id: "chapter-09", number: 9, title: "O Raro e o Lendário", firstLevel: 81, lastLevel: 90, assetKey: "chapter-09-raro-e-lendario" },
-  { id: "chapter-10", number: 10, title: "A Lenda UrsoFit", firstLevel: 91, lastLevel: 100, assetKey: "chapter-10-lenda-ursofit" },
+  { id: "chapter-01", number: 1, title: "O Despertar", description: "Todo urso começa em algum lugar. Geralmente dormindo.", firstLevel: 1, lastLevel: 10, assetKey: "chapter-01-o-despertar" },
+  { id: "chapter-02", number: 2, title: "Criando Raízes", description: "O entusiasmo inicial passou. O que fica agora é mais valioso: estrutura.", firstLevel: 11, lastLevel: 20, assetKey: "chapter-02-criando-raizes" },
+  { id: "chapter-03", number: 3, title: "Explorando o Caminho", description: "Agora não é só manter. É avançar.", firstLevel: 21, lastLevel: 30, assetKey: "chapter-03-explorando-o-caminho" },
+  { id: "chapter-04", number: 4, title: "Força em Construção", description: "É aqui que o urso começa a parecer mais herói do que iniciante.", firstLevel: 31, lastLevel: 40, assetKey: "chapter-04-forca-em-construcao" },
+  { id: "chapter-05", number: 5, title: "A Jornada Fica Séria", description: "Aqui o jogo muda. Você já foi longe demais para fingir que foi por acaso.", firstLevel: 41, lastLevel: 50, assetKey: "chapter-05-a-jornada-fica-seria" },
+  { id: "chapter-06", number: 6, title: "Subindo a Montanha", description: "Agora o ar fica mais fino e o progresso mais nobre.", firstLevel: 51, lastLevel: 60, assetKey: "chapter-06-subindo-a-montanha" },
+  { id: "chapter-07", number: 7, title: "Provação", description: "Toda boa jornada passa por um trecho em que a chama precisa vir de dentro.", firstLevel: 61, lastLevel: 70, assetKey: "chapter-07-provacao" },
+  { id: "chapter-08", number: 8, title: "Maestria", description: "O esforço deixou de parecer esforço. Virou linguagem natural.", firstLevel: 71, lastLevel: 80, assetKey: "chapter-08-maestria" },
+  { id: "chapter-09", number: 9, title: "O Raro e o Lendário", description: "Agora a jornada ganha brilho próprio.", firstLevel: 81, lastLevel: 90, assetKey: "chapter-09-raro-e-lendario" },
+  { id: "chapter-10", number: 10, title: "A Lenda UrsoFit", description: "O fim da jornada não é um fim. É um título.", firstLevel: 91, lastLevel: 100, assetKey: "chapter-10-lenda-ursofit" },
 ] as const;
-
-// Somente nomes já confirmados nas fontes disponíveis entram como conteúdo oficial.
-// O documento-mestre não acompanha o repositório; os demais nós continuam
-// identificados como pendentes para evitar inventar ou parafrasear a narrativa.
-const CONFIRMED_LEVEL_TITLES: Readonly<Record<number, string>> = {
-  1: "Ursinho Desperto",
-  2: "Saindo da Toca",
-  10: "Primeira Insígnia",
-  100: "Lenda UrsoFit",
-};
 
 export const SPECIAL_LEVELS = new Set([1, 5, 10, 20, 25, 30, 42, 50, 60, 69, 70, 80, 88, 89, 95, 99, 100]);
 
@@ -77,26 +70,25 @@ export function chapterForLevel(level: number) {
 }
 
 function levelDefinition(number: number): LevelDefinition {
-  const confirmedTitle = CONFIRMED_LEVEL_TITLES[number];
+  const officialContent = OFFICIAL_LEVEL_CONTENT[number - 1];
+  if (!officialContent) throw new Error(`Conteúdo oficial ausente para o nível ${number}.`);
   const chapter = chapterForLevel(number);
   return {
     id: `level-${String(number).padStart(3, "0")}`,
     number,
     chapterNumber: chapter.number,
     order: number,
-    title: confirmedTitle ?? `Nível ${number}`,
-    description: confirmedTitle
-      ? "Descrição oficial aguardando importação do documento-mestre."
-      : "Conteúdo narrativo oficial aguardando o documento-mestre.",
+    title: officialContent.title,
+    description: officialContent.description,
     minXp: totalXpForLevel(number),
     xpForNextLevel: number === XP_CURVE.maxNarrativeLevel ? 0 : xpForLevel(number),
     assetKey: `level-${String(number).padStart(3, "0")}-collectible`,
-    assetDescription: `Asset oficial do nível ${number} aguardando produção ou importação.`,
+    assetDescription: `Colecionável 3D exclusivo do nível ${number}, ${officialContent.title}; produção gráfica tratada separadamente.`,
     rewardId: number % 10 === 0 ? `medallion-chapter-${String(chapter.number).padStart(2, "0")}` : undefined,
     special: SPECIAL_LEVELS.has(number),
     active: true,
     version: JOURNEY_VERSION,
-    contentStatus: confirmedTitle ? "official" : "awaiting_master_document",
+    contentStatus: "official",
   };
 }
 

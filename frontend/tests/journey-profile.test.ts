@@ -31,7 +31,9 @@ test("jornada possui exatamente 100 níveis em 10 capítulos contínuos", () => 
     assert.equal(chapter.lastLevel - chapter.firstLevel + 1, 10);
   }
   assert.equal(chapterForLevel(1).title, "O Despertar");
+  assert.equal(chapterForLevel(1).description, "Todo urso começa em algum lugar. Geralmente dormindo.");
   assert.equal(chapterForLevel(100).title, "A Lenda UrsoFit");
+  assert.equal(chapterForLevel(100).description, "O fim da jornada não é um fim. É um título.");
 });
 
 test("curva de XP é crescente, estável nos limites e termina no nível narrativo 100", () => {
@@ -55,11 +57,15 @@ test("maior nível legado é preservado sem desbloquear regressão", () => {
   assert.equal(protectedProgress.legacyFloorApplied, true);
 });
 
-test("conteúdo não confirmado fica explicitamente pendente em vez de ser inventado", () => {
-  const official = new Map(LEVEL_DEFINITIONS.filter((level) => level.contentStatus === "official").map((level) => [level.number, level.title]));
-  assert.deepEqual([...official], [[1, "Ursinho Desperto"], [2, "Saindo da Toca"], [10, "Primeira Insígnia"], [100, "Lenda UrsoFit"]]);
-  assert.equal(LEVEL_DEFINITIONS[41].title, "Nível 42");
-  assert.equal(LEVEL_DEFINITIONS[41].contentStatus, "awaiting_master_document");
+test("os 100 títulos e descrições canônicos do documento mestre estão oficiais", () => {
+  assert.equal(LEVEL_DEFINITIONS.filter((level) => level.contentStatus === "official").length, 100);
+  assert.ok(LEVEL_DEFINITIONS.every((level) => level.title.length > 0 && level.description.length > 0));
+  assert.equal(LEVEL_DEFINITIONS[0].title, "Ursinho Desperto");
+  assert.equal(LEVEL_DEFINITIONS[41].title, "A Resposta do Caminho");
+  assert.equal(LEVEL_DEFINITIONS[68].title, "Equilíbrio Perfeito");
+  assert.equal(LEVEL_DEFINITIONS[94].title, "Brilho Raro");
+  assert.equal(LEVEL_DEFINITIONS[99].title, "Lenda UrsoFit");
+  assert.equal(LEVEL_DEFINITIONS[99].description, "O urso despertou, caminhou, caiu, subiu, brilhou — e virou lenda.");
 });
 
 test("assets de nível possuem chaves únicas e fallback rastreável", () => {
@@ -74,7 +80,8 @@ test("catálogo de Meu Urso preserva 15 avatares e IDs globais únicos", () => {
   assert.equal(AVATAR_DEFINITIONS.length, 15);
   assert.equal(new Set(COSMETIC_DEFINITIONS.map((item) => item.id)).size, COSMETIC_DEFINITIONS.length);
   assert.equal(new Set(COSMETIC_DEFINITIONS.map((item) => item.assetKey)).size, COSMETIC_DEFINITIONS.length);
-  assert.equal(AVATAR_DEFINITIONS.at(-1)?.secret, true);
+  assert.equal(AVATAR_DEFINITIONS[12].secret, true);
+  assert.equal(AVATAR_DEFINITIONS.at(-1)?.unlock.value, 95);
 });
 
 test("perfil nasce privado, valida username e não equipa item bloqueado", () => {

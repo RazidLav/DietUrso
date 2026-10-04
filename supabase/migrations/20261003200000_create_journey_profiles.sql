@@ -14,6 +14,7 @@ create table if not exists public.chapter_definitions (
   id text primary key,
   number smallint not null unique check (number between 1 and 10),
   title text not null,
+  description text not null default '',
   first_level smallint not null check (first_level between 1 and 100),
   last_level smallint not null check (last_level between 1 and 100 and last_level >= first_level),
   asset_key text not null unique,
@@ -22,6 +23,9 @@ create table if not exists public.chapter_definitions (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.chapter_definitions
+  add column if not exists description text not null default '';
 
 create table if not exists public.cosmetic_definitions (
   id text primary key,
@@ -168,20 +172,20 @@ drop trigger if exists user_progress_updated_at on public.user_progress;
 create trigger user_progress_updated_at before update on public.user_progress
 for each row execute function public.ursofit_set_updated_at();
 
-insert into public.chapter_definitions (id, number, title, first_level, last_level, asset_key)
+insert into public.chapter_definitions (id, number, title, description, first_level, last_level, asset_key)
 values
-  ('chapter-01', 1, 'O Despertar', 1, 10, 'chapter-01-o-despertar'),
-  ('chapter-02', 2, 'Criando Raízes', 11, 20, 'chapter-02-criando-raizes'),
-  ('chapter-03', 3, 'Explorando o Caminho', 21, 30, 'chapter-03-explorando-o-caminho'),
-  ('chapter-04', 4, 'Força em Construção', 31, 40, 'chapter-04-forca-em-construcao'),
-  ('chapter-05', 5, 'A Jornada Fica Séria', 41, 50, 'chapter-05-a-jornada-fica-seria'),
-  ('chapter-06', 6, 'Subindo a Montanha', 51, 60, 'chapter-06-subindo-a-montanha'),
-  ('chapter-07', 7, 'Provação', 61, 70, 'chapter-07-provacao'),
-  ('chapter-08', 8, 'Maestria', 71, 80, 'chapter-08-maestria'),
-  ('chapter-09', 9, 'O Raro e o Lendário', 81, 90, 'chapter-09-raro-e-lendario'),
-  ('chapter-10', 10, 'A Lenda UrsoFit', 91, 100, 'chapter-10-lenda-ursofit')
+  ('chapter-01', 1, 'O Despertar', 'Todo urso começa em algum lugar. Geralmente dormindo.', 1, 10, 'chapter-01-o-despertar'),
+  ('chapter-02', 2, 'Criando Raízes', 'O entusiasmo inicial passou. O que fica agora é mais valioso: estrutura.', 11, 20, 'chapter-02-criando-raizes'),
+  ('chapter-03', 3, 'Explorando o Caminho', 'Agora não é só manter. É avançar.', 21, 30, 'chapter-03-explorando-o-caminho'),
+  ('chapter-04', 4, 'Força em Construção', 'É aqui que o urso começa a parecer mais herói do que iniciante.', 31, 40, 'chapter-04-forca-em-construcao'),
+  ('chapter-05', 5, 'A Jornada Fica Séria', 'Aqui o jogo muda. Você já foi longe demais para fingir que foi por acaso.', 41, 50, 'chapter-05-a-jornada-fica-seria'),
+  ('chapter-06', 6, 'Subindo a Montanha', 'Agora o ar fica mais fino e o progresso mais nobre.', 51, 60, 'chapter-06-subindo-a-montanha'),
+  ('chapter-07', 7, 'Provação', 'Toda boa jornada passa por um trecho em que a chama precisa vir de dentro.', 61, 70, 'chapter-07-provacao'),
+  ('chapter-08', 8, 'Maestria', 'O esforço deixou de parecer esforço. Virou linguagem natural.', 71, 80, 'chapter-08-maestria'),
+  ('chapter-09', 9, 'O Raro e o Lendário', 'Agora a jornada ganha brilho próprio.', 81, 90, 'chapter-09-raro-e-lendario'),
+  ('chapter-10', 10, 'A Lenda UrsoFit', 'O fim da jornada não é um fim. É um título.', 91, 100, 'chapter-10-lenda-ursofit')
 on conflict (id) do update set
-  number = excluded.number, title = excluded.title, first_level = excluded.first_level,
+  number = excluded.number, title = excluded.title, description = excluded.description, first_level = excluded.first_level,
   last_level = excluded.last_level, asset_key = excluded.asset_key, active = true;
 
 insert into public.cosmetic_definitions
@@ -189,21 +193,21 @@ insert into public.cosmetic_definitions
 values
   ('frame-classic', 'frame', 'Moldura da Toca', 'Moldura inicial do perfil.', 'frame-classic', 'common', 'default', null, false, 1),
   ('banner-cave', 'banner', 'Luz da Caverna', 'Banner inicial da jornada.', 'banner-cave', 'common', 'default', null, false, 1),
-  ('avatar-01', 'avatar', 'Urso Clássico', 'Avatar colecionável do UrsoFit.', 'bear-urso-classico', 'common', 'default', null, false, 1),
-  ('avatar-02', 'avatar', 'Urso Maromba', 'Avatar colecionável do UrsoFit.', 'bear-urso-maromba', 'common', 'level', '10', false, 2),
-  ('avatar-03', 'avatar', 'Urso das Neves', 'Avatar colecionável do UrsoFit.', 'bear-urso-das-neves', 'common', 'future', null, false, 3),
-  ('avatar-04', 'avatar', 'Urso Emo', 'Avatar colecionável do UrsoFit.', 'bear-urso-emo', 'common', 'future', null, false, 4),
-  ('avatar-05', 'avatar', 'Urso Gratiluz', 'Avatar colecionável do UrsoFit.', 'bear-urso-gratiluz', 'common', 'future', null, false, 5),
-  ('avatar-06', 'avatar', 'Urso Caipira', 'Avatar colecionável do UrsoFit.', 'bear-urso-caipira', 'rare', 'future', null, false, 6),
-  ('avatar-07', 'avatar', 'Urso Corredor', 'Avatar colecionável do UrsoFit.', 'bear-urso-corredor', 'rare', 'achievement', 'first-run', false, 7),
-  ('avatar-08', 'avatar', 'Urso Ciclista', 'Avatar colecionável do UrsoFit.', 'bear-urso-ciclista', 'rare', 'achievement', 'first-bike', false, 8),
-  ('avatar-09', 'avatar', 'Urso Lutador', 'Avatar colecionável do UrsoFit.', 'bear-urso-lutador', 'rare', 'future', null, false, 9),
-  ('avatar-10', 'avatar', 'Urso Zen', 'Avatar colecionável do UrsoFit.', 'bear-urso-zen', 'rare', 'achievement', 'first-mobility', false, 10),
-  ('avatar-11', 'avatar', 'Urso HIIT', 'Avatar colecionável do UrsoFit.', 'bear-urso-hiit', 'rare', 'future', null, false, 11),
-  ('avatar-12', 'avatar', 'Chef da Caverna', 'Avatar colecionável do UrsoFit.', 'bear-chef-da-caverna', 'epic', 'achievement', 'first-recipe', false, 12),
-  ('avatar-13', 'avatar', 'Urso Noturno', 'Avatar colecionável do UrsoFit.', 'bear-urso-noturno', 'epic', 'future', null, false, 13),
-  ('avatar-14', 'avatar', 'Urso Explorador', 'Avatar colecionável do UrsoFit.', 'bear-urso-explorador', 'epic', 'chapter', '3', false, 14),
-  ('avatar-15', 'avatar', 'Urso Brilho Raro', 'Avatar secreto da lenda UrsoFit.', 'bear-urso-brilho-raro', 'mythic', 'level', '100', true, 15)
+  ('avatar-01', 'avatar', 'Urso Clássico', 'Mascote padrão, esportivo e simpático.', 'bear-urso-classico', 'common', 'default', null, false, 1),
+  ('avatar-02', 'avatar', 'Urso Maromba', 'Regata, físico atlético e shaker.', 'bear-urso-maromba', 'common', 'achievement', 'strength-milestone', false, 2),
+  ('avatar-03', 'avatar', 'Urso das Neves', 'Pelagem branca, detalhes azul-claro.', 'bear-urso-das-neves', 'common', 'future', 'journey-or-event-milestone', false, 3),
+  ('avatar-04', 'avatar', 'Urso Emo', 'Preto/roxo, franja e expressão dramática.', 'bear-urso-emo', 'common', 'future', 'emo-theme-cosmetic', false, 4),
+  ('avatar-05', 'avatar', 'Urso Gratiluz', 'Claro, solar, flor/estrela discreta.', 'bear-urso-gratiluz', 'common', 'future', 'gratiluz-theme-cosmetic', false, 5),
+  ('avatar-06', 'avatar', 'Urso Caipira', 'Chapéu de palha e xadrez discreto.', 'bear-urso-caipira', 'rare', 'future', 'seasonal-collection', false, 6),
+  ('avatar-07', 'avatar', 'Urso Corredor', 'Faixa, smartwatch e visual runner.', 'bear-urso-corredor', 'rare', 'achievement', 'running-milestone', false, 7),
+  ('avatar-08', 'avatar', 'Urso Ciclista', 'Capacete e óculos esportivos.', 'bear-urso-ciclista', 'rare', 'achievement', 'cycling-milestone', false, 8),
+  ('avatar-09', 'avatar', 'Urso Lutador', 'Bandagens/luvas; visual genérico de luta.', 'bear-urso-lutador', 'rare', 'achievement', 'combat-milestone', false, 9),
+  ('avatar-10', 'avatar', 'Urso Zen', 'Roupa leve e pose tranquila.', 'bear-urso-zen', 'rare', 'achievement', 'mobility-milestone', false, 10),
+  ('avatar-11', 'avatar', 'Urso HIIT', 'Faixa, suor fofo e energia.', 'bear-urso-hiit', 'rare', 'achievement', 'hiit-cardio-milestone', false, 11),
+  ('avatar-12', 'avatar', 'Chef da Caverna', 'Avental e chapéu de chef.', 'bear-chef-da-caverna', 'epic', 'achievement', 'food-creation-milestone', false, 12),
+  ('avatar-13', 'avatar', 'Urso Noturno', 'Azul-marinho, lua e olheiras fofas.', 'bear-urso-noturno', 'epic', 'achievement', 'night-owl', true, 13),
+  ('avatar-14', 'avatar', 'Urso Explorador', 'Mochila e bússola.', 'bear-urso-explorador', 'epic', 'chapter', '3', false, 14),
+  ('avatar-15', 'avatar', 'Urso Brilho Raro', 'Variante shiny/iridescente.', 'bear-urso-brilho-raro', 'mythic', 'level', '95', false, 15)
 on conflict (id) do update set
   kind = excluded.kind, name = excluded.name, description = excluded.description,
   asset_key = excluded.asset_key, rarity = excluded.rarity, unlock_type = excluded.unlock_type,
@@ -248,15 +252,116 @@ on conflict (id) do update set
   xp_for_next_level = excluded.xp_for_next_level, asset_key = excluded.asset_key,
   reward_id = excluded.reward_id, special = excluded.special, active = true;
 
-update public.level_definitions
-set title = case number
-  when 1 then 'Ursinho Desperto'
-  when 2 then 'Saindo da Toca'
-  when 10 then 'Primeira Insígnia'
-  when 100 then 'Lenda UrsoFit'
-end,
-content_status = 'official'
-where number in (1, 2, 10, 100);
+update public.level_definitions as levels
+set
+  title = official.title,
+  description = official.description,
+  asset_description = 'Colecionável 3D exclusivo do nível ' || official.number ||
+    ', ' || official.title || '; produção gráfica tratada separadamente.',
+  content_status = 'official'
+from (values
+  (1, 'Ursinho Desperto', 'Toda grande jornada começa quando alguém finalmente abre os olhos.'),
+  (2, 'Saindo da Toca', 'O primeiro desafio nem sempre é treinar. Às vezes é só sair da toca mesmo.'),
+  (3, 'Primeiros Passos', 'Um pequeno passo para o urso, um grande passo para a sua rotina.'),
+  (4, 'Urso Persistente', 'Nem todo dia é grandioso. O importante é aparecer.'),
+  (5, 'Guardião da Rotina', 'A rotina começou a nascer. Agora ela precisa ser protegida.'),
+  (6, 'Ritmo Encontrado', 'Motivação vai e volta. Ritmo é o que faz você continuar.'),
+  (7, 'Caminho Aberto', 'Você não está mais parado. A trilha já reconhece seus passos.'),
+  (8, 'Passos Firmes', 'Ainda não é velocidade. É constância com convicção.'),
+  (9, 'Quase um Hábito', 'Você já não depende tanto do ''amanhã eu começo''.'),
+  (10, 'Primeira Insígnia', 'Parabéns, treinador... digo, aventureiro. A jornada começou de verdade.'),
+  (11, 'Urso Comprometido', 'Você deixou de testar. Agora está se comprometendo.'),
+  (12, 'Força do Hábito', 'Pequenas ações repetidas começam a parecer magia.'),
+  (13, 'Pequenas Vitórias', 'Nem todo troféu faz barulho. Alguns só fazem diferença.'),
+  (14, 'Constância Silenciosa', 'O progresso gosta de gente que não precisa anunciar tudo.'),
+  (15, 'Raízes Fortes', 'O que cresce bonito costuma começar por baixo da terra.'),
+  (16, 'Dia Após Dia', 'Não parece épico... e é exatamente assim que funciona.'),
+  (17, 'Ritual da Toca', 'Alguns chamam de rotina. Outros de ritual sagrado.'),
+  (18, 'Companheiro da Rotina', 'A rotina já não é inimiga. Ela sentou do seu lado.'),
+  (19, 'Caminho Conhecido', 'O início já não assusta. Você sabe por onde ir.'),
+  (20, 'Urso Disciplinado', 'Motivação é visita. Disciplina já mora aqui.'),
+  (21, 'Além da Toca', 'Existe um mundo inteiro depois do ''não tô com vontade''.'),
+  (22, 'Trilha Conhecida', 'Você não está perdido; só está indo mais longe do que antes.'),
+  (23, 'Passos de Aventureiro', 'Sua rotina ganhou espírito de jornada.'),
+  (24, 'Urso Explorador', 'Quem sai da toca descobre que o mundo é maior do que o sofá.'),
+  (25, 'Primeiro Marco', 'Você chegou num ponto em que dá para olhar para trás e sorrir.'),
+  (26, 'Caminho das Pedras', 'Nem todo terreno é confortável. Ainda bem.'),
+  (27, 'Subindo a Colina', 'O cenário muda quando você continua mesmo cansado.'),
+  (28, 'Fôlego de Aventureiro', 'Você aprendeu que respirar fundo também é estratégia.'),
+  (29, 'Horizonte Novo', 'Quanto mais você anda, mais o mapa cresce.'),
+  (30, 'Guardião da Trilha', 'Você não apenas segue o caminho. Agora parece fazer parte dele.'),
+  (31, 'Urso Determinado', 'Determinação é continuar mesmo sem trilha sonora épica.'),
+  (32, 'Força em Construção', 'Nem toda evolução aparece no espelho primeiro.'),
+  (33, 'Mais Forte que Ontem', 'A competição mais justa continua sendo contra o seu eu de ontem.'),
+  (34, 'Passo Pesado', 'Seus passos já fazem o chão perceber sua presença.'),
+  (35, 'Patas Firmes', 'Base forte, mente estável, rotina viva.'),
+  (36, 'Urso Resistente', 'A força impressiona. A resistência sustenta.'),
+  (37, 'Força Interior', 'O verdadeiro upgrade quase nunca é só físico.'),
+  (38, 'Ritmo de Ferro', 'O corpo cansa. O hábito empurra.'),
+  (39, 'Coragem Renovada', 'Às vezes a coragem volta depois do banho e da creatina.'),
+  (40, 'Guardião da Força', 'A força deixou de ser meta. Já é parte da sua identidade.'),
+  (41, 'Viajante Experiente', 'Não é mais começo de jornada. É bagagem.'),
+  (42, 'A Resposta do Caminho', 'Você chegou até aqui buscando respostas. Pena que ninguém lembrou a pergunta.'),
+  (43, 'Urso Experiente', 'Você já sabe reconhecer o que é cansaço... e o que é desculpa.'),
+  (44, 'Caminho sem Atalhos', 'Infelizmente, o portal mágico ainda não foi desbloqueado.'),
+  (45, 'Persistência Rara', 'Pouca gente entende o poder de insistir com elegância.'),
+  (46, 'Além do Cansaço', 'Às vezes a linha entre desistir e evoluir dura mais cinco minutos.'),
+  (47, 'Passos de Veterano', 'Seus passos carregam memória. E um pouco de dor na panturrilha também.'),
+  (48, 'Força e Equilíbrio', 'Ficar forte é bom. Permanecer inteiro é melhor.'),
+  (49, 'Quase Mestre', 'Você ainda não virou lenda. Mas já está dando trabalho pros iniciantes.'),
+  (50, 'Metade da Montanha', 'Metade do caminho. O bom é que a vista já começou a compensar.'),
+  (51, 'Urso Montanhista', 'O terreno ficou mais inclinado, mas você também ficou maior.'),
+  (52, 'Terreno Elevado', 'Você começou a habitar lugares que antes pareciam difíceis demais.'),
+  (53, 'Subida Constante', 'Nem rápido, nem bonito. Só constante. E isso resolve muita coisa.'),
+  (54, 'Sem Voltar Atrás', 'Não porque não dá, mas porque já não faz sentido.'),
+  (55, 'Acima das Nuvens', 'Você descobriu que alguns cenários só aparecem pra quem continua subindo.'),
+  (56, 'Passos nas Alturas', 'O medo ainda existe. Só não manda mais.'),
+  (57, 'Resistência Ancestral', 'Há uma energia antiga em quem aprende a persistir.'),
+  (58, 'Urso Implacável', 'Não confundir com raiva. É só consistência em estado bruto.'),
+  (59, 'O Caminho Continua', 'O topo sempre revela outro topo. Curiosamente, isso é animador.'),
+  (60, 'Guardião da Montanha', 'Você já não parece visitante. Parece parte da paisagem.'),
+  (61, 'Urso Incansável', 'Cansa, sim. Só não para.'),
+  (62, 'Chama Interior', 'Alguns combustíveis não vêm em pote.'),
+  (63, 'Dias Difíceis', 'Nem todo vilão tem rosto. Às vezes ele atende por preguiça.'),
+  (64, 'Ainda de Pé', 'Se você permaneceu, já venceu mais do que parece.'),
+  (65, 'Força Renovada', 'Às vezes o upgrade vem depois da pausa certa.'),
+  (66, 'Depois da Tempestade', 'Há algo de mágico na calmaria depois de um período difícil.'),
+  (67, 'Mais Uma Vez', 'Heróis e hábitos têm isso em comum: voltam no dia seguinte.'),
+  (68, 'Além dos Limites', 'Muitos limites eram só cercas mal posicionadas.'),
+  (69, 'Equilíbrio Perfeito', 'Algumas conquistas são autoexplicativas. Esta, por educação, deixaremos em silêncio.'),
+  (70, 'Guardião da Chama', 'A chama não é mais acaso. Você aprendeu a cuidar dela.'),
+  (71, 'Urso Mestre', 'Não porque sabe tudo. Mas porque aprendeu a continuar.'),
+  (72, 'Mestre da Rotina', 'A rotina já não exige negociação diária.'),
+  (73, 'Passos Precisos', 'Menos desperdício. Mais intenção.'),
+  (74, 'Força Tranquila', 'A verdadeira força raramente precisa fazer alarde.'),
+  (75, 'Veterano da Toca', 'Você se lembra de onde começou — e isso torna tudo melhor.'),
+  (76, 'Caminho Dominado', 'O mapa deixou de ser um mistério. Agora é território conhecido.'),
+  (77, 'Disciplina Natural', 'O que antes era esforço, agora parece parte da sua natureza.'),
+  (78, 'Mestre dos Hábitos', 'Pequenas repetições: o superpoder mais subestimado do mundo.'),
+  (79, 'Urso Inabalável', 'O vento muda. A rotina não.'),
+  (80, 'Guardião do Equilíbrio', 'Força, descanso, constância e leveza finalmente aprenderam a morar juntos.'),
+  (81, 'Urso Excepcional', 'Você começou a se destacar até do seu eu imaginário.'),
+  (82, 'Além da Rotina', 'Isso já não é só hábito. É identidade.'),
+  (83, 'Marca do Veterano', 'Todo aventureiro de verdade carrega sinais da jornada.'),
+  (84, 'Trilha Lendária', 'Há caminhos que se tornam lenda porque alguém insistiu neles.'),
+  (85, 'Guardião Antigo', 'Sua rotina parece ter sido escrita em pedra.'),
+  (86, 'Urso de Muitas Jornadas', 'Você já não acumula dias. Acumula capítulos.'),
+  (87, 'Sabedoria da Toca', 'Nem todo conhecimento vem de livros. Às vezes vem de repetir o básico muito bem.'),
+  (88, 'Caminhante das Estrelas', 'Seus passos parecem guiados por alguma força... cósmica, talvez.'),
+  (89, 'Força Desperta', 'Sentiu isso? Pode ser evolução. Pode ser o pré-treino.'),
+  (90, 'Guardião da Jornada', 'Você não só venceu etapas. Você se tornou símbolo do caminho.'),
+  (91, 'Urso Ascendente', 'Já não dá para falar em progresso. Agora é ascensão mesmo.'),
+  (92, 'Além da Montanha', 'O topo era só o começo do que vinha depois.'),
+  (93, 'Guardião Supremo', 'Você protege aquilo que construiu porque sabe o valor de cada passo.'),
+  (94, 'Urso Lendário', 'Alguns ouvem falar. Poucos chegam aqui.'),
+  (95, 'Brilho Raro', 'Há quem passe a vida inteira sem encontrar um destes.'),
+  (96, 'Lenda da Floresta', 'Seu nome já circula pela mata em tom de respeito... e leve inveja.'),
+  (97, 'Mestre da Jornada', 'Você não venceu apenas níveis. Você aprendeu a jornada.'),
+  (98, 'Último Desafio', 'Todo final digno precisa de um último portal.'),
+  (99, 'Guardião da Toca', 'Você voltou ao início, mas já não é o mesmo urso que saiu de lá.'),
+  (100, 'Lenda UrsoFit', 'O urso despertou, caminhou, caiu, subiu, brilhou — e virou lenda.')
+) as official(number, title, description)
+where levels.number = official.number;
 
 insert into public.cosmetic_definitions
   (id, kind, name, description, asset_key, rarity, unlock_type, unlock_value, display_order)
@@ -497,7 +602,7 @@ create policy "Users delete their own profile photos" on storage.objects for del
 using (bucket_id = 'profile-photos' and (storage.foldername(name))[1] = (select auth.uid())::text);
 
 comment on table public.level_definitions is
-  'Catálogo versionado da jornada de 100 níveis. Registros pending aguardam o documento-mestre oficial.';
+  'Catálogo versionado da jornada oficial de 100 níveis do UrsoGame.';
 comment on table public.profiles is
   'Perfil próprio do UrsoFit; privado por padrão e sem perfil público nesta etapa.';
 

@@ -19,27 +19,33 @@ export interface CosmeticDefinition {
   active: boolean;
 }
 
-const avatarNames = [
-  "Urso Clássico", "Urso Maromba", "Urso das Neves", "Urso Emo", "Urso Gratiluz",
-  "Urso Caipira", "Urso Corredor", "Urso Ciclista", "Urso Lutador", "Urso Zen",
-  "Urso HIIT", "Chef da Caverna", "Urso Noturno", "Urso Explorador", "Urso Brilho Raro",
-] as const;
+const avatarCatalog = [
+  { name: "Urso Clássico", description: "Mascote padrão, esportivo e simpático.", unlock: { type: "default" } },
+  { name: "Urso Maromba", description: "Regata, físico atlético e shaker.", unlock: { type: "achievement", value: "strength-milestone" } },
+  { name: "Urso das Neves", description: "Pelagem branca, detalhes azul-claro.", unlock: { type: "future", value: "journey-or-event-milestone" } },
+  { name: "Urso Emo", description: "Preto/roxo, franja e expressão dramática.", unlock: { type: "future", value: "emo-theme-cosmetic" } },
+  { name: "Urso Gratiluz", description: "Claro, solar, flor/estrela discreta.", unlock: { type: "future", value: "gratiluz-theme-cosmetic" } },
+  { name: "Urso Caipira", description: "Chapéu de palha e xadrez discreto.", unlock: { type: "future", value: "seasonal-collection" } },
+  { name: "Urso Corredor", description: "Faixa, smartwatch e visual runner.", unlock: { type: "achievement", value: "running-milestone" } },
+  { name: "Urso Ciclista", description: "Capacete e óculos esportivos.", unlock: { type: "achievement", value: "cycling-milestone" } },
+  { name: "Urso Lutador", description: "Bandagens/luvas; visual genérico de luta.", unlock: { type: "achievement", value: "combat-milestone" } },
+  { name: "Urso Zen", description: "Roupa leve e pose tranquila.", unlock: { type: "achievement", value: "mobility-milestone" } },
+  { name: "Urso HIIT", description: "Faixa, suor fofo e energia.", unlock: { type: "achievement", value: "hiit-cardio-milestone" } },
+  { name: "Chef da Caverna", description: "Avental e chapéu de chef.", unlock: { type: "achievement", value: "food-creation-milestone" } },
+  { name: "Urso Noturno", description: "Azul-marinho, lua e olheiras fofas.", unlock: { type: "achievement", value: "night-owl" }, secret: true },
+  { name: "Urso Explorador", description: "Mochila e bússola.", unlock: { type: "chapter", value: 3 } },
+  { name: "Urso Brilho Raro", description: "Variante shiny/iridescente.", unlock: { type: "level", value: 95 } },
+] satisfies readonly { name: string; description: string; unlock: UnlockCondition; secret?: boolean }[];
 
-const avatarUnlocks: UnlockCondition[] = [
-  { type: "default" }, { type: "level", value: 10 }, { type: "future" }, { type: "future" }, { type: "future" },
-  { type: "future" }, { type: "achievement", value: "first-run" }, { type: "achievement", value: "first-bike" }, { type: "future" }, { type: "achievement", value: "first-mobility" },
-  { type: "future" }, { type: "achievement", value: "first-recipe" }, { type: "future" }, { type: "chapter", value: 3 }, { type: "level", value: 100 },
-];
-
-export const AVATAR_DEFINITIONS: readonly CosmeticDefinition[] = avatarNames.map((name, index) => ({
+export const AVATAR_DEFINITIONS: readonly CosmeticDefinition[] = avatarCatalog.map((avatar, index) => ({
   id: `avatar-${String(index + 1).padStart(2, "0")}`,
   kind: "avatar",
-  name,
-  description: `Avatar colecionável ${name} do UrsoFit.`,
-  assetKey: `bear-${name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}`,
-  unlock: avatarUnlocks[index],
+  name: avatar.name,
+  description: avatar.description,
+  assetKey: `bear-${avatar.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}`,
+  unlock: avatar.unlock,
   rarity: index === 14 ? "mythic" : index >= 11 ? "epic" : index >= 5 ? "rare" : "common",
-  secret: index === 14,
+  secret: avatar.secret,
   order: index + 1,
   active: true,
 }));

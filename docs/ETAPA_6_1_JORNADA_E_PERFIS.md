@@ -2,16 +2,9 @@
 
 ## Fonte narrativa
 
-O catálogo técnico tem 100 níveis e 10 capítulos, com IDs, XP, ordem, versão e chave de asset estáveis. O arquivo `UrsoGame_Documento_Mestre_Producao_UrsoFit.docx` não estava no repositório nem nos anexos acessíveis durante a implementação. Por isso, nenhum título ou texto narrativo ausente foi inventado.
+O catálogo técnico tem 100 níveis e 10 capítulos, com IDs, XP, ordem, versão e chave de asset estáveis. Os títulos e descrições oficiais foram importados integralmente do documento `UrsoGame_Relatorio_Sem_Imagens.docx`, versão consolidada de 4 de outubro de 2026, sem reescrita ou paráfrase.
 
-Estão marcados como oficiais apenas os nomes já confirmados nas fontes disponíveis:
-
-- nível 1 — Ursinho Desperto;
-- nível 2 — Saindo da Toca;
-- nível 10 — Primeira Insígnia;
-- nível 100 — Lenda UrsoFit.
-
-Os outros registros usam título técnico (`Nível N`) e `content_status = awaiting_master_document`. A importação posterior deve atualizar os registros por `id`, sem recriar tabelas, alterar XP ou duplicar conteúdo.
+Todos os 100 registros usam `content_status = official`. A fonte informa expressamente que a produção gráfica dos assets é tratada separadamente; por isso, cada nível já possui uma chave exclusiva e fallback seguro, mas continua com arte final pendente enquanto o manifesto visual não for produzido.
 
 ## Compatibilidade
 

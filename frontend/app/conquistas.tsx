@@ -189,6 +189,7 @@ function JourneyMap({ summary, selectedLevel, onSelect }: { summary: Gamificatio
               <View style={styles.chapterCopy}>
                 <Text style={styles.chapterEyebrow}>CAPÍTULO {chapter.number}</Text>
                 <Text style={styles.chapterTitle}>{chapter.title}</Text>
+                <Text style={styles.chapterDescription}>{chapter.description}</Text>
               </View>
               {completed ? <MaterialDesignIcons name="check-decagram" size={24} color="#FFD166" /> : null}
             </View>
@@ -361,6 +362,7 @@ const styles = StyleSheet.create({
   chapterCopy: { flex: 1 },
   chapterEyebrow: { color: colors.brandPrimary, fontSize: 8, fontWeight: "900", letterSpacing: 1.3 },
   chapterTitle: { color: colors.onSurface, fontSize: 17, fontWeight: "900" },
+  chapterDescription: { color: colors.onSurfaceSecondary, fontSize: 12, lineHeight: 17, marginTop: 3 },
   levelPath: { paddingTop: spacing.md },
   levelRow: { minHeight: 62, flexDirection: "row", gap: spacing.md },
   pathRail: { width: 42, alignItems: "center" },
