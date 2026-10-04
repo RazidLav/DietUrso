@@ -4,7 +4,7 @@
     "slug": "dieturso",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/ursofit-icon-v2.png",
+    "icon": "./assets/images/ursofit-icon.png",
     "scheme": "dieturso",
     "userInterfaceStyle": "automatic",
     "ios": {
@@ -13,7 +13,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/ursofit-mark.png",
+        "foregroundImage": "./assets/images/ursofit-icon.png",
         "backgroundColor": "#B7FF2A"
       },
       "package": "com.razidlav.dieturso"
@@ -21,17 +21,17 @@
     "web": {
       "bundler": "metro",
       "output": "single",
-      "favicon": "./assets/images/ursofit-favicon-v2.png"
+      "favicon": "./assets/images/ursofit-favicon.png"
     },
     "plugins": [
       "expo-router",
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/ursofit-mark.png",
+          "image": "./assets/images/ursofit-logo.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#000000"
+          "backgroundColor": "#B7FF2A"
         }
       ],
       "expo-font",
