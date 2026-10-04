@@ -76,33 +76,44 @@ export interface AchievementDefinition {
 }
 
 export interface GamificationState {
-  version: 1;
+  version: 1 | 2;
   totalXp: number;
   rewardedEvents: string[];
   unlockedAt: Record<string, string>;
   unseenUnlockIds: string[];
   initialized: boolean;
+  legacyLevelFloor: number;
+  chapterCompletions: Record<number, string>;
 }
 
 export interface GamificationSummary {
   state: GamificationState;
   context: GamificationContext;
   level: number;
+  narrativeLevel: number;
+  legacyLevel: number;
+  legacyFloorApplied: boolean;
   title: string;
+  chapterNumber: number;
+  chapterTitle: string;
   xpIntoLevel: number;
   xpForNextLevel: number;
   progress: number;
+  isMaxLevel: boolean;
+  overflowXp: number;
   unlockedCount: number;
   totalAchievements: number;
 }
 
 export function createInitialGamificationState(): GamificationState {
   return {
-    version: 1,
+    version: 2,
     totalXp: 0,
     rewardedEvents: [],
     unlockedAt: {},
     unseenUnlockIds: [],
     initialized: false,
+    legacyLevelFloor: 1,
+    chapterCompletions: {},
   };
 }

@@ -38,8 +38,9 @@ test("tema é aplicado antes da hidratação para evitar clarão", () => {
 
 test("tema usa o snapshot existente e não cria sistema paralelo de banco", () => {
   const sync = source("src/cloud/cloudSync.ts");
-  assert.match(sync, /version: 6/);
+  assert.match(sync, /version: 7/);
   assert.match(sync, /themePreference/);
+  assert.match(sync, /profileState/);
   assert.match(sync, /applyRemoteThemePreference/);
   assert.doesNotMatch(sync, /from\(["']user_theme/);
 });

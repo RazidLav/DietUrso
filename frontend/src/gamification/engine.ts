@@ -19,6 +19,7 @@ import { entryNutrients } from "../nutrition/records";
 import { categorizeFood } from "../utils/categories";
 import { ACHIEVEMENTS, findAchievement } from "./achievements";
 import { levelFromXp, WATER_GOAL_ML, XP_REWARDS } from "./config";
+import { completedChapterNumbers } from "./journey";
 import { applyIdempotentReward } from "./rewards";
 import {
   createInitialGamificationState,
@@ -295,12 +296,14 @@ function sanitizeState(value: GamificationState): GamificationState {
   const initial = createInitialGamificationState();
   if (!value || typeof value !== "object") return initial;
   return {
-    version: 1,
+    version: value.version === 1 ? 1 : 2,
     totalXp: Number.isFinite(value.totalXp) ? Math.max(0, value.totalXp) : 0,
     rewardedEvents: Array.isArray(value.rewardedEvents) ? value.rewardedEvents : [],
     unlockedAt: value.unlockedAt && typeof value.unlockedAt === "object" ? value.unlockedAt : {},
     unseenUnlockIds: Array.isArray(value.unseenUnlockIds) ? value.unseenUnlockIds : [],
     initialized: Boolean(value.initialized),
+    legacyLevelFloor: Number.isFinite(value.legacyLevelFloor) ? Math.max(1, Math.floor(value.legacyLevelFloor)) : 1,
+    chapterCompletions: value.chapterCompletions && typeof value.chapterCompletions === "object" ? value.chapterCompletions : {},
   };
 }
 
@@ -367,13 +370,23 @@ export async function evaluateGamification(): Promise<GamificationSummary> {
   const unseenUnlockIds = state.initialized
     ? Array.from(new Set([...state.unseenUnlockIds, ...newlyUnlocked]))
     : newlyUnlocked.slice(-1);
+  const progress = levelFromXp(totalXp, state.legacyLevelFloor);
+  const chapterCompletions = { ...state.chapterCompletions };
+  completedChapterNumbers(progress.narrativeLevel).forEach((chapterNumber) => {
+    if (!chapterCompletions[chapterNumber]) {
+      chapterCompletions[chapterNumber] = now;
+      changed = true;
+    }
+  });
   const nextState: GamificationState = {
-    version: 1,
+    version: 2,
     totalXp,
     rewardedEvents: Array.from(rewarded),
     unlockedAt,
     unseenUnlockIds,
     initialized: true,
+    legacyLevelFloor: Math.max(state.legacyLevelFloor, progress.legacyLevel),
+    chapterCompletions,
   };
 
   const meaningfulChange = changed || unseenUnlockIds.length !== state.unseenUnlockIds.length;
@@ -382,11 +395,10 @@ export async function evaluateGamification(): Promise<GamificationSummary> {
     if (meaningfulChange) await markLocalChange();
   }
 
-  const level = levelFromXp(totalXp);
   return {
     state: nextState,
     context,
-    ...level,
+    ...progress,
     unlockedCount: Object.keys(unlockedAt).length,
     totalAchievements: ACHIEVEMENTS.length,
   };
