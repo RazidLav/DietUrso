@@ -11,10 +11,14 @@ import {
   PLANS_KEY,
   RECIPES_KEY,
   WATER_KEY,
+  EVOLUTION_STATE_KEY,
 } from "../store/storageKeys";
 import type { ConsumptionEntry, FoodCatalogItem, MealOption, Plan, Recipe } from "../types/plan";
 import type { HydrationState } from "../hydration/types";
 import type { TrainingState } from "../training/types";
+import type { EvolutionState } from "../evolution/types";
+import { goalAwareDirection, trendSummary } from "../evolution/calculations";
+import { supabase } from "../cloud/supabase";
 import { entryNutrients } from "../nutrition/records";
 import { categorizeFood } from "../utils/categories";
 import { ACHIEVEMENTS, findAchievement } from "./achievements";
@@ -157,6 +161,7 @@ function buildContext(
   water: WaterByDate,
   hydration: HydrationState | undefined,
   training: TrainingState | undefined,
+  evolution: EvolutionState | undefined,
   personalFoods = 0,
   recipes = 0
 ): { context: GamificationContext; completedDates: string[]; proteinDates: string[]; balanceDates: string[]; waterDates: string[] } {
@@ -287,6 +292,17 @@ function buildContext(
     recipes,
     offPlanMeals: offPlanEntries.length,
     returnedToPlanAfterOffPlan,
+    physicalAssessments: evolution?.assessments.length ?? 0,
+    completePhysicalAssessments: evolution?.assessments.filter((assessment) => assessment.completeness === "complete").length ?? 0,
+    bodyMeasurementsLogged: evolution?.assessments.reduce((total, assessment) => total + Object.keys(assessment.measurements).length, 0) ?? 0,
+    progressPhotos: evolution?.photos.length ?? 0,
+    assessmentComparisons: evolution?.comparisonEvents.length ?? 0,
+    consistentGoalProgress: evolution ? (() => {
+      const targetMetric = evolution.goal.type === "muscle_gain" ? "muscle_mass_kg" : evolution.goal.type === "fat_loss" ? "waist" : "weight_kg";
+      const summary = trendSummary(evolution.assessments, targetMetric);
+      return summary.enoughData && goalAwareDirection(evolution.goal.type, targetMetric, summary.absoluteChange) === "toward_goal";
+    })() : false,
+    friendships: 0, socialPosts: 0, rugidos: 0, joinedChallenges: 0, completedChallenges: 0, challengeMedals: 0,
   };
 
   return { context, completedDates, proteinDates, balanceDates, waterDates };
@@ -307,8 +323,27 @@ function sanitizeState(value: GamificationState): GamificationState {
   };
 }
 
+async function remoteCommunityContext() {
+  const empty = { friendships: 0, socialPosts: 0, rugidos: 0, joinedChallenges: 0, completedChallenges: 0, challengeMedals: 0 };
+  if (!supabase) return empty;
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return empty;
+    const userId = session.user.id;
+    const [friendships, posts, rugidos, joined, challenges, medals] = await Promise.all([
+      supabase.from("friendships").select("id", { count: "exact", head: true }).eq("status", "accepted").or(`user_low_id.eq.${userId},user_high_id.eq.${userId}`),
+      supabase.from("social_posts").select("id", { count: "exact", head: true }).eq("user_id", userId).is("removed_at", null),
+      supabase.from("rugidos").select("id", { count: "exact", head: true }).eq("user_id", userId),
+      supabase.from("challenge_members").select("challenge_id", { count: "exact", head: true }).eq("user_id", userId).in("status", ["joined", "finished"]),
+      supabase.from("challenge_members").select("challenge_id", { count: "exact", head: true }).eq("user_id", userId).eq("status", "finished"),
+      supabase.from("user_medals").select("id", { count: "exact", head: true }).eq("user_id", userId),
+    ]);
+    return { friendships: friendships.count ?? 0, socialPosts: posts.count ?? 0, rugidos: rugidos.count ?? 0, joinedChallenges: joined.count ?? 0, completedChallenges: challenges.count ?? 0, challengeMedals: medals.count ?? 0 };
+  } catch { return empty; }
+}
+
 export async function evaluateGamification(): Promise<GamificationSummary> {
-  const [plans, activePlanId, entries, chosen, water, storedState, foods, recipes, hydration, training] = await Promise.all([
+  const [plans, activePlanId, entries, chosen, water, storedState, foods, recipes, hydration, training, evolution] = await Promise.all([
     readJson<Plan[]>(PLANS_KEY, []),
     AsyncStorage.getItem(ACTIVE_PLAN_KEY),
     readJson<ConsumptionEntry[]>(CONSUMPTION_KEY, []),
@@ -319,6 +354,7 @@ export async function evaluateGamification(): Promise<GamificationSummary> {
     readJson<Recipe[]>(RECIPES_KEY, []),
     readJson<HydrationState | undefined>(HYDRATION_STATE_KEY, undefined),
     readJson<TrainingState | undefined>(TRAINING_STATE_KEY, undefined),
+    readJson<EvolutionState | undefined>(EVOLUTION_STATE_KEY, undefined),
   ]);
   const plan = plans.find((candidate) => candidate.id === activePlanId) ?? plans.find((candidate) => !candidate.archived) ?? null;
   const state = sanitizeState(storedState);
@@ -329,9 +365,11 @@ export async function evaluateGamification(): Promise<GamificationSummary> {
     water,
     hydration,
     training,
+    evolution,
     foods.filter((food) => food.scope === "personal").length,
     recipes.filter((recipe) => !recipe.archived).length
   );
+  Object.assign(context, await remoteCommunityContext());
   const rewarded = new Set(state.rewardedEvents);
   let totalXp = state.totalXp;
   let changed = false;

@@ -7,7 +7,7 @@ import TrainingSessionCard from "../src/components/TrainingSessionCard";
 import { getCloudStatus, subscribeCloudStatus } from "../src/cloud/cloudSync";
 import { useCloudDataRefresh } from "../src/cloud/useCloudDataRefresh";
 import { addDays, dayEntries, localDate, startOfWeek } from "../src/training/calculations";
-import { ACTIVITY_COLORS } from "../src/training/catalog";
+import { ACTIVITY_COLORS, ACTIVITY_LABELS } from "../src/training/catalog";
 import type { TrainingState } from "../src/training/types";
 import { getTrainingState, movePlannedSession, prepareTrainingRange } from "../src/store/trainingStore";
 import { colors, withAlpha, radius, spacing } from "../src/theme";
@@ -98,9 +98,9 @@ export default function TreinosScreen() {
           <View style={styles.sectionRow}><Text style={styles.sectionTitle}>SESSÕES DO DIA · {entries.length}</Text><Text style={styles.sectionHint}>status independente</Text></View>
           {entries.length ? entries.map((entry) => <TrainingSessionCard key={entry.planned.id} entry={entry} onPress={() => router.push(`/treino-planejado/${entry.planned.id}`)} onMove={(direction) => void move(entry.planned.id, direction)} />) : <EmptyDay onAdd={() => router.push(`/treino-novo?date=${selectedDate}`)} />}
           <Text style={styles.sectionTitle}>MODALIDADES</Text>
-          <View style={styles.modalityGrid}>{(["mobility", "strength", "crossfit", "running", "cycling", "custom"] as const).map((activityType) => {
+          <View style={styles.modalityGrid}>{(["mobility", "strength", "crossfit", "running", "cycling", "pilates", "jiu_jitsu", "muay_thai", "hiit", "cardio", "custom"] as const).map((activityType) => {
             const count = entries.filter((entry) => entry.planned.activityType === activityType).length;
-            return <Pressable key={activityType} style={styles.modality} onPress={() => router.push(`/treino-novo?date=${selectedDate}&type=${activityType}`)}><View style={[styles.dot, { backgroundColor: ACTIVITY_COLORS[activityType] }]} /><Text style={styles.modalityText}>{activityType === "mobility" ? "Alongamento" : activityType === "strength" ? "Musculação" : activityType === "running" ? "Corrida" : activityType === "cycling" ? "Bike" : activityType === "crossfit" ? "CrossFit" : "Personalizada"}</Text><Text style={styles.count}>{count || "+"}</Text></Pressable>;
+            return <Pressable key={activityType} style={styles.modality} onPress={() => router.push(`/treino-novo?date=${selectedDate}&type=${activityType}`)}><View style={[styles.dot, { backgroundColor: ACTIVITY_COLORS[activityType] }]} /><Text style={styles.modalityText}>{ACTIVITY_LABELS[activityType]}</Text><Text style={styles.count}>{count || "+"}</Text></Pressable>;
           })}</View>
         </View> : null}
 

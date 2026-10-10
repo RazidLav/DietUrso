@@ -52,6 +52,11 @@ export const ACTIVITY_LABELS: Record<ActivityType, string> = {
   crossfit: "CrossFit",
   running: "Corrida",
   cycling: "Bike",
+  pilates: "Pilates",
+  jiu_jitsu: "Jiu-jitsu",
+  muay_thai: "Muay Thai",
+  hiit: "HIIT",
+  cardio: "Cardio",
   custom: "Outra atividade",
 };
 
@@ -61,6 +66,11 @@ export const ACTIVITY_ICONS: Record<ActivityType, string> = {
   crossfit: "weight-lifter",
   running: "run-fast",
   cycling: "bike-fast",
+  pilates: "meditation",
+  jiu_jitsu: "karate",
+  muay_thai: "boxing-glove",
+  hiit: "timer-outline",
+  cardio: "heart-pulse",
   custom: "star-outline",
 };
 
@@ -70,5 +80,10 @@ export const ACTIVITY_COLORS: Record<ActivityType, string> = {
   crossfit: "#FF9F0A",
   running: "#0A84FF",
   cycling: "#5AC8FA",
+  pilates: "#C084FC",
+  jiu_jitsu: "#A78BFA",
+  muay_thai: "#FB7185",
+  hiit: "#F97316",
+  cardio: "#22D3EE",
   custom: "#FF375F",
 };

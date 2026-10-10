@@ -11,6 +11,9 @@ export type AchievementCategory =
   | "Alimentação"
   | "Água"
   | "Treinos"
+  | "Evolução"
+  | "Comunidade"
+  | "Desafios"
   | "Secretas";
 
 export interface GamificationContext {
@@ -59,6 +62,18 @@ export interface GamificationContext {
   recipes: number;
   offPlanMeals: number;
   returnedToPlanAfterOffPlan: boolean;
+  physicalAssessments: number;
+  completePhysicalAssessments: number;
+  bodyMeasurementsLogged: number;
+  progressPhotos: number;
+  assessmentComparisons: number;
+  consistentGoalProgress: boolean;
+  friendships: number;
+  socialPosts: number;
+  rugidos: number;
+  joinedChallenges: number;
+  completedChallenges: number;
+  challengeMedals: number;
 }
 
 export interface AchievementDefinition {

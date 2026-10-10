@@ -13,7 +13,7 @@ import { colors, withAlpha, radius, spacing } from "../theme";
 
 const DAYS = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
 const ORDER = [1, 2, 3, 4, 5, 6, 0];
-const TYPES: ActivityType[] = ["strength", "crossfit", "running", "cycling", "mobility", "custom"];
+const TYPES: ActivityType[] = ["strength", "crossfit", "running", "cycling", "mobility", "pilates", "jiu_jitsu", "muay_thai", "hiit", "cardio", "custom"];
 type Draft = Partial<TrainingPlanItem> & { weekday: number; name: string; activityType?: ActivityType };
 type LoadState = "idle" | "loading" | "success" | "empty" | "error";
 

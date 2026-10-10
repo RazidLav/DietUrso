@@ -10,7 +10,7 @@ import { createPersonalExerciseVariant, getTrainingState, savePersonalExercise, 
 import { colors, radius, spacing } from "../src/theme";
 import { matchesSearch } from "../src/utils/search";
 
-const TYPES: (ActivityType | "all")[] = ["all", "strength", "mobility", "crossfit", "running", "cycling", "custom"];
+const TYPES: (ActivityType | "all")[] = ["all", "strength", "mobility", "crossfit", "running", "cycling", "pilates", "jiu_jitsu", "muay_thai", "hiit", "cardio", "custom"];
 type ExerciseDraft = Partial<ExerciseDefinition> & { name: string; activityType: ActivityType };
 
 export default function ExerciseCatalogScreen() {

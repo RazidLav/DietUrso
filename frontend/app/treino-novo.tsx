@@ -9,7 +9,7 @@ import type { ActivityType, WorkoutTemplate } from "../src/training/types";
 import { getTrainingState, replaceTrainingSession, scheduleTrainingSession } from "../src/store/trainingStore";
 import { colors, radius, spacing } from "../src/theme";
 
-const TYPES: ActivityType[] = ["mobility", "strength", "crossfit", "running", "cycling", "custom"];
+const TYPES: ActivityType[] = ["mobility", "strength", "crossfit", "running", "cycling", "pilates", "jiu_jitsu", "muay_thai", "hiit", "cardio", "custom"];
 
 export default function NewTrainingSessionScreen() {
   const router = useRouter();
