@@ -12,6 +12,7 @@ import {
   FOOD_LIBRARY_KEY,
   GAMIFICATION_KEY,
   HYDRATION_STATE_KEY,
+  EVOLUTION_STATE_KEY,
   TRAINING_STATE_KEY,
   LOCAL_CHANGED_AT_KEY,
   ONBOARDING_COMPLETE_KEY,
@@ -29,6 +30,7 @@ import { authRedirectUrl, normalizeEmail, registerWithPassword, requestPasswordR
 import { applyRemoteThemePreference, sanitizeThemePreference } from "../store/themeStore";
 import type { ThemePreference } from "../theme";
 import type { ProfileState } from "../profile/types";
+import type { EvolutionState } from "../evolution/types";
 
 type CloudPhase =
   | "disabled"
@@ -51,7 +53,7 @@ export interface CloudStatus {
 }
 
 interface AppSnapshot {
-  version: 1 | 2 | 3 | 4 | 5 | 6 | 7;
+  version: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
   plans: Plan[];
   activePlanId: string | null;
   consumption: ConsumptionEntry[];
@@ -67,6 +69,7 @@ interface AppSnapshot {
   trainingState?: TrainingState;
   themePreference?: ThemePreference;
   profileState?: ProfileState;
+  evolutionState?: EvolutionState;
 }
 
 type CloudRow = {
@@ -113,7 +116,7 @@ async function readJson<T>(key: string, fallback: T): Promise<T> {
 }
 
 async function readLocalSnapshot(): Promise<AppSnapshot> {
-  const [plans, activePlanId, consumption, chosenOptions, shoppingChecked, gamification, waterByDate, onboardingComplete, foodLibrary, recipes, shoppingConfig, hydrationState, trainingState, themePreference, profileState] =
+  const [plans, activePlanId, consumption, chosenOptions, shoppingChecked, gamification, waterByDate, onboardingComplete, foodLibrary, recipes, shoppingConfig, hydrationState, trainingState, themePreference, profileState, evolutionState] =
     await Promise.all([
       readJson<Plan[]>(PLANS_KEY, []),
       AsyncStorage.getItem(ACTIVE_PLAN_KEY),
@@ -135,10 +138,11 @@ async function readLocalSnapshot(): Promise<AppSnapshot> {
       readJson<TrainingState | undefined>(TRAINING_STATE_KEY, undefined),
       AsyncStorage.getItem(THEME_PREFERENCE_KEY),
       readJson<ProfileState | undefined>(PROFILE_STATE_KEY, undefined),
+      readJson<EvolutionState | undefined>(EVOLUTION_STATE_KEY, undefined),
     ]);
 
   return {
-    version: 7,
+    version: 8,
     plans,
     activePlanId,
     consumption,
@@ -154,6 +158,7 @@ async function readLocalSnapshot(): Promise<AppSnapshot> {
     trainingState,
     themePreference: sanitizeThemePreference(themePreference),
     profileState,
+    evolutionState,
   };
 }
 
@@ -161,7 +166,7 @@ function isValidSnapshot(value: unknown): value is AppSnapshot {
   if (!value || typeof value !== "object") return false;
   const candidate = value as Partial<AppSnapshot>;
   return (
-    (candidate.version === 1 || candidate.version === 2 || candidate.version === 3 || candidate.version === 4 || candidate.version === 5 || candidate.version === 6 || candidate.version === 7) &&
+    (candidate.version === 1 || candidate.version === 2 || candidate.version === 3 || candidate.version === 4 || candidate.version === 5 || candidate.version === 6 || candidate.version === 7 || candidate.version === 8) &&
     Array.isArray(candidate.plans) &&
     Array.isArray(candidate.consumption) &&
     typeof candidate.chosenOptions === "object" &&
@@ -228,6 +233,9 @@ async function applyCloudSnapshot(row: CloudRow) {
         : Promise.resolve(),
       row.payload.version >= 7 && row.payload.profileState
         ? AsyncStorage.setItem(PROFILE_STATE_KEY, JSON.stringify(row.payload.profileState))
+        : Promise.resolve(),
+      row.payload.version >= 8 && row.payload.evolutionState
+        ? AsyncStorage.setItem(EVOLUTION_STATE_KEY, JSON.stringify(row.payload.evolutionState))
         : Promise.resolve(),
       row.payload.onboardingComplete
         ? AsyncStorage.setItem(ONBOARDING_COMPLETE_KEY, "1")

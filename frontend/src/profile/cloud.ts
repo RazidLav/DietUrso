@@ -14,6 +14,8 @@ export async function saveRemoteProfile(profile: UserProfile) {
     photo_path: profile.photoPath,
     avatar_mode: profile.avatarMode,
     privacy: profile.privacy,
+    profile_visibility: profile.profileVisibility,
+    content_visibility: profile.contentVisibility,
     show_progress_stats: profile.showProgressStats,
     show_streak_stats: profile.showStreakStats,
     updated_at: new Date().toISOString(),

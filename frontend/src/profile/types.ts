@@ -1,6 +1,8 @@
 import type { CosmeticKind } from "../gamification/cosmetics";
 
 export type ProfilePrivacy = "private" | "future_public";
+export type SocialVisibility = "private" | "friends" | "public";
+export type ProfileContentArea = "workouts" | "nutrition" | "hydration" | "achievements" | "evolution" | "photos" | "rugidos" | "challenges";
 
 export interface UserProfile {
   displayName: string;
@@ -10,6 +12,8 @@ export interface UserProfile {
   photoUrl: string | null;
   avatarMode: "bear" | "photo";
   privacy: ProfilePrivacy;
+  profileVisibility: SocialVisibility;
+  contentVisibility: Record<ProfileContentArea, SocialVisibility>;
   showProgressStats: boolean;
   showStreakStats: boolean;
   joinedAt: string;

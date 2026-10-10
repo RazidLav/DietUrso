@@ -16,3 +16,4 @@ export const NUTRITION_SEED_KEY = "urso:nutritionSeeded_v1";
 export const SHOPPING_CONFIG_KEY = "urso:shoppingConfig_v1";
 export const THEME_PREFERENCE_KEY = "urso:themePreference";
 export const PROFILE_STATE_KEY = "urso:profile_v1";
+export const EVOLUTION_STATE_KEY = "urso:evolution_v1";

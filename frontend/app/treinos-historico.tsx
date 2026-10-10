@@ -10,7 +10,7 @@ import type { ActivityType, PlannedSessionStatus, TrainingHistoryFilters, Traini
 import { getTrainingState } from "../src/store/trainingStore";
 import { colors, radius, spacing } from "../src/theme";
 
-const TYPES: (ActivityType | "all")[] = ["all", "mobility", "strength", "crossfit", "running", "cycling", "custom"];
+const TYPES: (ActivityType | "all")[] = ["all", "mobility", "strength", "crossfit", "running", "cycling", "pilates", "jiu_jitsu", "muay_thai", "hiit", "cardio", "custom"];
 const STATUSES: (WorkoutSessionStatus | PlannedSessionStatus | "all")[] = ["all", "planned", "in_progress", "completed", "partial", "skipped", "canceled"];
 
 export default function TrainingHistoryScreen() {

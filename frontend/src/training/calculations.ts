@@ -3,6 +3,7 @@ import type {
   ActivityType,
   ExerciseDefinition,
   PersonalRecord,
+  ProgressionSuggestion,
   PlannedSession,
   StrengthSetResult,
   TrainingDayEntry,
@@ -336,6 +337,42 @@ export function completedStrengthSet(
   now = new Date(),
 ) {
   return { ...set, ...values, status: "completed" as const, completedAt: now.toISOString() };
+}
+
+export function estimatedOneRepMax(load: number, repetitions: number) {
+  if (!Number.isFinite(load) || !Number.isFinite(repetitions) || load <= 0 || repetitions <= 0) return undefined;
+  if (repetitions === 1) return load;
+  return Math.round(load * (1 + Math.min(repetitions, 12) / 30) * 10) / 10;
+}
+
+export function deterministicProgressionSuggestion(input: {
+  exerciseId: string;
+  sessionId: string;
+  sets: { performedLoad?: number; performedReps?: number; targetRepMax?: number; rir?: number; loadUnit?: "kg" | "lb" }[];
+  increment?: number;
+}): ProgressionSuggestion | null {
+  const valid = input.sets.filter((set) => (set.performedLoad ?? 0) > 0 && (set.performedReps ?? 0) > 0);
+  if (!valid.length) return null;
+  const reachedTop = valid.every((set) => set.targetRepMax !== undefined && set.performedReps! >= set.targetRepMax);
+  const controlled = valid.every((set) => set.rir !== undefined && set.rir >= 1);
+  const recurringStruggle = valid.filter((set) => set.rir === 0 || (set.targetRepMax !== undefined && set.performedReps! < set.targetRepMax)).length >= Math.ceil(valid.length / 2);
+  const latestLoad = valid.at(-1)!.performedLoad!;
+  if (reachedTop && controlled) return { exerciseId: input.exerciseId, sourceSessionId: input.sessionId, action: "increase_load", explanation: "Você alcançou o topo da faixa em todas as séries com pelo menos 1 RIR. A sugestão precisa da sua confirmação.", suggestedLoad: Math.round((latestLoad + (input.increment ?? (valid[0].loadUnit === "lb" ? 5 : 2.5))) * 10) / 10, loadUnit: valid[0].loadUnit ?? "kg" };
+  if (recurringStruggle) return { exerciseId: input.exerciseId, sourceSessionId: input.sessionId, action: "review", explanation: "Metade ou mais das séries ficou abaixo da faixa ou chegou a RIR 0. Considere manter a carga e revisar descanso ou prescrição.", suggestedLoad: latestLoad, loadUnit: valid[0].loadUnit ?? "kg" };
+  return { exerciseId: input.exerciseId, sourceSessionId: input.sessionId, action: "maintain", explanation: "O desempenho ainda não sustenta uma progressão clara. Mantenha a carga e colete mais uma execução.", suggestedLoad: latestLoad, loadUnit: valid[0].loadUnit ?? "kg" };
+}
+
+export function substituteExerciseForSession(session: WorkoutSession, exercisePlanId: string, executed: ExerciseDefinition, now = new Date()) {
+  const planned = session.prescriptionSnapshot.strength?.exercises.find((exercise) => exercise.id === exercisePlanId);
+  if (!planned) throw new Error("Exercício planejado não encontrado.");
+  return {
+    ...session,
+    result: {
+      ...session.result,
+      strengthSets: session.result.strengthSets.map((set) => set.exercisePlanId !== exercisePlanId ? set : { ...set, executedExerciseId: executed.id, exerciseId: executed.id, exerciseName: executed.name }),
+    },
+    updatedAt: now.toISOString(),
+  };
 }
 
 function recordBeats(previous: PersonalRecord | undefined, metric: PersonalRecord["metric"], value: number) {

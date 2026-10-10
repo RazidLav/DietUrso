@@ -1,4 +1,4 @@
-export type ActivityType = "mobility" | "strength" | "crossfit" | "running" | "cycling" | "custom";
+export type ActivityType = "mobility" | "strength" | "crossfit" | "running" | "cycling" | "pilates" | "jiu_jitsu" | "muay_thai" | "hiit" | "cardio" | "custom";
 
 export type PlannedSessionStatus = "planned" | "skipped" | "canceled";
 export type WorkoutSessionStatus = "in_progress" | "completed" | "partial";
@@ -226,6 +226,7 @@ export interface StrengthSetResult {
   planSetId: string;
   exercisePlanId: string;
   exerciseId?: string;
+  executedExerciseId?: string;
   exerciseName: string;
   status: SetStatus;
   performedReps?: number;
@@ -235,6 +236,25 @@ export interface StrengthSetResult {
   rpe?: number;
   notes?: string;
   completedAt?: string;
+}
+
+export interface ExerciseSubstitution {
+  sessionId: string;
+  exercisePlanId: string;
+  plannedExerciseId?: string;
+  executedExerciseId: string;
+  reason?: string;
+  scope: "session" | "plan";
+  createdAt: string;
+}
+
+export interface ProgressionSuggestion {
+  exerciseId: string;
+  sourceSessionId: string;
+  action: "increase_load" | "maintain" | "review";
+  explanation: string;
+  suggestedLoad?: number;
+  loadUnit?: LoadUnit;
 }
 
 export interface MobilityMovementResult {

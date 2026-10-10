@@ -25,6 +25,8 @@ export function createInitialProfileState(now = new Date().toISOString()): Profi
     profile: {
       displayName: "Amigo do Urso", username: null, bio: "", photoPath: null, photoUrl: null,
       avatarMode: "bear", privacy: "private", showProgressStats: false, showStreakStats: false, joinedAt: now,
+      profileVisibility: "private",
+      contentVisibility: { workouts: "friends", nutrition: "private", hydration: "private", achievements: "friends", evolution: "private", photos: "private", rugidos: "friends", challenges: "friends" },
     },
     unlockedCosmetics: { "avatar-01": now, "frame-classic": now, "banner-cave": now, "title-legacy-1": now },
     equipped: { avatar: "avatar-01", frame: "frame-classic", banner: "banner-cave", title: "title-legacy-1" },
@@ -48,6 +50,8 @@ export function sanitizeProfileState(value: unknown): ProfileState {
       photoUrl: typeof profile.photoUrl === "string" ? profile.photoUrl : null,
       avatarMode: profile.avatarMode === "photo" ? "photo" : "bear",
       privacy: profile.privacy === "future_public" ? "future_public" : "private",
+      profileVisibility: profile.profileVisibility === "public" || profile.profileVisibility === "friends" ? profile.profileVisibility : "private",
+      contentVisibility: { ...initial.profile.contentVisibility, ...(profile.contentVisibility && typeof profile.contentVisibility === "object" ? profile.contentVisibility : {}) },
       showProgressStats: Boolean(profile.showProgressStats),
       showStreakStats: Boolean(profile.showStreakStats),
       joinedAt: typeof profile.joinedAt === "string" ? profile.joinedAt : initial.profile.joinedAt,

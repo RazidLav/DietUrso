@@ -75,11 +75,15 @@ export const NAVIGATION: NavigationSection[] = [
     ],
   },
   {
-    ...item("profile", "Perfil", "account-circle-outline", "/perfil", ["/perfil", "/meu-urso", "/ajustes", "/conta", "/conquistas", "/estatisticas"]),
+    ...item("profile", "Perfil", "account-circle-outline", "/perfil", ["/perfil", "/meu-urso", "/ajustes", "/conta", "/conquistas", "/estatisticas", "/evolucao", "/comunidade", "/rugidos", "/desafios"]),
     id: "profile",
     order: 4,
     children: [
       item("profile-account", "Meu perfil", "account-outline", "/perfil", ["/perfil", "/meu-urso"], "Perfil"),
+      item("profile-evolution", "Evolução", "chart-timeline-variant", "/evolucao"),
+      item("profile-community", "Comunidade", "account-group-outline", "/comunidade"),
+      item("profile-rugidos", "Rugidos", "bullhorn-outline", "/rugidos"),
+      item("profile-challenges", "Desafios", "flag-checkered", "/desafios"),
       item("profile-achievements", "Conquistas", "trophy-outline", "/conquistas"),
       item("profile-progress", "Progresso", "chart-box-outline", "/estatisticas"),
       item("profile-settings", "Configurações", "cog-outline", "/ajustes", ["/ajustes"], "Ajustes"),

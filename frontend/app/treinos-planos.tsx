@@ -11,7 +11,7 @@ import type { ActivityType, ExerciseDefinition, TrainingPlan, TrainingState, Wor
 import { deleteTrainingPlanIfUnused, duplicateTrainingPlan, duplicateWorkoutTemplate, getTrainingState, saveTrainingPlan, saveWorkoutTemplate, setActiveTrainingPlan, setTrainingPlanArchived, setWorkoutTemplateArchived } from "../src/store/trainingStore";
 import { colors, radius, spacing } from "../src/theme";
 
-const TYPES: ActivityType[] = ["mobility", "strength", "crossfit", "running", "cycling", "custom"];
+const TYPES: ActivityType[] = ["mobility", "strength", "crossfit", "running", "cycling", "pilates", "jiu_jitsu", "muay_thai", "hiit", "cardio", "custom"];
 
 export default function TrainingPlansScreen() {
   const router = useRouter(); const insets = useSafeAreaInsets(); const [state, setState] = useState<TrainingState | null>(null);
