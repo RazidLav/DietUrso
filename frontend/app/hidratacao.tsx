@@ -3,6 +3,7 @@ import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { FolderCard } from "../src/components/ProgressiveUI";
 import { useCloudDataRefresh } from "../src/cloud/useCloudDataRefresh";
 import { formatHydrationVolume, hydrationClock, hydrationSummary, selectHydrationAlert, snapshotFromConfig } from "../src/hydration/calculations";
 import type { HydrationAlert, HydrationRecord, HydrationState } from "../src/hydration/types";
@@ -132,8 +133,6 @@ export default function HydrationScreen() {
       <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
         <Pressable style={styles.iconButton} onPress={() => router.back()}><MaterialDesignIcons name="chevron-left" size={26} color={colors.onSurface} /></Pressable>
         <View style={{ flex: 1 }}><Text style={styles.eyebrow}>HIDRATAÇÃO INTELIGENTE</Text><Text style={styles.title}>HidratUrso</Text></View>
-        <Pressable style={styles.iconButton} onPress={() => router.push("/hidratacao-historico")} accessibilityLabel="Histórico"><MaterialDesignIcons name="chart-timeline-variant" size={20} color={colors.onSurface} /></Pressable>
-        <Pressable style={styles.iconButton} onPress={() => router.push("/hidratacao-config")} accessibilityLabel="Configurações"><MaterialDesignIcons name="cog-outline" size={20} color={colors.onSurface} /></Pressable>
       </View>
       <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: 120, gap: spacing.lg }}>
         {error ? <Pressable style={styles.error} onPress={() => setError(null)}><MaterialDesignIcons name="alert-circle-outline" size={18} color={colors.error} /><Text style={styles.errorText}>{error}</Text><MaterialDesignIcons name="close" size={16} color={colors.onSurfaceTertiary} /></Pressable> : null}
@@ -146,6 +145,12 @@ export default function HydrationScreen() {
         </View>
 
         <View><Text style={styles.sectionTitle}>REGISTRO RÁPIDO</Text><View style={styles.quickGrid}>{QUICK_AMOUNTS.map((amount) => <Pressable accessibilityRole="button" accessibilityLabel={`Adicionar ${amount === 1000 ? "1 litro" : `${amount} mililitros`}`} disabled={saving} key={amount} style={[styles.quickButton, saving && { opacity: 0.55 }]} onPress={() => void optimisticAdd(amount, "quick")} testID={`quick-water-${amount}`}><MaterialDesignIcons name="water-plus-outline" size={19} color={colors.brandSecondary} /><Text style={styles.quickAmount}>+{amount === 1000 ? "1" : amount}</Text><Text style={styles.quickUnit}>{amount === 1000 ? "L" : "ml"}</Text></Pressable>)}</View></View>
+
+        <View style={{ gap: spacing.sm }}>
+          <FolderCard icon="bottle-soda-classic-outline" title="Recipientes" description="Copos e garrafas personalizados" onPress={() => router.push("/hidratacao-recipientes")} />
+          <FolderCard icon="chart-timeline-variant" title="Histórico" description="Consumo por dia e evolução" onPress={() => router.push("/hidratacao-historico")} />
+          <FolderCard icon="target" title="Meta e configurações" description="Horários, ritmo e cálculo diário" onPress={() => router.push("/hidratacao-config")} />
+        </View>
 
         {favorites.length ? <View><View style={styles.sectionHeader}><Text style={styles.sectionTitle}>MEUS RECIPIENTES</Text><Pressable accessibilityRole="button" onPress={() => router.push("/hidratacao-recipientes")}><Text style={styles.manage}>Gerenciar</Text></Pressable></View><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm }}>{favorites.map((container) => <Pressable accessibilityRole="button" accessibilityLabel={`Adicionar ${container.volumeMl} mililitros usando ${container.name}`} key={container.id} disabled={saving} style={styles.container} onPress={() => void optimisticAdd(container.volumeMl, "container", container.id)}><View style={[styles.containerIcon, { backgroundColor: `${container.color ?? colors.brandSecondary}22` }]}><MaterialDesignIcons name={(container.icon ?? "cup-water") as never} size={22} color={container.color ?? colors.brandSecondary} /></View><Text style={styles.containerName}>{container.name}</Text><Text style={styles.containerVolume}>+{container.volumeMl} ml</Text></Pressable>)}</ScrollView></View> : null}
 

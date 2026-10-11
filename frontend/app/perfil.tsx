@@ -3,6 +3,7 @@ import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import { ActivityIndicator, Image, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { FolderCard } from "../src/components/ProgressiveUI";
 import { ACHIEVEMENTS } from "../src/gamification/achievements";
 import { evaluateGamification } from "../src/gamification/engine";
 import { findCosmetic } from "../src/gamification/cosmetics";
@@ -115,6 +116,14 @@ export default function ProfileScreen() {
     <View style={styles.topbar}><Pressable style={styles.iconButton} onPress={() => router.back()} accessibilityLabel="Voltar"><MaterialDesignIcons name="chevron-left" size={25} color={colors.onSurface} /></Pressable><View style={{ flex: 1 }}><Text style={styles.eyebrow}>MINHA TOCA</Text><Text style={styles.headerTitle}>Perfil UrsoFit</Text></View><Pressable style={styles.iconButton} onPress={() => setEditing((value) => !value)} accessibilityLabel="Editar perfil"><MaterialDesignIcons name={editing ? "close" : "pencil-outline"} size={21} color={colors.onSurface} /></Pressable></View>
 
     {notice ? <View style={styles.notice}><Text style={styles.noticeText}>{notice}</Text></View> : null}
+    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing.sm }}>
+      <FolderCard style={desktop ? { flexBasis: "31%", flexGrow: 1 } : { flexBasis: "100%" }} icon="trophy-outline" title="Conquistas" description="Nível, jornada e Caverna de Troféus" onPress={() => router.push("/conquistas")} />
+      <FolderCard style={desktop ? { flexBasis: "31%", flexGrow: 1 } : { flexBasis: "100%" }} icon="teddy-bear" title="Meu Urso" description="Títulos, coleções e recompensas" onPress={() => router.push("/meu-urso")} />
+      <FolderCard style={desktop ? { flexBasis: "31%", flexGrow: 1 } : { flexBasis: "100%" }} icon="chart-line" title="Evolução" description="Progresso e registros físicos" onPress={() => router.push("/evolucao")} />
+      <FolderCard style={desktop ? { flexBasis: "31%", flexGrow: 1 } : { flexBasis: "100%" }} icon="account-group-outline" title="Comunidade" description="Pessoas, perfil social e descobertas" onPress={() => router.push("/comunidade")} />
+      <FolderCard style={desktop ? { flexBasis: "31%", flexGrow: 1 } : { flexBasis: "100%" }} icon="bullhorn-outline" title="Rugidos" description="Suas publicações e interações" onPress={() => router.push("/rugidos")} />
+      <FolderCard style={desktop ? { flexBasis: "31%", flexGrow: 1 } : { flexBasis: "100%" }} icon="flag-checkered" title="Desafios" description="Metas coletivas e pessoais" onPress={() => router.push("/desafios")} />
+    </View>
     <View style={[styles.profileGrid, desktop && styles.profileGridDesktop]}>
       <View style={[styles.showcase, desktop && styles.showcaseDesktop]}>
         <View style={styles.banner}><View style={styles.bannerGlow} /></View>

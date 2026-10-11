@@ -1,9 +1,7 @@
 import MaterialDesignIcons from "@react-native-vector-icons/material-design-icons";
 import { usePathname, useRouter } from "expo-router";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
-  AccessibilityInfo,
-  Animated,
   Image,
   Keyboard,
   Platform,
@@ -15,8 +13,8 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { NAVIGATION, getActiveChild, getActiveSection, normalizePathname, shouldHideNavigation, type NavigationItem, type NavigationSection } from "../navigation/config";
-import { breakpoints, colors, withAlpha, motion, radius, spacing, zIndex } from "../theme";
+import { NAVIGATION, getActiveChild, getActiveSection, normalizePathname, shouldHideNavigation, type NavigationItem } from "../navigation/config";
+import { breakpoints, colors, withAlpha, radius, spacing, zIndex } from "../theme";
 
 export const DESKTOP_BREAKPOINT = breakpoints.desktop;
 export const MOBILE_DOCK_HEIGHT = 68;
@@ -118,46 +116,8 @@ function NavPressable({ item, active, sectionActive = false, onPress, style }: {
 function MobileNavigation({ pathname, bottomInset }: { pathname: string; bottomInset: number }) {
   const router = useRouter();
   const activeSection = getActiveSection(pathname);
-  const [displayedSection, setDisplayedSection] = useState(activeSection);
-  const [reduceMotion, setReduceMotion] = useState(false);
-  const [opacity] = useState(() => new Animated.Value(1));
-  const [translateX] = useState(() => new Animated.Value(0));
-
-  useEffect(() => {
-    void AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotion);
-    const subscription = AccessibilityInfo.addEventListener("reduceMotionChanged", setReduceMotion);
-    return () => subscription.remove();
-  }, []);
-
-  useEffect(() => {
-    if (displayedSection.id === activeSection.id) return;
-    if (reduceMotion) {
-      opacity.setValue(1); translateX.setValue(0);
-      return;
-    }
-    const direction = activeSection.order > displayedSection.order ? 1 : -1;
-    Animated.parallel([
-      Animated.timing(opacity, { toValue: 0, duration: motion.contextExitMs, useNativeDriver: Platform.OS !== "web" }),
-      Animated.timing(translateX, { toValue: -direction * 18, duration: motion.contextExitMs, useNativeDriver: Platform.OS !== "web" }),
-    ]).start(({ finished }) => {
-      if (!finished) return;
-      setDisplayedSection(activeSection);
-      translateX.setValue(direction * 18);
-      Animated.parallel([
-        Animated.timing(opacity, { toValue: 1, duration: motion.contextEnterMs, useNativeDriver: Platform.OS !== "web" }),
-        Animated.timing(translateX, { toValue: 0, duration: motion.contextEnterMs, useNativeDriver: Platform.OS !== "web" }),
-      ]).start();
-    });
-  }, [activeSection, displayedSection, opacity, reduceMotion, translateX]);
-
-  const visibleSection = reduceMotion ? activeSection : displayedSection;
   return (
     <View style={[styles.mobileNav, { paddingBottom: Math.max(bottomInset, spacing.sm) }]} testID="mobile-navigation">
-      {visibleSection.children.length ? (
-        <Animated.View style={{ opacity, transform: [{ translateX }] }}>
-          <ContextBar section={visibleSection} pathname={pathname} onNavigate={(href) => navigate(router, href)} />
-        </Animated.View>
-      ) : <View style={styles.contextSpacer} />}
       <View style={styles.dock} accessibilityRole="tablist" testID="mobile-dock">
         {NAVIGATION.map((section) => {
           const active = activeSection.id === section.id;
@@ -183,65 +143,11 @@ function MobileNavigation({ pathname, bottomInset }: { pathname: string; bottomI
   );
 }
 
-function ContextBar({ section, pathname, onNavigate }: { section: NavigationSection; pathname: string; onNavigate: (href: string) => void }) {
-  const scrollRef = useRef<ScrollView>(null);
-  const positions = useRef<Record<string, { x: number; width: number }>>({});
-  const [viewportWidth, setViewportWidth] = useState(0);
-  const activeChild = useMemo(() => getActiveChild(section, pathname) ?? section.children[0], [pathname, section]);
-
-  useEffect(() => {
-    const position = positions.current[activeChild?.id];
-    if (!position || !viewportWidth) return;
-    scrollRef.current?.scrollTo({ x: Math.max(0, position.x - (viewportWidth - position.width) / 2), animated: true });
-  }, [activeChild?.id, viewportWidth]);
-
-  return (
-    <View style={styles.contextFrame} testID={`context-${section.id}`}>
-      <ScrollView
-        ref={scrollRef}
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.contextContent}
-        onLayout={(event) => setViewportWidth(event.nativeEvent.layout.width)}
-        keyboardShouldPersistTaps="handled"
-      >
-        {section.children.map((child) => {
-          const active = child.id === activeChild?.id;
-          const aria = { "aria-current": active ? "page" : undefined } as Record<string, unknown>;
-          return (
-            <Pressable
-              {...aria}
-              key={child.id}
-              accessibilityRole="link"
-              accessibilityState={{ selected: active }}
-              onLayout={(event) => { positions.current[child.id] = event.nativeEvent.layout; }}
-              onPress={() => onNavigate(child.href)}
-              style={({ pressed }) => [styles.contextItem, active && styles.contextItemActive, pressed && styles.pressed]}
-              testID={`context-item-${child.id}`}
-            >
-              <Text style={[styles.contextText, active && styles.contextTextActive]}>{child.shortLabel ?? child.label}</Text>
-            </Pressable>
-          );
-        })}
-      </ScrollView>
-      <View pointerEvents="none" style={styles.contextFade}><MaterialDesignIcons name="chevron-right" size={18} color={colors.onSurfaceTertiary} /></View>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   fullScreen: { flex: 1, backgroundColor: colors.surface },
   mobileShell: { flex: 1, backgroundColor: colors.surface },
   mobileMain: { flex: 1, minHeight: 0 },
   mobileNav: { flexShrink: 0, zIndex: zIndex.navigation, backgroundColor: colors.surface },
-  contextSpacer: { height: 4 },
-  contextFrame: { height: 50, justifyContent: "center", backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: colors.border },
-  contextContent: { paddingHorizontal: spacing.md, alignItems: "center", gap: spacing.xs, paddingRight: spacing.xxl },
-  contextItem: { minHeight: 36, justifyContent: "center", paddingHorizontal: spacing.md, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surfaceSecondary },
-  contextItemActive: { backgroundColor: withAlpha(colors.brandPrimary, "18"), borderColor: colors.brandPrimary },
-  contextText: { color: colors.onSurfaceTertiary, fontSize: 11, fontWeight: "700" },
-  contextTextActive: { color: colors.brandPrimary, fontWeight: "900" },
-  contextFade: { position: "absolute", right: 0, top: 0, bottom: 0, width: 28, alignItems: "center", justifyContent: "center", backgroundColor: withAlpha(colors.surface, "EE") },
   dock: {
     minHeight: MOBILE_DOCK_HEIGHT,
     flexDirection: "row",

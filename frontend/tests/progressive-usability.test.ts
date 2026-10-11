@@ -1,0 +1,54 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import test from "node:test";
+
+const read = (path: string) => readFileSync(new URL(path, import.meta.url), "utf8");
+
+test("a biblioteca compartilhada expõe os padrões de revelação progressiva", () => {
+  const source = read("../src/components/ProgressiveUI.tsx");
+  for (const component of ["FolderCard", "FeatureCard", "StepHeader", "AdvancedOptions", "StickyActionBar", "FloatingActionMenu", "SearchAndFilter", "LoadingSkeleton", "EmptyState", "ErrorState"]) {
+    assert.match(source, new RegExp(`export function ${component}`));
+  }
+});
+
+test("o mobile mantém a dock estável sem uma segunda barra contextual", () => {
+  const source = read("../src/components/AppNavigation.tsx");
+  assert.doesNotMatch(source, /function ContextBar/);
+  assert.match(source, /NAVIGATION\.map/);
+});
+
+test("a criação de sessão revela modalidade antes da configuração", () => {
+  const source = read("../app/treino-novo.tsx");
+  const weekly = read("../src/components/WeeklyTrainingEditor.tsx");
+  assert.match(source, /StepHeader/);
+  assert.match(source, /!activityType/);
+  assert.match(source, /AdvancedOptions/);
+  assert.match(source, /StickyActionBar/);
+  assert.match(weekly, /Revise antes de salvar/);
+  assert.match(weekly, /current=\{reviewing \? 3/);
+});
+
+test("musculação nasce com padrão herdável e separa grupo de técnica de série", () => {
+  const source = read("../app/treino-planejado/[plannedId].tsx");
+  assert.match(source, /plannedRepMin: 8/);
+  assert.match(source, /plannedRepMax: 12/);
+  assert.match(source, /restSeconds: 90/);
+  assert.match(source, /targetRir: 2/);
+  assert.match(source, /GROUP_TECHNIQUES/);
+  assert.match(source, /SET_TECHNIQUES/);
+  assert.match(source, /Adicionar selecionados/);
+  assert.match(source, /Como medir esta série/);
+});
+
+test("o catálogo filtra modalidade, músculo, equipamento e favoritos", () => {
+  const source = read("../app/treinos-exercicios.tsx");
+  for (const state of ["setType", "setMuscle", "setEquipment", "setFavoritesOnly"]) assert.match(source, new RegExp(state));
+});
+
+test("planejamento e execução usam detalhes recolhidos e registros compactos", () => {
+  const planning = read("../app/treino-planejado/[plannedId].tsx");
+  const execution = read("../app/treino/[sessionId].tsx");
+  assert.match(planning, /Detalhes da sessão/);
+  assert.match(execution, /Detalhes desta série/);
+  assert.match(execution, /accessibilityRole="checkbox"/);
+});

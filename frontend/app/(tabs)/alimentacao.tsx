@@ -3,6 +3,7 @@ import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { FloatingActionMenu, FolderCard } from "../../src/components/ProgressiveUI";
 import { useCloudDataRefresh } from "../../src/cloud/useCloudDataRefresh";
 import { listConsumption } from "../../src/store/planStore";
 import { listFoodCatalog, listRecipes } from "../../src/store/nutritionStore";
@@ -50,6 +51,11 @@ export default function AlimentacaoScreen() {
           <Summary value={counts.today} label="registros hoje" />
         </View>
 
+        <View style={[styles.folderGrid, desktop && styles.folderGridDesktop]}>
+          <FolderCard icon="calendar-check" title="Hoje e meu plano" description="Refeições planejadas e registro do dia" onPress={() => router.push("/plano")} />
+          <FolderCard icon="cart-outline" title="Lista de compras" description="Itens organizados para sua rotina" onPress={() => router.push("/compras")} />
+        </View>
+
         <View style={[styles.featureGrid, desktop && styles.featureGridDesktop]}>
         <FeatureCard
           icon="food-apple"
@@ -91,6 +97,11 @@ export default function AlimentacaoScreen() {
         />
         </View>
       </ScrollView>
+      <FloatingActionMenu label="Registrar" actions={[
+        { id: "off-plan", label: "Refeição fora do plano", hint: "Registre sem alterar as próximas refeições", icon: "silverware-variant", onPress: () => router.push("/fora-do-plano") },
+        { id: "food", label: "Novo alimento", hint: "Abra seu banco de alimentos", icon: "food-apple", onPress: () => router.push("/alimentos") },
+        { id: "recipe", label: "Nova receita", hint: "Monte uma preparação por porções", icon: "chef-hat", onPress: () => router.push("/receitas") },
+      ]} />
     </View>
   );
 }
@@ -124,6 +135,8 @@ const styles = StyleSheet.create({
   summaryRow: { flexDirection: "row", gap: spacing.sm },
   featureGrid: { gap: spacing.md },
   featureGridDesktop: { flexDirection: "row", flexWrap: "wrap" },
+  folderGrid: { gap: spacing.sm },
+  folderGridDesktop: { flexDirection: "row" },
   summary: { flex: 1, backgroundColor: colors.surfaceSecondary, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, padding: spacing.md },
   summaryValue: { color: colors.onSurface, fontSize: 22, fontWeight: "800" },
   summaryLabel: { color: colors.onSurfaceTertiary, fontSize: 10, marginTop: 2 },

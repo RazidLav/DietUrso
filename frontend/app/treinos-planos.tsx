@@ -1,5 +1,5 @@
 import MaterialDesignIcons from "@react-native-vector-icons/material-design-icons";
-import { useFocusEffect, useRouter } from "expo-router";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Modal, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -14,7 +14,7 @@ import { colors, radius, spacing } from "../src/theme";
 const TYPES: ActivityType[] = ["mobility", "strength", "crossfit", "running", "cycling", "pilates", "jiu_jitsu", "muay_thai", "hiit", "cardio", "custom"];
 
 export default function TrainingPlansScreen() {
-  const router = useRouter(); const insets = useSafeAreaInsets(); const [state, setState] = useState<TrainingState | null>(null);
+  const router = useRouter(); const { new: createNew } = useLocalSearchParams<{ new?: string }>(); const insets = useSafeAreaInsets(); const [state, setState] = useState<TrainingState | null>(null);
   const [planModal, setPlanModal] = useState<Partial<TrainingPlan> | null>(null); const [templateModal, setTemplateModal] = useState<Partial<WorkoutTemplate> | null>(null); const [contentTemplate, setContentTemplate] = useState<WorkoutTemplate | null>(null); const [message, setMessage] = useState<string | null>(null);
   const [showPlanOptions, setShowPlanOptions] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
@@ -26,8 +26,10 @@ export default function TrainingPlansScreen() {
   const [continuous, setContinuous] = useState(true);
   const [weeks, setWeeks] = useState("");
   const planSaveLock = useRef(false);
+  const routeActionHandled = useRef(false);
   const openNewPlan = () => { setContinuous(true); setWeeks(""); setShowPlanOptions(false); setPlanError(null); setPlanModal({ name: "", repeatWeekly: true }); };
   const openEditPlan = (plan: TrainingPlan) => { setContinuous(!plan.validUntil); setWeeks(""); setShowPlanOptions(true); setPlanError(null); setPlanModal(plan); };
+  useEffect(() => { if (createNew === "1" && !routeActionHandled.current) { routeActionHandled.current = true; openNewPlan(); } }, [createNew]);
   const load = useCallback(async () => { if (!getCloudStatus().readyForData) return; try { setState(await getTrainingState()); const cloud = getCloudStatus(); setLoadError(cloud.phase === "error" ? cloud.message : null); } catch (cause) { setLoadError(cause instanceof Error ? cause.message : "Não foi possível carregar os planos."); } }, []);
   const retry = async () => { if (getCloudStatus().phase === "error") { try { await syncCloudNow(); } catch { /* A mensagem permanece visível. */ } } await load(); };
   useFocusEffect(useCallback(() => { if (cloudReady) void load(); }, [cloudReady, load]));
