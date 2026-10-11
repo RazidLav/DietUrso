@@ -3,6 +3,7 @@ import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { AdvancedOptions, StepHeader, StickyActionBar } from "./ProgressiveUI";
 import { TrainingPrescriptionFields } from "../../app/treino-planejado/[plannedId]";
 import { getCloudStatus, subscribeCloudStatus } from "../cloud/cloudSync";
 import { ACTIVITY_COLORS, ACTIVITY_LABELS } from "../training/catalog";
@@ -22,7 +23,7 @@ export default function WeeklyTrainingEditor() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
-  const desktop = width >= 900;
+  const desktop = width >= 768;
   const [state, setState] = useState<TrainingState | null>(null);
   const [loadState, setLoadState] = useState<LoadState>("idle");
   const [cloudReady, setCloudReady] = useState(getCloudStatus().readyForData);
@@ -31,8 +32,8 @@ export default function WeeklyTrainingEditor() {
   const [selectedDay, setSelectedDay] = useState(1);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
+  const [reviewing, setReviewing] = useState(false);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
-  const [query, setQuery] = useState("");
   const [saving, setSaving] = useState(false);
   const saveLock = useRef(false);
   const [copyTarget, setCopyTarget] = useState<number | null>(null);
@@ -58,11 +59,11 @@ export default function WeeklyTrainingEditor() {
 
   const plan = state?.plans.find((candidate) => candidate.id === planId);
   const items = useMemo(() => (plan?.days.find((day) => day.weekday === selectedDay)?.items ?? []).slice().sort((a, b) => a.order - b.order), [plan, selectedDay]);
-  const exercises = useMemo(() => state?.exercises.filter((exercise) => !exercise.archivedAt && exercise.activityType === draft?.activityType && exercise.name.toLocaleLowerCase("pt-BR").includes(query.toLocaleLowerCase("pt-BR"))) ?? [], [state, draft?.activityType, query]);
+  const exercises = useMemo(() => state?.exercises.filter((exercise) => !exercise.archivedAt && exercise.activityType === draft?.activityType) ?? [], [state, draft?.activityType]);
 
-  const startAdd = () => { if (!draft) setDraft({ weekday: selectedDay, name: "" }); setEditorOpen(true); setQuery(""); setMessage(null); };
-  const startEdit = (item: TrainingPlanItem) => { if (!draft) setDraft({ ...clonePrescription(item), weekday: selectedDay }); setEditorOpen(true); setQuery(""); setMessage(null); };
-  const chooseType = (activityType: ActivityType) => setDraft((current) => current ? { ...current, activityType, name: current.name || ACTIVITY_LABELS[activityType], prescription: createDefaultPrescription(activityType) } : current);
+  const startAdd = () => { if (!draft) setDraft({ weekday: selectedDay, name: "" }); setReviewing(false); setEditorOpen(true); setMessage(null); };
+  const startEdit = (item: TrainingPlanItem) => { if (!draft) setDraft({ ...clonePrescription(item), weekday: selectedDay }); setReviewing(false); setEditorOpen(true); setMessage(null); };
+  const chooseType = (activityType: ActivityType) => { setReviewing(false); setDraft((current) => current ? { ...current, activityType, name: current.name || ACTIVITY_LABELS[activityType], prescription: createDefaultPrescription(activityType) } : current); };
   const change = (updates: Partial<Draft>) => setDraft((current) => current ? { ...current, ...updates } : current);
 
   const save = async (isDraft: boolean) => {
@@ -72,7 +73,7 @@ export default function WeeklyTrainingEditor() {
       const saved = await saveTrainingPlanItem(planId, draft.weekday, { ...draft, name: draft.name.trim() || ACTIVITY_LABELS[draft.activityType], activityType: draft.activityType, isDraft });
       await load();
       if (isDraft) { setDraft({ ...draft, id: saved.id, isDraft: true }); setMessage("Rascunho salvo. Esta sessão ainda não aparece no calendário."); }
-      else { setDraft(null); setEditorOpen(false); setMessage("Sessão salva na semana."); }
+      else { setDraft(null); setReviewing(false); setEditorOpen(false); setMessage("Sessão salva na semana."); }
     } catch (cause) { setMessage(cause instanceof Error ? cause.message : "Não foi possível salvar a sessão."); }
     finally { saveLock.current = false; setSaving(false); }
   };
@@ -130,13 +131,17 @@ export default function WeeklyTrainingEditor() {
   </View>;
 
   const editor = draft && editorOpen ? <View style={styles.editor} testID="weekly-session-editor">
-    <View style={styles.panelHeader}><Pressable style={styles.backButton} onPress={() => setEditorOpen(false)} accessibilityLabel="Voltar para a semana"><MaterialDesignIcons name="arrow-left" size={22} color={colors.onSurface} /></Pressable><View style={{ flex: 1 }}><Text style={styles.eyebrow}>{DAYS[draft.weekday].toUpperCase()}</Text><Text style={styles.title}>{draft.activityType ? draft.id ? "Editar sessão" : "Nova sessão" : "Escolha a modalidade"}</Text></View></View>
-    {!draft.activityType ? <View style={styles.typeGrid}>{TYPES.map((type) => <Pressable key={type} style={styles.typeCard} onPress={() => chooseType(type)}><View style={[styles.typeMark, { backgroundColor: `${ACTIVITY_COLORS[type]}22` }]}><Text style={[styles.typeMarkText, { color: ACTIVITY_COLORS[type] }]}>{ACTIVITY_LABELS[type].slice(0, 1)}</Text></View><Text style={styles.sessionName}>{ACTIVITY_LABELS[type]}</Text><MaterialDesignIcons name="chevron-right" size={20} color={colors.onSurfaceTertiary} /></Pressable>)}</View> : <>
-      <View style={styles.formCard}><Field label="Nome do treino"><TextInput style={styles.input} value={draft.name} onChangeText={(name) => change({ name })} placeholder="Ex.: Quadríceps e panturrilhas" placeholderTextColor={colors.muted} /></Field><View style={styles.row}><Field label="Horário" grow><TextInput style={styles.input} value={draft.scheduledTime ?? ""} onChangeText={(scheduledTime) => change({ scheduledTime })} placeholder="HH:MM" placeholderTextColor={colors.muted} /></Field><Field label="Duração prevista (min)" grow><TextInput style={styles.input} value={draft.estimatedDurationMinutes ? String(draft.estimatedDurationMinutes) : ""} onChangeText={(value) => change({ estimatedDurationMinutes: Number(value) || undefined })} keyboardType="numeric" placeholder="Opcional" placeholderTextColor={colors.muted} /></Field></View><Field label="Orientações desta sessão no plano"><TextInput style={[styles.input, styles.multiline]} multiline value={draft.notes ?? ""} onChangeText={(notes) => change({ notes })} placeholder="Vale só para esta sessão" placeholderTextColor={colors.muted} /></Field></View>
-      {draft.activityType === "strength" || draft.activityType === "mobility" ? <View style={styles.formCard}><Field label="Pesquisar no banco de exercícios"><TextInput style={styles.input} value={query} onChangeText={setQuery} placeholder="Nome do exercício" placeholderTextColor={colors.muted} /></Field>{draft.activityType === "strength" ? <Pressable onPress={() => setCreatingExercise((value) => !value)}><Text style={styles.link}>+ Criar exercício próprio</Text></Pressable> : null}{creatingExercise ? <View style={styles.createForm}><Field label="Nome"><TextInput style={styles.input} value={newExercise.name} onChangeText={(name) => setNewExercise((current) => ({ ...current, name }))} /></Field><Field label="Grupo muscular"><TextInput style={styles.input} value={newExercise.primaryMuscle} onChangeText={(primaryMuscle) => setNewExercise((current) => ({ ...current, primaryMuscle }))} /></Field><Field label="Equipamento"><TextInput style={styles.input} value={newExercise.equipment} onChangeText={(equipment) => setNewExercise((current) => ({ ...current, equipment }))} /></Field><Field label="Orientação geral do exercício"><TextInput style={[styles.input, styles.multiline]} multiline value={newExercise.instructions} onChangeText={(instructions) => setNewExercise((current) => ({ ...current, instructions }))} /></Field><Pressable style={styles.primarySmall} disabled={saving || !newExercise.name.trim()} onPress={() => void createExercise()}><Text style={styles.primarySmallText}>Criar e adicionar</Text></Pressable></View> : null}</View> : null}
+    <StepHeader current={reviewing ? 3 : draft.activityType ? 2 : 1} total={3} title={reviewing ? "Revise antes de salvar" : draft.activityType ? draft.id ? "Editar a sessão" : "Configure a sessão" : "Escolha a modalidade"} summary={`${DAYS[draft.weekday]}${draft.activityType ? ` · ${ACTIVITY_LABELS[draft.activityType]}` : ""}`} onBack={() => reviewing ? setReviewing(false) : draft.activityType ? change({ activityType: undefined, prescription: undefined }) : setEditorOpen(false)} />
+    {!draft.activityType ? <View style={styles.typeGrid}>{TYPES.map((type) => <Pressable key={type} style={styles.typeCard} onPress={() => chooseType(type)}><View style={[styles.typeMark, { backgroundColor: `${ACTIVITY_COLORS[type]}22` }]}><Text style={[styles.typeMarkText, { color: ACTIVITY_COLORS[type] }]}>{ACTIVITY_LABELS[type].slice(0, 1)}</Text></View><Text style={styles.sessionName}>{ACTIVITY_LABELS[type]}</Text><MaterialDesignIcons name="chevron-right" size={20} color={colors.onSurfaceTertiary} /></Pressable>)}</View> : reviewing ? <>
+      <View style={styles.formCard}><Text style={styles.eyebrow}>RESUMO</Text><Text style={styles.title}>{draft.name.trim() || ACTIVITY_LABELS[draft.activityType]}</Text><Text style={styles.muted}>{DAYS[draft.weekday]} · {draft.scheduledTime || "sem horário"} · {ACTIVITY_LABELS[draft.activityType]}</Text><Text style={styles.muted}>{prescriptionItemCount(draft.prescription)} item(ns) configurado(s){draft.estimatedDurationMinutes ? ` · ${draft.estimatedDurationMinutes} min` : ""}</Text>{draft.notes ? <Text style={styles.muted}>{draft.notes}</Text> : null}</View>
+      {message ? <Text style={styles.feedback}>{message}</Text> : null}
+      <StickyActionBar secondaryLabel="Voltar e editar" onSecondary={() => setReviewing(false)} primaryLabel="Salvar sessão" onPrimary={() => void save(false)} busy={saving} />
+    </> : <>
+      <View style={styles.formCard}><Field label="Nome do treino"><TextInput style={styles.input} value={draft.name} onChangeText={(name) => change({ name })} placeholder="Ex.: Quadríceps e panturrilhas" placeholderTextColor={colors.muted} /></Field><Field label="Horário"><TextInput style={styles.input} value={draft.scheduledTime ?? ""} onChangeText={(scheduledTime) => change({ scheduledTime })} placeholder="HH:MM · opcional" placeholderTextColor={colors.muted} /></Field><AdvancedOptions title="Detalhes da sessão" summary="Duração e orientações opcionais"><Field label="Duração prevista (min)"><TextInput style={styles.input} value={draft.estimatedDurationMinutes ? String(draft.estimatedDurationMinutes) : ""} onChangeText={(value) => change({ estimatedDurationMinutes: Number(value) || undefined })} keyboardType="numeric" placeholder="Opcional" placeholderTextColor={colors.muted} /></Field><Field label="Orientações desta sessão no plano"><TextInput style={[styles.input, styles.multiline]} multiline value={draft.notes ?? ""} onChangeText={(notes) => change({ notes })} placeholder="Vale só para esta sessão" placeholderTextColor={colors.muted} /></Field></AdvancedOptions></View>
+      {draft.activityType === "strength" ? <View style={styles.formCard}><Pressable onPress={() => setCreatingExercise((value) => !value)}><Text style={styles.link}>{creatingExercise ? "− Fechar criação" : "+ Criar exercício próprio"}</Text></Pressable>{creatingExercise ? <View style={styles.createForm}><Field label="Nome"><TextInput style={styles.input} value={newExercise.name} onChangeText={(name) => setNewExercise((current) => ({ ...current, name }))} /></Field><Field label="Grupo muscular"><TextInput style={styles.input} value={newExercise.primaryMuscle} onChangeText={(primaryMuscle) => setNewExercise((current) => ({ ...current, primaryMuscle }))} /></Field><Field label="Equipamento"><TextInput style={styles.input} value={newExercise.equipment} onChangeText={(equipment) => setNewExercise((current) => ({ ...current, equipment }))} /></Field><AdvancedOptions title="Orientação geral" summary="Opcional"><Field label="Como executar"><TextInput style={[styles.input, styles.multiline]} multiline value={newExercise.instructions} onChangeText={(instructions) => setNewExercise((current) => ({ ...current, instructions }))} /></Field></AdvancedOptions><Pressable style={styles.primarySmall} disabled={saving || !newExercise.name.trim()} onPress={() => void createExercise()}><Text style={styles.primarySmallText}>Criar e adicionar</Text></Pressable></View> : null}</View> : null}
       {draft.prescription ? <TrainingPrescriptionFields prescription={draft.prescription} exercises={exercises} onChange={(prescription: WorkoutPrescription) => change({ prescription })} /> : null}
       {message ? <Text style={styles.feedback}>{message}</Text> : null}
-      <View style={styles.saveBar}><Pressable style={styles.secondaryButton} disabled={saving} onPress={() => void save(true)}><Text style={styles.secondaryText}>Salvar rascunho</Text></Pressable><Pressable style={styles.primaryButton} disabled={saving} onPress={() => void save(false)} testID="weekly-save-session">{saving ? <ActivityIndicator color={colors.onBrandPrimary} /> : <Text style={styles.primaryText}>Salvar sessão</Text>}</Pressable></View>
+      <StickyActionBar secondaryLabel="Salvar rascunho" onSecondary={() => void save(true)} primaryLabel="Revisar" onPrimary={() => setReviewing(true)} busy={saving} />
     </>}
   </View> : null;
 
@@ -147,6 +152,10 @@ export default function WeeklyTrainingEditor() {
   </ScrollView>;
 }
 
+function prescriptionItemCount(prescription?: WorkoutPrescription) {
+  if (!prescription) return 0;
+  return prescription.strength?.exercises.length ?? prescription.mobility?.movements.length ?? prescription.running?.blocks.length ?? prescription.cycling?.blocks.length ?? prescription.crossfit?.blocks.length ?? prescription.custom?.fields.length ?? 0;
+}
 function Field({ label, children, grow }: { label: string; children: React.ReactNode; grow?: boolean }) { return <View style={grow ? { flex: 1 } : undefined}><Text style={styles.label}>{label}</Text>{children}</View>; }
 function IconButton({ icon, label, disabled, onPress }: { icon: string; label: string; disabled?: boolean; onPress: () => void | Promise<void> }) { return <Pressable style={styles.iconButton} accessibilityLabel={label} disabled={disabled} onPress={() => void onPress()}><MaterialDesignIcons name={icon as never} size={18} color={disabled ? colors.muted : colors.onSurfaceSecondary} /></Pressable>; }
 function StateMessage({ title, loading, retry }: { title: string; loading?: boolean; retry?: () => void }) { return <View style={styles.stateMessage}>{loading ? <ActivityIndicator color={colors.brandPrimary} /> : null}<Text style={styles.muted}>{title}</Text>{retry ? <Pressable onPress={retry}><Text style={styles.link}>Tentar novamente</Text></Pressable> : null}</View>; }

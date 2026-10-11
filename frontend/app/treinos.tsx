@@ -1,9 +1,10 @@
 import MaterialDesignIcons from "@react-native-vector-icons/material-design-icons";
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import TrainingSessionCard from "../src/components/TrainingSessionCard";
+import { EmptyState, ErrorState, FeatureCard, FloatingActionMenu, FolderCard, LoadingSkeleton, SectionHeader } from "../src/components/ProgressiveUI";
 import { getCloudStatus, subscribeCloudStatus } from "../src/cloud/cloudSync";
 import { useCloudDataRefresh } from "../src/cloud/useCloudDataRefresh";
 import { addDays, dayEntries, localDate, startOfWeek } from "../src/training/calculations";
@@ -76,32 +77,37 @@ export default function TreinosScreen() {
 
   const refresh = async () => { setRefreshing(true); await load(); setRefreshing(false); };
 
-  if (!state) return <View style={styles.loading}>{error ? <><Text style={styles.muted}>{error}</Text><Pressable onPress={() => void load()}><Text style={styles.retry}>Tentar novamente</Text></Pressable></> : <><ActivityIndicator color={colors.brandPrimary} /><Text style={styles.muted}>Preparando seus treinos…</Text></>}</View>;
+  if (!state) return <View style={styles.loading}>{error ? <ErrorState description={error} onRetry={() => void load()} /> : <LoadingSkeleton title="Preparando seus treinos…" rows={4} />}</View>;
+
+  const nextEntry = entries.find((entry) => entry.status === "in_progress") ?? entries.find((entry) => entry.status === "planned") ?? entries[0];
+  const completedOnSelectedDay = entries.filter((entry) => entry.status === "completed").length;
+  const openEntry = (entry: typeof nextEntry) => entry?.status === "in_progress" && entry.execution ? router.push(`/treino/${entry.execution.id}`) : entry ? router.push(`/treino-planejado/${entry.planned.id}`) : router.push(`/treino-novo?date=${selectedDate}`);
 
   return (
     <View style={styles.screen}>
       <ScrollView refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={colors.brandPrimary} />} contentContainerStyle={[styles.content, { paddingTop: insets.top + spacing.lg }]}>
-        <View style={styles.header}><Pressable style={styles.back} onPress={() => router.back()} accessibilityLabel="Voltar"><MaterialDesignIcons name="arrow-left" size={23} color={colors.onSurface} /></Pressable><View style={{ flex: 1 }}><Text style={styles.eyebrow}>ETAPA 4 · URSOFIT</Text><Text style={styles.title}>Treinos completos</Text></View><Pressable style={styles.primarySmall} onPress={() => router.push(`/treino-novo?date=${selectedDate}`)} accessibilityLabel="Adicionar sessão"><MaterialDesignIcons name="plus" size={20} color={colors.onBrandPrimary} /><Text style={styles.primarySmallText}>Sessão</Text></Pressable></View>
+        <SectionHeader eyebrow="TREINO" title="Sua semana, sem burocracia." description="Veja o que vem agora. Planos, exercícios e histórico ficam organizados em áreas próprias." />
 
-        <View style={[styles.shortcuts, width >= 800 && styles.shortcutsDesktop]}>
-          <Shortcut icon="calendar-edit" label="Planos e modelos" onPress={() => router.push("/treinos-planos")} />
-          <Shortcut icon="dumbbell" label="Banco de exercícios" onPress={() => router.push("/treinos-exercicios")} />
-          <Shortcut icon="chart-timeline-variant" label="Histórico e evolução" onPress={() => router.push("/treinos-historico")} />
+        <View style={[styles.summaryGrid, width >= 768 && styles.summaryGridWide]}>
+          <FeatureCard icon={nextEntry?.status === "in_progress" ? "play-circle-outline" : "calendar-clock"} title={nextEntry?.status === "in_progress" ? "EM ANDAMENTO" : "PRÓXIMA AÇÃO"} value={nextEntry?.planned.name ?? "Dia livre"} description={nextEntry ? `${nextEntry.planned.scheduledTime ?? "Sem horário"} · ${ACTIVITY_LABELS[nextEntry.planned.activityType]}` : "Você pode adicionar uma sessão quando quiser."} onPress={() => openEntry(nextEntry)} />
+          <FeatureCard icon="check-circle-outline" title={selectedDate === localDate() ? "HOJE" : "DIA SELECIONADO"} value={`${completedOnSelectedDay}/${entries.length}`} description="sessões concluídas de forma independente" accent={colors.success} />
+        </View>
+
+        <View style={[styles.shortcuts, width >= 768 && styles.shortcutsDesktop]}>
+          <FolderCard icon="calendar-edit" title="Meus planos" description="Monte e organize sua semana" onPress={() => router.push("/treinos-planos")} />
+          <FolderCard icon="dumbbell" title="Banco de exercícios" description="Pesquise, filtre e favorite" onPress={() => router.push("/treinos-exercicios")} />
+          <FolderCard icon="history" title="Histórico" description="Sessões, volume e recordes" onPress={() => router.push("/treinos-historico")} />
+          <FolderCard icon="chart-line" title="Evolução" description="Acompanhe seu progresso" onPress={() => router.push("/evolucao")} />
         </View>
 
         <View style={styles.modeRow}>{(["day", "week", "month"] as ViewMode[]).map((value) => <Pressable key={value} style={[styles.mode, mode === value && styles.modeActive]} onPress={() => setMode(value)}><Text style={[styles.modeText, mode === value && styles.modeTextActive]}>{value === "day" ? "Dia" : value === "week" ? "Semana" : "Mês"}</Text></Pressable>)}</View>
         <View style={styles.dateNav}><Pressable style={styles.navButton} onPress={() => shift(-1)} accessibilityLabel="Período anterior"><MaterialDesignIcons name="chevron-left" size={24} color={colors.onSurface} /></Pressable><Pressable style={styles.dateCenter} onPress={() => setSelectedDate(localDate())}><Text style={styles.dateTitle}>{mode === "month" ? new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" }).format(new Date(`${selectedDate}T12:00:00`)) : dateTitle(selectedDate)}</Text><Text style={styles.todayHint}>{selectedDate === localDate() ? "HOJE" : "TOQUE PARA VOLTAR A HOJE"}</Text></Pressable><Pressable style={styles.navButton} onPress={() => shift(1)} accessibilityLabel="Próximo período"><MaterialDesignIcons name="chevron-right" size={24} color={colors.onSurface} /></Pressable></View>
 
-        {error ? <View style={styles.error}><Text style={styles.errorText}>{error}</Text><Pressable onPress={load}><Text style={styles.retry}>Tentar novamente</Text></Pressable></View> : null}
+        {error ? <ErrorState title="Dados locais preservados" description={error} onRetry={() => void load()} /> : null}
 
         {mode === "day" ? <View style={styles.list}>
           <View style={styles.sectionRow}><Text style={styles.sectionTitle}>SESSÕES DO DIA · {entries.length}</Text><Text style={styles.sectionHint}>status independente</Text></View>
-          {entries.length ? entries.map((entry) => <TrainingSessionCard key={entry.planned.id} entry={entry} onPress={() => router.push(`/treino-planejado/${entry.planned.id}`)} onMove={(direction) => void move(entry.planned.id, direction)} />) : <EmptyDay onAdd={() => router.push(`/treino-novo?date=${selectedDate}`)} />}
-          <Text style={styles.sectionTitle}>MODALIDADES</Text>
-          <View style={styles.modalityGrid}>{(["mobility", "strength", "crossfit", "running", "cycling", "pilates", "jiu_jitsu", "muay_thai", "hiit", "cardio", "custom"] as const).map((activityType) => {
-            const count = entries.filter((entry) => entry.planned.activityType === activityType).length;
-            return <Pressable key={activityType} style={styles.modality} onPress={() => router.push(`/treino-novo?date=${selectedDate}&type=${activityType}`)}><View style={[styles.dot, { backgroundColor: ACTIVITY_COLORS[activityType] }]} /><Text style={styles.modalityText}>{ACTIVITY_LABELS[activityType]}</Text><Text style={styles.count}>{count || "+"}</Text></Pressable>;
-          })}</View>
+          {entries.length ? entries.map((entry) => <TrainingSessionCard key={entry.planned.id} entry={entry} onPress={() => router.push(`/treino-planejado/${entry.planned.id}`)} onMove={(direction) => void move(entry.planned.id, direction)} />) : <EmptyState icon="calendar-blank-outline" title="Dia livre por enquanto" description="Adicione uma sessão quando fizer sentido. Cada modalidade continua independente." actionLabel="Adicionar sessão" onAction={() => router.push(`/treino-novo?date=${selectedDate}`)} />}
         </View> : null}
 
         {mode === "week" ? <View style={[styles.weekGrid, width >= 800 && styles.weekGridDesktop]}>{weekDates.map((date) => {
@@ -111,17 +117,19 @@ export default function TreinosScreen() {
 
         {mode === "month" ? <View style={styles.monthGrid}>{monthDates.map((date, index) => date ? <Pressable key={date} style={[styles.monthDay, date === selectedDate && styles.selected]} onPress={() => { setSelectedDate(date); setMode("day"); }}><Text style={styles.monthNumber}>{Number(date.slice(-2))}</Text><View style={styles.monthDots}>{dayEntries(state, date).slice(0, 4).map((entry) => <View key={entry.planned.id} style={[styles.monthDot, { backgroundColor: ACTIVITY_COLORS[entry.planned.activityType] }]} />)}</View></Pressable> : <View key={`empty-${index}`} style={styles.monthDay} />)}</View> : null}
       </ScrollView>
+      <FloatingActionMenu label="Adicionar" actions={[
+        { id: "session", label: "Nova sessão", hint: "Escolha a modalidade na próxima etapa", icon: "calendar-plus", onPress: () => router.push(`/treino-novo?date=${selectedDate}`) },
+        { id: "plan", label: "Novo plano", hint: "Crie primeiro o plano e depois organize a semana", icon: "calendar-edit", onPress: () => router.push("/treinos-planos?new=1") },
+        { id: "exercise", label: "Exercício personalizado", hint: "Adicione ao seu banco pessoal", icon: "plus-circle-outline", onPress: () => router.push("/treinos-exercicios?new=1") },
+      ]} />
     </View>
   );
 }
 
-function Shortcut({ icon, label, onPress }: { icon: string; label: string; onPress: () => void }) { return <Pressable style={styles.shortcut} onPress={onPress} accessibilityRole="button"><MaterialDesignIcons name={icon as never} size={22} color={colors.brandPrimary} /><Text style={styles.shortcutText}>{label}</Text><MaterialDesignIcons name="chevron-right" size={20} color={colors.onSurfaceTertiary} /></Pressable>; }
-function EmptyDay({ onAdd }: { onAdd: () => void }) { return <View style={styles.empty}><MaterialDesignIcons name="calendar-blank-outline" size={38} color={colors.onSurfaceTertiary} /><Text style={styles.emptyTitle}>Dia livre por enquanto</Text><Text style={styles.muted}>Adicione sessões independentes. Uma não conclui a outra.</Text><Pressable style={styles.primary} onPress={onAdd}><Text style={styles.primaryText}>Adicionar sessão</Text></Pressable></View>; }
-
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.surface }, content: { width: "100%", maxWidth: 1180, alignSelf: "center", paddingHorizontal: spacing.lg, paddingBottom: spacing.xxxl, gap: spacing.lg }, loading: { flex: 1, backgroundColor: colors.surface, alignItems: "center", justifyContent: "center", gap: spacing.md },
+  screen: { flex: 1, backgroundColor: colors.surface }, content: { width: "100%", maxWidth: 1180, alignSelf: "center", paddingHorizontal: spacing.lg, paddingBottom: 148, gap: spacing.lg }, loading: { flex: 1, backgroundColor: colors.surface, justifyContent: "center", padding: spacing.lg },
   header: { flexDirection: "row", alignItems: "center", gap: spacing.md }, back: { width: 44, height: 44, borderRadius: radius.md, backgroundColor: colors.surfaceSecondary, alignItems: "center", justifyContent: "center" }, eyebrow: { color: colors.brandPrimary, fontSize: 10, fontWeight: "900", letterSpacing: 1.3 }, title: { color: colors.onSurface, fontSize: 26, fontWeight: "900" }, primarySmall: { minHeight: 44, flexDirection: "row", alignItems: "center", gap: spacing.xs, backgroundColor: colors.brandPrimary, borderRadius: radius.pill, paddingHorizontal: spacing.md }, primarySmallText: { color: colors.onBrandPrimary, fontWeight: "900", fontSize: 12 },
-  shortcuts: { gap: spacing.sm }, shortcutsDesktop: { flexDirection: "row" }, shortcut: { minHeight: 58, flex: 1, flexDirection: "row", alignItems: "center", gap: spacing.sm, padding: spacing.md, borderRadius: radius.md, backgroundColor: colors.surfaceSecondary, borderWidth: 1, borderColor: colors.border }, shortcutText: { flex: 1, color: colors.onSurfaceSecondary, fontWeight: "700", fontSize: 12 },
+  summaryGrid: { gap: spacing.sm }, summaryGridWide: { flexDirection: "row" }, shortcuts: { gap: spacing.sm }, shortcutsDesktop: { flexDirection: "row" },
   modeRow: { flexDirection: "row", padding: 4, borderRadius: radius.pill, backgroundColor: colors.surfaceSecondary }, mode: { flex: 1, minHeight: 40, borderRadius: radius.pill, alignItems: "center", justifyContent: "center" }, modeActive: { backgroundColor: colors.brandPrimary }, modeText: { color: colors.onSurfaceTertiary, fontWeight: "800" }, modeTextActive: { color: colors.onBrandPrimary },
   dateNav: { flexDirection: "row", alignItems: "center" }, navButton: { width: 44, height: 44, alignItems: "center", justifyContent: "center", backgroundColor: colors.surfaceSecondary, borderRadius: radius.md }, dateCenter: { flex: 1, alignItems: "center", paddingHorizontal: spacing.sm }, dateTitle: { color: colors.onSurface, fontSize: 16, fontWeight: "800", textTransform: "capitalize", textAlign: "center" }, todayHint: { color: colors.brandPrimary, fontSize: 8, fontWeight: "900", marginTop: 2 },
   list: { gap: spacing.sm }, sectionRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" }, sectionTitle: { color: colors.onSurfaceTertiary, fontSize: 11, letterSpacing: 1, fontWeight: "900", marginTop: spacing.sm }, sectionHint: { color: colors.brandPrimary, fontSize: 10, fontWeight: "700" },
