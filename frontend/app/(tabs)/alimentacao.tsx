@@ -41,19 +41,20 @@ export default function AlimentacaoScreen() {
         <ContentContainer style={styles.content}>
         <PageHeader eyebrow="ALIMENTAÇÃO" title="Sua despensa e seu diário" description="Plano, registros e preparações organizados sem misturar o que foi planejado com o que você realmente consumiu." />
 
-        <ResponsiveGrid minItemWidth={170} maxColumns={3} gap={spacing.sm}>
-          <SummaryCard icon="food-apple-outline" label="Alimentos" value={String(counts.foods)} />
-          <SummaryCard icon="chef-hat" label="Receitas" value={String(counts.recipes)} />
-          <SummaryCard icon="check-circle-outline" label="Registros hoje" value={String(counts.today)} />
+        <ResponsiveGrid minItemWidth={96} maxColumns={3} gap={spacing.sm} singleColumnOnPhone={false}>
+          <SummaryCard compact icon="food-apple-outline" label="Alimentos" value={String(counts.foods)} />
+          <SummaryCard compact icon="chef-hat" label="Receitas" value={String(counts.recipes)} />
+          <SummaryCard compact icon="check-circle-outline" label="Registros hoje" value={String(counts.today)} />
         </ResponsiveGrid>
 
-        <ResponsiveGrid minItemWidth={260} maxColumns={2} gap={spacing.sm}>
+        <ResponsiveGrid minItemWidth={150} maxColumns={2} gap={spacing.sm} singleColumnOnPhone={false}>
           <FolderCard icon="calendar-check" title="Hoje e meu plano" description="Refeições planejadas e registro do dia" onPress={() => router.push("/plano")} />
           <FolderCard icon="cart-outline" title="Lista de compras" description="Itens organizados para sua rotina" onPress={() => router.push("/compras")} />
         </ResponsiveGrid>
 
-        <ResponsiveGrid minItemWidth={280} maxColumns={2}>
+        <ResponsiveGrid minItemWidth={150} maxColumns={2} gap={spacing.sm} singleColumnOnPhone={false}>
         <FeatureCard
+          compact
           icon="food-apple"
           title="Banco de alimentos"
           value={`${counts.foods} disponíveis`}
@@ -61,6 +62,7 @@ export default function AlimentacaoScreen() {
           onPress={() => router.push("/alimentos")}
         />
         <FeatureCard
+          compact
           icon="chef-hat"
           title="Receitas e preparações"
           value={`${counts.recipes} salvas`}
@@ -68,6 +70,7 @@ export default function AlimentacaoScreen() {
           onPress={() => router.push("/receitas")}
         />
         <FeatureCard
+          compact
           icon="silverware-variant"
           title="Registrar fora do plano"
           value={`${counts.offPlan} no histórico`}
@@ -76,6 +79,7 @@ export default function AlimentacaoScreen() {
           onPress={() => router.push("/fora-do-plano")}
         />
         <FeatureCard
+          compact
           icon="calendar-search"
           title="Histórico alimentar"
           value="Visão diária e semanal"

@@ -4,6 +4,7 @@ import React, { useCallback, useMemo, useState } from "react";
 import { ActivityIndicator, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useCloudDataRefresh } from "../src/cloud/useCloudDataRefresh";
+import { ResponsiveGrid } from "../src/components/DesignSystem";
 import { getSignedInUser } from "../src/cloud/cloudSync";
 import { normalizeNutrients } from "../src/nutrition/calculations";
 import { createPersonalFood, duplicateFood, listFoodCatalog, setFoodArchived, updatePersonalFood } from "../src/store/nutritionStore";
@@ -132,9 +133,13 @@ export default function AlimentosScreen() {
       </ScrollView>
       {error && editing === undefined ? <Text style={styles.error}>{error}</Text> : null}
       {loading ? <ActivityIndicator style={{ marginTop: spacing.xl }} color={colors.brandPrimary} /> : (
-        <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: 120, gap: spacing.sm }}>
-          {visible.map((item) => <FoodCard key={item.id} item={item} onEdit={() => openEdit(item)} onDuplicate={() => void duplicate(item)} onArchive={() => void archive(item)} />)}
+        <ScrollView contentContainerStyle={styles.catalogScroll}>
+          <View style={styles.catalog}>
+          <ResponsiveGrid minItemWidth={160} maxColumns={4} gap={spacing.sm} singleColumnOnPhone={false}>
+            {visible.map((item) => <FoodCard key={item.id} item={item} onEdit={() => openEdit(item)} onDuplicate={() => void duplicate(item)} onArchive={() => void archive(item)} />)}
+          </ResponsiveGrid>
           {!visible.length ? <View style={styles.empty}><MaterialDesignIcons name="basket-outline" size={38} color={colors.onSurfaceTertiary} /><Text style={styles.emptyTitle}>Nada por aqui</Text><Text style={styles.emptyText}>Ajuste a busca ou cadastre seu primeiro alimento pessoal.</Text></View> : null}
+          </View>
         </ScrollView>
       )}
 
@@ -146,7 +151,7 @@ export default function AlimentosScreen() {
 function FoodCard({ item, onEdit, onDuplicate, onArchive }: { item: FoodCatalogItem; onEdit: () => void; onDuplicate: () => void; onArchive: () => void }) {
   return (
     <View style={[styles.card, item.archived && { opacity: 0.62 }]} testID={`food-card-${item.id}`}>
-      <View style={{ flexDirection: "row", gap: spacing.md }}>
+      <View style={styles.foodHeading}>
         <View style={[styles.foodIcon, { backgroundColor: (item.scope === "global" ? colors.brandSecondary : colors.brandPrimary) + "22" }]}><MaterialDesignIcons name={item.scope === "global" ? "earth" : "account"} size={20} color={item.scope === "global" ? colors.brandSecondary : colors.brandPrimary} /></View>
         <View style={{ flex: 1 }}>
           <Text style={styles.cardTitle}>{item.name}</Text>
@@ -155,9 +160,9 @@ function FoodCard({ item, onEdit, onDuplicate, onArchive }: { item: FoodCatalogI
         </View>
       </View>
       <View style={styles.actions}>
-        {item.scope === "personal" ? <Pressable style={styles.action} onPress={onEdit}><MaterialDesignIcons name="pencil" size={16} color={colors.onSurfaceSecondary} /><Text style={styles.actionText}>Editar</Text></Pressable> : null}
-        <Pressable style={styles.action} onPress={onDuplicate}><MaterialDesignIcons name="content-copy" size={16} color={colors.onSurfaceSecondary} /><Text style={styles.actionText}>Duplicar</Text></Pressable>
-        {item.scope === "personal" ? <Pressable style={styles.action} onPress={onArchive}><MaterialDesignIcons name={item.archived ? "archive-arrow-up" : "archive-outline"} size={16} color={colors.onSurfaceSecondary} /><Text style={styles.actionText}>{item.archived ? "Restaurar" : "Arquivar"}</Text></Pressable> : null}
+        {item.scope === "personal" ? <Pressable accessibilityRole="button" accessibilityLabel="Editar alimento" style={styles.action} onPress={onEdit}><MaterialDesignIcons name="pencil" size={16} color={colors.onSurfaceSecondary} /></Pressable> : null}
+        <Pressable accessibilityRole="button" accessibilityLabel="Duplicar alimento" style={styles.action} onPress={onDuplicate}><MaterialDesignIcons name="content-copy" size={16} color={colors.onSurfaceSecondary} /></Pressable>
+        {item.scope === "personal" ? <Pressable accessibilityRole="button" accessibilityLabel={item.archived ? "Restaurar alimento" : "Arquivar alimento"} style={styles.action} onPress={onArchive}><MaterialDesignIcons name={item.archived ? "archive-arrow-up" : "archive-outline"} size={16} color={colors.onSurfaceSecondary} /></Pressable> : null}
       </View>
     </View>
   );
@@ -210,11 +215,14 @@ const styles = StyleSheet.create({
   searchWrap: { margin: spacing.lg, marginBottom: spacing.sm, flexDirection: "row", alignItems: "center", gap: spacing.sm, backgroundColor: colors.surfaceSecondary, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingHorizontal: spacing.md },
   search: { flex: 1, color: colors.onSurface, paddingVertical: spacing.md, outlineStyle: "none" } as any,
   filters: { paddingHorizontal: spacing.lg, gap: spacing.sm, alignItems: "center" },
+  catalogScroll: { padding: spacing.lg, paddingBottom: 120 },
+  catalog: { width: "100%", maxWidth: 1240, alignSelf: "center", gap: spacing.md },
   chip: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radius.pill, backgroundColor: colors.surfaceTertiary, borderWidth: 1, borderColor: colors.border }, chipOn: { backgroundColor: colors.brandPrimary, borderColor: colors.brandPrimary },
   chipText: { color: colors.onSurfaceSecondary, fontSize: 12, fontWeight: "700" }, chipTextOn: { color: colors.onBrandPrimary },
-  card: { backgroundColor: colors.surfaceSecondary, borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, padding: spacing.md, gap: spacing.md },
-  foodIcon: { width: 38, height: 38, borderRadius: radius.md, alignItems: "center", justifyContent: "center" }, cardTitle: { color: colors.onSurface, fontSize: 15, fontWeight: "800" }, cardMeta: { color: colors.onSurfaceTertiary, fontSize: 11, marginTop: 2 }, macros: { color: colors.onSurfaceSecondary, fontSize: 11, lineHeight: 17, marginTop: spacing.sm },
-  actions: { flexDirection: "row", gap: spacing.sm, flexWrap: "wrap" }, action: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radius.pill, backgroundColor: colors.surfaceTertiary }, actionText: { color: colors.onSurfaceSecondary, fontSize: 11, fontWeight: "700" },
+  card: { minHeight: 144, backgroundColor: colors.surfaceSecondary, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, padding: spacing.sm, gap: spacing.sm },
+  foodHeading: { flexDirection: "row", gap: spacing.sm },
+  foodIcon: { width: 32, height: 32, borderRadius: radius.sm, alignItems: "center", justifyContent: "center" }, cardTitle: { color: colors.onSurface, fontSize: 13, fontWeight: "800" }, cardMeta: { color: colors.onSurfaceTertiary, fontSize: 9, lineHeight: 13, marginTop: 2 }, macros: { color: colors.onSurfaceSecondary, fontSize: 9, lineHeight: 14, marginTop: spacing.xs },
+  actions: { flexDirection: "row", gap: spacing.xs, marginTop: "auto" }, action: { width: 32, height: 32, alignItems: "center", justifyContent: "center", borderRadius: radius.pill, backgroundColor: colors.surfaceTertiary },
   empty: { alignItems: "center", padding: spacing.xxxl, gap: spacing.sm }, emptyTitle: { color: colors.onSurface, fontSize: 17, fontWeight: "800" }, emptyText: { color: colors.onSurfaceTertiary, fontSize: 12, textAlign: "center" },
   error: { color: colors.error, fontSize: 12, marginHorizontal: spacing.lg, marginTop: spacing.sm },
   overlay: { flex: 1, backgroundColor: "#000A", justifyContent: "flex-end" }, modal: { maxHeight: "92%", minHeight: 0, width: "100%", maxWidth: 720, alignSelf: "center", backgroundColor: colors.surfaceSecondary, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg, padding: spacing.lg, borderWidth: 1, borderColor: colors.border }, modalScroll: { minHeight: 0 },

@@ -39,11 +39,12 @@ export function SectionHeader({ title, description, action }: { title: string; d
   </View>;
 }
 
-export function ResponsiveGrid({ children, minItemWidth = 280, maxColumns = 3, gap = spacing.md }: { children: React.ReactNode; minItemWidth?: number; maxColumns?: number; gap?: number }) {
+export function ResponsiveGrid({ children, minItemWidth = 280, maxColumns = 3, gap = spacing.md, singleColumnOnPhone = true }: { children: React.ReactNode; minItemWidth?: number; maxColumns?: number; gap?: number; singleColumnOnPhone?: boolean }) {
   const { width, isPhone } = useResponsiveLayout();
   const [containerWidth, setContainerWidth] = useState(0);
   const available = containerWidth || Math.max(0, Math.min(width, layout.contentMax) - spacing.lg * 2);
-  const columns = isPhone ? 1 : Math.max(1, Math.min(maxColumns, Math.floor((available + gap) / (minItemWidth + gap))));
+  const fluidColumns = Math.max(1, Math.min(maxColumns, Math.floor((available + gap) / (minItemWidth + gap))));
+  const columns = isPhone && singleColumnOnPhone ? 1 : fluidColumns;
   const itemWidth = columns === 1 ? "100%" : Math.floor((available - gap * (columns - 1)) / columns);
   return <View onLayout={(event) => setContainerWidth(Math.round(event.nativeEvent.layout.width))} style={[styles.grid, { gap }]}>{React.Children.map(children, (child, index) => <View key={index} style={{ width: itemWidth, maxWidth: itemWidth }}>{child}</View>)}</View>;
 }
@@ -53,10 +54,10 @@ export function CompactCard({ children, onPress, selected, style, accessibilityL
   return onPress ? <Pressable accessibilityRole="button" accessibilityLabel={accessibilityLabel} accessibilityState={{ selected }} onPress={onPress} style={({ pressed }) => [cardStyle, pressed && styles.pressed]}>{children}</Pressable> : <View style={cardStyle}>{children}</View>;
 }
 
-export function SummaryCard({ label, value, hint, icon, accent = colors.brandPrimary, style }: { label: string; value: string; hint?: string; icon?: string; accent?: string; style?: StyleProp<ViewStyle> }) {
-  return <View style={[styles.summaryCard, style]}>
-    <View style={styles.summaryTop}>{icon ? <MaterialDesignIcons name={icon as never} size={18} color={accent} /> : null}<Text style={styles.summaryLabel}>{label}</Text></View>
-    <Text style={styles.summaryValue}>{value}</Text>
+export function SummaryCard({ label, value, hint, icon, accent = colors.brandPrimary, style, compact = false }: { label: string; value: string; hint?: string; icon?: string; accent?: string; style?: StyleProp<ViewStyle>; compact?: boolean }) {
+  return <View style={[styles.summaryCard, compact && styles.summaryCardCompact, style]}>
+    <View style={styles.summaryTop}>{icon ? <MaterialDesignIcons name={icon as never} size={compact ? 15 : 18} color={accent} /> : null}<Text numberOfLines={1} style={[styles.summaryLabel, compact && styles.summaryLabelCompact]}>{label}</Text></View>
+    <Text style={[styles.summaryValue, compact && styles.summaryValueCompact]}>{value}</Text>
     {hint ? <Text style={styles.summaryHint}>{hint}</Text> : null}
   </View>;
 }
@@ -125,9 +126,12 @@ const styles = StyleSheet.create({
   compactCard: { minHeight: 64, padding: spacing.md, borderRadius: radius.md, backgroundColor: colors.surfaceSecondary },
   compactCardSelected: { backgroundColor: withAlpha(colors.brandPrimary, 0.09), borderWidth: 1, borderColor: withAlpha(colors.brandPrimary, 0.42) },
   summaryCard: { minHeight: 74, padding: spacing.md, borderRadius: radius.md, backgroundColor: colors.surfaceSecondary },
+  summaryCardCompact: { minHeight: 66, padding: spacing.sm },
   summaryTop: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
   summaryLabel: { color: colors.onSurfaceTertiary, fontSize: typeScale.caption.fontSize, fontWeight: "750" as never },
+  summaryLabelCompact: { fontSize: 9 },
   summaryValue: { color: colors.onSurface, fontSize: typeScale.metric.fontSize, lineHeight: typeScale.metric.lineHeight, fontWeight: "900", marginTop: spacing.xs },
+  summaryValueCompact: { fontSize: 20, lineHeight: 24, marginTop: 3 },
   summaryHint: { color: colors.onSurfaceTertiary, fontSize: typeScale.caption.fontSize, lineHeight: typeScale.caption.lineHeight, marginTop: 2 },
   statusBadge: { alignSelf: "flex-start", minHeight: 24, flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: spacing.sm, borderRadius: radius.pill },
   statusDot: { width: 6, height: 6, borderRadius: 3 },
