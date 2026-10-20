@@ -80,6 +80,27 @@ test("a segunda revisão de densidade reduz escolhas simultâneas e fixa o FAB a
   assert.match(progressive, /fabPhone/);
 });
 
+test("a auditoria de cards elimina flex móvel, cria prateleiras e limita o catálogo a quatro colunas", () => {
+  const home = read("../app/(tabs)/index.tsx");
+  const diet = read("../app/(tabs)/alimentacao.tsx");
+  const profile = read("../app/perfil.tsx");
+  const journey = read("../app/conquistas.tsx");
+  const foods = read("../app/alimentos.tsx");
+  const designSystem = read("../src/components/DesignSystem.tsx");
+
+  assert.match(home, /focusColumnDesktop: \{ flex: 0\.9 \}/);
+  assert.doesNotMatch(home, /focusColumn: \{ flex:/);
+  assert.match(diet, /singleColumnOnPhone=\{false\}/);
+  assert.match(diet, /<SummaryCard compact/);
+  assert.match(profile, /profile-area-shelf/);
+  assert.match(profile, /profile-more-areas/);
+  assert.match(journey, /horizontal showsHorizontalScrollIndicator=\{false\} contentContainerStyle=\{styles\.chapterRail\}/);
+  assert.match(journey, /trophy-more-card/);
+  assert.match(foods, /maxColumns=\{4\}/);
+  assert.match(foods, /minItemWidth=\{160\}/);
+  assert.match(designSystem, /singleColumnOnPhone = true/);
+});
+
 test("o banco de exercícios preserva filtros e ações existentes", () => {
   const source = read("../app/treinos-exercicios.tsx");
   for (const state of ["setType", "setScope", "setMuscle", "setEquipment", "setFavoritesOnly"]) {

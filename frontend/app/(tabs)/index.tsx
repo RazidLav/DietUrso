@@ -168,7 +168,7 @@ export default function HomeScreen() {
         <WeekSelector wide={!isPhone} days={weekDays} selectedDate={selectedDate} activityDates={activityDates} onSelect={setSelectedDate} onShift={(amount) => setSelectedDate(toISO(addDays(selected, amount * 7)))} />
 
         <View style={[styles.overview, desktop && styles.overviewDesktop]} testID="home-overview-columns">
-          <View style={styles.focusColumn}>
+          <View style={[styles.focusColumn, desktop && styles.focusColumnDesktop]}>
             <Pressable style={[styles.hero, stackHero && styles.heroStacked, desktop && styles.heroDesktop]} onPress={() => router.push(trainingEntries.length ? "/treinos" : "/conquistas")} accessibilityRole="button" testID="home-main-highlight">
               <View style={[styles.heroCopy, stackHero && styles.heroCopyStacked]} testID="home-highlight-copy">
                 <Text style={styles.heroEyebrow}>{trainingEntries.length ? "SEU MOVIMENTO DE HOJE" : "PROGRESSO DA SEMANA"}</Text>
@@ -299,10 +299,11 @@ const styles = StyleSheet.create({
   quickText: { flexShrink: 1, color: colors.onSurfaceSecondary, fontSize: 10, lineHeight: 14, fontWeight: "800" },
   overview: { gap: spacing.lg },
   overviewDesktop: { flexDirection: "row", alignItems: "flex-start" },
-  focusColumn: { flex: 0.9, minWidth: 0, gap: spacing.md },
-  dashboard: { flex: 1.1, minWidth: 0, gap: spacing.lg },
+  focusColumn: { minWidth: 0, gap: spacing.md },
+  focusColumnDesktop: { flex: 0.9 },
+  dashboard: { minWidth: 0, gap: spacing.lg },
   dashboardWide: { flexDirection: "row", flexWrap: "wrap", alignItems: "flex-start" },
-  dashboardDesktop: { gap: spacing.md },
+  dashboardDesktop: { flex: 1.1, gap: spacing.md },
   column: { gap: spacing.sm },
   columnWide: { width: "48.8%", flexGrow: 1 },
   columnDesktop: { width: "48%", flexGrow: 1 },

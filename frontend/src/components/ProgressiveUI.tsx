@@ -45,13 +45,13 @@ export function FolderCard({ icon, title, description, badge, onPress, testID, s
   </Pressable>;
 }
 
-export function FeatureCard({ icon, title, value, description, onPress, accent = colors.brandPrimary, style }: { icon: string; title: string; value?: string; description?: string; onPress?: () => void; accent?: string; style?: StyleProp<ViewStyle> }) {
+export function FeatureCard({ icon, title, value, description, onPress, accent = colors.brandPrimary, style, compact = false }: { icon: string; title: string; value?: string; description?: string; onPress?: () => void; accent?: string; style?: StyleProp<ViewStyle>; compact?: boolean }) {
   const content = <>
-    <View style={[styles.featureIcon, { backgroundColor: withAlpha(accent, 0.12) }]}><MaterialDesignIcons name={icon as never} size={21} color={accent} /></View>
-    <View style={styles.folderCopy}><Text style={styles.featureTitle}>{title}</Text>{value ? <Text style={styles.featureValue}>{value}</Text> : null}{description ? <Text style={styles.folderDescription}>{description}</Text> : null}</View>
+    <View style={[styles.featureIcon, compact && styles.featureIconCompact, { backgroundColor: withAlpha(accent, 0.12) }]}><MaterialDesignIcons name={icon as never} size={compact ? 18 : 21} color={accent} /></View>
+    <View style={styles.folderCopy}><Text style={styles.featureTitle}>{title}</Text>{value ? <Text style={[styles.featureValue, compact && styles.featureValueCompact]}>{value}</Text> : null}{description && !compact ? <Text style={styles.folderDescription}>{description}</Text> : null}</View>
     {onPress ? <MaterialDesignIcons name="chevron-right" size={20} color={colors.onSurfaceTertiary} /> : null}
   </>;
-  return onPress ? <Pressable accessibilityRole="button" accessibilityLabel={title} onPress={onPress} style={({ pressed }) => [styles.featureCard, style, pressed && styles.pressed]}>{content}</Pressable> : <View style={[styles.featureCard, style]}>{content}</View>;
+  return onPress ? <Pressable accessibilityRole="button" accessibilityLabel={title} onPress={onPress} style={({ pressed }) => [styles.featureCard, compact && styles.featureCardCompact, style, pressed && styles.pressed]}>{content}</Pressable> : <View style={[styles.featureCard, compact && styles.featureCardCompact, style]}>{content}</View>;
 }
 
 export function StepHeader({ current, total, title, summary, onBack }: { current: number; total: number; title: string; summary?: string; onBack?: () => void }) {
@@ -144,9 +144,12 @@ const styles = StyleSheet.create({
   badge: { minWidth: 25, height: 25, paddingHorizontal: 7, alignItems: "center", justifyContent: "center", borderRadius: radius.pill, backgroundColor: withAlpha(colors.brandPrimary, 0.14) },
   badgeText: { color: colors.brandPrimary, fontSize: 10, fontWeight: "900" },
   featureCard: { minHeight: 78, flexDirection: "row", alignItems: "center", gap: spacing.md, padding: spacing.md, borderRadius: radius.md, backgroundColor: colors.surfaceSecondary },
+  featureCardCompact: { minHeight: 72, gap: spacing.sm, padding: spacing.sm },
   featureIcon: { width: 42, height: 42, borderRadius: radius.md, alignItems: "center", justifyContent: "center" },
+  featureIconCompact: { width: 34, height: 34, borderRadius: radius.sm },
   featureTitle: { color: colors.onSurfaceTertiary, fontSize: 10, fontWeight: "800", letterSpacing: 0.4 },
   featureValue: { color: colors.onSurface, fontSize: 21, fontWeight: "900", marginTop: 2 },
+  featureValueCompact: { fontSize: 14 },
   stepHeader: { gap: spacing.md, padding: spacing.lg, borderRadius: radius.lg, backgroundColor: colors.surfaceSecondary },
   stepTop: { flexDirection: "row", alignItems: "center", gap: spacing.md },
   stepTitle: { color: colors.onSurface, fontSize: 21, fontWeight: "900" },
