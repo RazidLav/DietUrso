@@ -3,13 +3,11 @@ import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
-  AccessibilityInfo,
   Image,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
-  useWindowDimensions,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -19,6 +17,7 @@ import { evaluateGamification } from "../src/gamification/engine";
 import { CHAPTERS, getLevelDefinition, LEVEL_DEFINITIONS } from "../src/gamification/journey";
 import type { LevelDefinition } from "../src/gamification/journey";
 import type { AchievementDefinition, GamificationSummary } from "../src/gamification/types";
+import { useReducedMotion, useResponsiveLayout } from "../src/responsive";
 import { colors, radius, spacing, withAlpha } from "../src/theme";
 
 type CaveRoom = "Jornada" | "Salão" | "Segredos" | "Fogueira" | "Relíquias";
@@ -35,14 +34,14 @@ const ROOMS: { id: CaveRoom; icon: string; label: string }[] = [
 export default function TrophyCaveScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { width } = useWindowDimensions();
+  const responsive = useResponsiveLayout();
   const scrollRef = useRef<ScrollView>(null);
   const [status, setStatus] = useState<LoadState>("loading");
   const [summary, setSummary] = useState<GamificationSummary | null>(null);
   const [room, setRoom] = useState<CaveRoom>("Jornada");
   const [selectedLevel, setSelectedLevel] = useState(1);
-  const [reduceMotion, setReduceMotion] = useState(false);
-  const desktop = width >= 900;
+  const reduceMotion = useReducedMotion();
+  const desktop = responsive.isDesktop;
 
   const load = useCallback(async () => {
     try {
@@ -57,12 +56,6 @@ export default function TrophyCaveScreen() {
 
   useFocusEffect(useCallback(() => { void load(); }, [load]));
   useCloudDataRefresh(load);
-
-  useEffect(() => {
-    AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotion).catch(() => undefined);
-    const subscription = AccessibilityInfo.addEventListener("reduceMotionChanged", setReduceMotion);
-    return () => subscription.remove();
-  }, []);
 
   useEffect(() => {
     if (status !== "ready" || room !== "Jornada" || !summary) return;
@@ -94,7 +87,7 @@ export default function TrophyCaveScreen() {
       {status === "error" ? <ErrorState onRetry={load} /> : null}
       {status === "ready" && summary ? (
         <ScrollView ref={scrollRef} contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 48 }]}>
-          <JourneyHero summary={summary} compact={width < 560} />
+          <JourneyHero summary={summary} compact={responsive.width < 560} />
 
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.rooms}>
             {ROOMS.map((item) => {
@@ -316,8 +309,8 @@ function PreparedRoom({ icon, title, text }: { icon: string; title: string; text
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.surface },
-  header: { flexDirection: "row", alignItems: "center", gap: spacing.sm, paddingHorizontal: spacing.lg, paddingBottom: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border, backgroundColor: colors.surface },
-  iconButton: { width: 42, height: 42, borderRadius: radius.md, alignItems: "center", justifyContent: "center", backgroundColor: colors.surfaceSecondary, borderWidth: 1, borderColor: colors.border },
+  header: { flexDirection: "row", alignItems: "center", gap: spacing.sm, paddingHorizontal: spacing.lg, paddingBottom: spacing.md, backgroundColor: colors.surface },
+  iconButton: { width: 42, height: 42, borderRadius: radius.md, alignItems: "center", justifyContent: "center", backgroundColor: colors.surfaceSecondary },
   headerCopy: { flex: 1 },
   eyebrow: { color: colors.brandPrimary, fontSize: 9, fontWeight: "900", letterSpacing: 1.6 },
   headerTitle: { color: colors.onSurface, fontSize: 21, fontWeight: "900" },
@@ -332,9 +325,9 @@ const styles = StyleSheet.create({
   skeletonArt: { position: "absolute", right: spacing.xl, bottom: spacing.lg, width: 110, height: 110, borderRadius: 55, backgroundColor: colors.surfaceTertiary },
   primaryButton: { marginTop: spacing.sm, paddingHorizontal: spacing.xl, paddingVertical: spacing.md, backgroundColor: colors.brandPrimary, borderRadius: radius.pill },
   primaryButtonText: { color: colors.onBrandPrimary, fontSize: 12, fontWeight: "900" },
-  hero: { minHeight: 230, flexDirection: "row", overflow: "hidden", borderRadius: radius.lg, borderWidth: 1, borderColor: withAlpha(colors.brandPrimary, 0.38), backgroundColor: colors.surfaceSecondary },
+  hero: { minHeight: 190, flexDirection: "row", overflow: "hidden", borderRadius: radius.lg, backgroundColor: colors.surfaceSecondary },
   heroCompact: { flexDirection: "column", minHeight: 0 },
-  heroCopy: { flex: 1.15, minWidth: 220, padding: spacing.xl, justifyContent: "center", zIndex: 1 },
+  heroCopy: { flex: 1.15, minWidth: 220, padding: spacing.lg, justifyContent: "center", zIndex: 1 },
   heroChapter: { color: colors.brandPrimary, fontSize: 10, fontWeight: "900", letterSpacing: 1.2 },
   heroTitle: { color: colors.onSurface, fontSize: 28, lineHeight: 32, fontWeight: "900", marginTop: spacing.xs },
   heroSubtitle: { color: colors.onSurfaceSecondary, fontSize: 13, fontWeight: "700", marginTop: spacing.xs },
@@ -342,8 +335,8 @@ const styles = StyleSheet.create({
   progressFill: { height: "100%", borderRadius: radius.pill, backgroundColor: colors.brandPrimary },
   heroStats: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", gap: spacing.sm, marginTop: spacing.sm },
   heroStat: { color: colors.onSurfaceTertiary, fontSize: 10, fontWeight: "700" },
-  heroMascot: { flex: 0, width: "42%", minWidth: 150, height: 250 },
-  heroMascotCompact: { width: "100%", minWidth: 0, height: 230 },
+  heroMascot: { flex: 0, width: "38%", minWidth: 140, height: 205 },
+  heroMascotCompact: { width: "100%", minWidth: 0, height: 185 },
   rooms: { gap: spacing.sm, paddingVertical: 1 },
   roomButton: { flexDirection: "row", alignItems: "center", gap: 7, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radius.pill, backgroundColor: colors.surfaceSecondary, borderWidth: 1, borderColor: colors.border },
   roomButtonActive: { backgroundColor: colors.brandPrimary, borderColor: colors.brandPrimary },
@@ -352,8 +345,8 @@ const styles = StyleSheet.create({
   journeyLayout: { gap: spacing.lg },
   journeyLayoutDesktop: { flexDirection: "row", alignItems: "flex-start" },
   mapColumn: { flex: 1, gap: spacing.md },
-  chapterCard: { backgroundColor: colors.surfaceSecondary, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: spacing.lg },
-  chapterCardCurrent: { borderColor: withAlpha(colors.brandPrimary, 0.62) },
+  chapterCard: { backgroundColor: colors.surfaceSecondary, borderRadius: radius.md, padding: spacing.lg },
+  chapterCardCurrent: { backgroundColor: withAlpha(colors.brandPrimary, 0.07) },
   chapterHeader: { flexDirection: "row", alignItems: "center", gap: spacing.md, paddingBottom: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.divider },
   medallion: { width: 42, height: 42, borderRadius: 21, alignItems: "center", justifyContent: "center", backgroundColor: colors.surfaceTertiary, borderWidth: 1, borderColor: colors.borderStrong },
   medallionCompleted: { backgroundColor: "#FFD166", borderColor: "#FFD166" },
@@ -397,7 +390,7 @@ const styles = StyleSheet.create({
   sectionTitle: { color: colors.onSurface, fontSize: 22, fontWeight: "900" },
   sectionMeta: { color: colors.onSurfaceTertiary, fontSize: 10 },
   trophyGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md },
-  trophyCard: { flexGrow: 1, flexBasis: 280, minWidth: 260, maxWidth: 570, flexDirection: "row", gap: spacing.md, backgroundColor: colors.surfaceSecondary, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: spacing.md },
+  trophyCard: { flexGrow: 1, flexBasis: 280, minWidth: 260, maxWidth: 570, flexDirection: "row", gap: spacing.md, backgroundColor: colors.surfaceSecondary, borderRadius: radius.md, padding: spacing.md },
   trophyIcon: { width: 52, height: 52, borderRadius: radius.md, alignItems: "center", justifyContent: "center" },
   trophyCopy: { flex: 1 },
   trophyTitle: { color: colors.onSurface, fontSize: 12, fontWeight: "900" },

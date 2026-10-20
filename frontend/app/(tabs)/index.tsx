@@ -1,7 +1,7 @@
 import MaterialDesignIcons from "@react-native-vector-icons/material-design-icons";
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useMemo, useRef, useState } from "react";
-import { Image, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { Image, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AchievementUnlockModal from "../../src/components/AchievementUnlockModal";
 import GamificationSummaryCard from "../../src/components/GamificationSummaryCard";
@@ -25,6 +25,7 @@ import { colors, radius, spacing, withAlpha } from "../../src/theme";
 import type { ConsumptionEntry, Plan } from "../../src/types/plan";
 import { todayISO, WEEKDAYS_LONG, WEEKDAYS_SHORT } from "../../src/utils/date";
 import { FLOATING_TAB_HEIGHT, FLOATING_TAB_MARGIN } from "./_layout";
+import { useResponsiveLayout } from "../../src/responsive";
 
 type SectionKey = "diet" | "water" | "training" | "game";
 type DataLoadState = "idle" | "loading" | "success" | "error";
@@ -33,9 +34,8 @@ const EMPTY_ERRORS: Record<SectionKey, string | null> = { diet: null, water: nul
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
-  const { width } = useWindowDimensions();
-  const desktop = width >= 1024;
-  const tablet = width >= 700;
+  const { width, isDesktop: desktop, isPhone, isWide } = useResponsiveLayout();
+  const tablet = !isPhone;
   const stackHero = width < 520;
   const router = useRouter();
   const [selectedDate, setSelectedDate] = useState(todayISO());
@@ -218,7 +218,7 @@ export default function HomeScreen() {
             const macros = option ? optionMacros(option) : { kcal: 0, protein: 0, carbs: 0, fats: 0, fiber: 0, sodium: 0 };
             const entry = consumption.find((candidate) => candidate.date === selectedDate && candidate.mealId === meal.id);
             const status = entry ? (entry.status === "off_plan" ? "modified" : entry.status) : "planned";
-            return <View key={meal.id} style={desktop ? styles.mealCell : undefined}><MealCard title={meal.name} subtitle={entry ? `${entry.status === "as_planned" ? "Conforme o plano" : entry.status === "skipped" ? "Não realizada" : "Com alterações"} · ${option?.name ?? ""}` : `${meal.suggestedTime ? `${meal.suggestedTime} · ` : ""}${option?.name ?? "Sem opções"}`} icon={iconForMeal(meal.type)} kcal={entry ? entryNutrients(entry).kcal : macros.kcal} status={status} onPress={() => router.push(`/meal/${plan.id}/${meal.id}?date=${selectedDate}`)} onToggleDone={() => void toggleQuickDone(meal.id, option?.id)} /></View>;
+            return <View key={meal.id} style={desktop ? [styles.mealCell, isWide && styles.mealCellWide] : undefined}><MealCard compact title={meal.name} subtitle={entry ? `${entry.status === "as_planned" ? "Conforme o plano" : entry.status === "skipped" ? "Não realizada" : "Com alterações"} · ${option?.name ?? ""}` : `${meal.suggestedTime ? `${meal.suggestedTime} · ` : ""}${option?.name ?? "Sem opções"}`} icon={iconForMeal(meal.type)} kcal={entry ? entryNutrients(entry).kcal : macros.kcal} status={status} onPress={() => router.push(`/meal/${plan.id}/${meal.id}?date=${selectedDate}`)} onToggleDone={() => void toggleQuickDone(meal.id, option?.id)} /></View>;
           })}</View>
         </View> : null}
       </ScrollView>
@@ -262,9 +262,9 @@ const styles = StyleSheet.create({
   greeting: { color: colors.onSurface, fontSize: 18, fontWeight: "900", letterSpacing: -0.3 },
   greetingMessage: { color: colors.onSurfaceSecondary, fontSize: 12, fontWeight: "600", marginTop: 2 },
   headerDate: { color: colors.onSurfaceTertiary, fontSize: 10, marginTop: 3, textTransform: "capitalize" },
-  iconButton: { position: "relative", width: 44, height: 44, borderRadius: radius.md, alignItems: "center", justifyContent: "center", backgroundColor: colors.surfaceSecondary, borderWidth: 1, borderColor: colors.border },
+  iconButton: { position: "relative", width: 44, height: 44, borderRadius: radius.md, alignItems: "center", justifyContent: "center", backgroundColor: colors.surfaceSecondary },
   notificationDot: { position: "absolute", right: 9, top: 8, width: 8, height: 8, borderRadius: 4, backgroundColor: colors.brandPrimary, borderWidth: 2, borderColor: colors.surfaceSecondary },
-  weekWrap: { flexDirection: "row", alignItems: "center", gap: spacing.xs, padding: spacing.xs, borderRadius: radius.lg, backgroundColor: colors.surfaceSecondary, borderWidth: 1, borderColor: colors.border },
+  weekWrap: { flexDirection: "row", alignItems: "center", gap: spacing.xs, padding: spacing.xs, borderRadius: radius.lg, backgroundColor: colors.surfaceSecondary },
   weekArrow: { width: 36, minHeight: 64, alignItems: "center", justifyContent: "center", borderRadius: radius.md },
   weekDays: { flexGrow: 1, justifyContent: "space-between", gap: 5 },
   day: { width: 52, minHeight: 64, alignItems: "center", justifyContent: "center", gap: 2, borderRadius: radius.md },
@@ -276,9 +276,9 @@ const styles = StyleSheet.create({
   dayDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: "transparent" },
   dayDotOn: { backgroundColor: colors.brandSecondary },
   dayDotActive: { backgroundColor: colors.onBrandPrimary },
-  hero: { minHeight: 210, flexDirection: "row", alignItems: "stretch", overflow: "hidden", borderRadius: 30, backgroundColor: withAlpha(colors.brandSecondary, 0.18), borderWidth: 1, borderColor: withAlpha(colors.brandSecondary, 0.3) },
-  heroStacked: { flexDirection: "column", minHeight: 390 },
-  heroDesktop: { minHeight: 260 },
+  hero: { minHeight: 164, flexDirection: "row", alignItems: "stretch", overflow: "hidden", borderRadius: radius.xl, backgroundColor: withAlpha(colors.brandSecondary, 0.16) },
+  heroStacked: { flexDirection: "column", minHeight: 278 },
+  heroDesktop: { minHeight: 176 },
   heroCopy: { flex: 1.15, minWidth: 0, justifyContent: "center", alignItems: "flex-start", padding: spacing.xl },
   heroCopyStacked: { flexGrow: 0, flexBasis: "auto", width: "100%", padding: spacing.lg, paddingBottom: spacing.md },
   heroEyebrow: { color: colors.brandSecondary, fontSize: 9, fontWeight: "900", letterSpacing: 1.3 },
@@ -287,10 +287,10 @@ const styles = StyleSheet.create({
   heroCta: { minHeight: 38, flexDirection: "row", alignItems: "center", gap: spacing.sm, marginTop: spacing.lg, paddingHorizontal: spacing.md, borderRadius: radius.pill, backgroundColor: colors.brandPrimary },
   heroCtaText: { color: colors.onBrandPrimary, fontSize: 10, fontWeight: "900" },
   heroArtwork: { flex: 0.85, minWidth: 150, alignItems: "stretch", justifyContent: "center", overflow: "hidden", padding: spacing.sm },
-  heroArtworkStacked: { flexGrow: 1, width: "100%", minHeight: 180, paddingTop: 0 },
+  heroArtworkStacked: { flexGrow: 1, width: "100%", minHeight: 120, paddingTop: 0 },
   heroMascot: { width: "100%", height: "100%" },
   quickRow: { flexDirection: "row", gap: spacing.sm },
-  quickAction: { flex: 1, minHeight: 70, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: spacing.sm, paddingHorizontal: spacing.sm, borderRadius: radius.md, backgroundColor: colors.surfaceSecondary, borderWidth: 1, borderColor: colors.border },
+  quickAction: { flex: 1, minHeight: 58, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: spacing.sm, paddingHorizontal: spacing.sm, borderRadius: radius.md, backgroundColor: colors.surfaceSecondary },
   quickIcon: { width: 34, height: 34, borderRadius: radius.sm, alignItems: "center", justifyContent: "center", backgroundColor: withAlpha(colors.brandPrimary, 0.12) },
   quickText: { flexShrink: 1, color: colors.onSurfaceSecondary, fontSize: 10, lineHeight: 14, fontWeight: "800" },
   dashboard: { gap: spacing.lg },
@@ -306,11 +306,12 @@ const styles = StyleSheet.create({
   mealGrid: { gap: spacing.sm },
   mealGridDesktop: { flexDirection: "row", flexWrap: "wrap" },
   mealCell: { width: "49.4%" },
-  skeleton: { gap: spacing.md, padding: spacing.lg, borderRadius: radius.lg, backgroundColor: colors.surfaceSecondary, borderWidth: 1, borderColor: colors.border },
+  mealCellWide: { width: "32.7%" },
+  skeleton: { gap: spacing.md, padding: spacing.lg, borderRadius: radius.lg, backgroundColor: colors.surfaceSecondary },
   skeletonIcon: { width: 44, height: 44, borderRadius: radius.md, backgroundColor: colors.surfaceTertiary },
   skeletonLine: { height: 12, borderRadius: radius.pill, backgroundColor: colors.surfaceTertiary },
   skeletonBlock: { minHeight: 70, borderRadius: radius.md, backgroundColor: withAlpha(colors.surfaceTertiary, 0.78) },
-  stateCard: { minHeight: 190, alignItems: "center", justifyContent: "center", gap: spacing.sm, padding: spacing.xl, borderRadius: radius.lg, backgroundColor: colors.surfaceSecondary, borderWidth: 1, borderColor: colors.border },
+  stateCard: { minHeight: 164, alignItems: "center", justifyContent: "center", gap: spacing.sm, padding: spacing.lg, borderRadius: radius.lg, backgroundColor: colors.surfaceSecondary },
   stateTitle: { color: colors.onSurface, fontSize: 14, fontWeight: "900", textAlign: "center" },
   stateText: { maxWidth: 360, color: colors.onSurfaceTertiary, fontSize: 11, lineHeight: 16, textAlign: "center" },
   retry: { minHeight: 40, justifyContent: "center", paddingHorizontal: spacing.md, borderRadius: radius.pill, backgroundColor: withAlpha(colors.brandPrimary, 0.12) },

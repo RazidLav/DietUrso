@@ -2,7 +2,6 @@ import React, { useCallback, useRef, useState } from "react";
 import { ActivityIndicator, Modal, ScrollView, StyleSheet, Text, View, Pressable } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import MaterialDesignIcons from "@react-native-vector-icons/material-design-icons";
 import { colors, radius, spacing } from "../../src/theme";
 import MacroSummary from "../../src/components/MacroSummary";
 import MealCard, { iconForMeal } from "../../src/components/MealCard";
@@ -13,6 +12,7 @@ import { FLOATING_TAB_HEIGHT, FLOATING_TAB_MARGIN } from "./_layout";
 import { useCloudDataRefresh } from "../../src/cloud/useCloudDataRefresh";
 import { getCloudStatus, subscribeCloudStatus, syncCloudNow } from "../../src/cloud/cloudSync";
 import { resolvePlanView, type DataLoadState } from "../../src/cloud/planViewState";
+import { ContentContainer, IconButton, PageHeader, PrimaryButton, ResponsiveGrid, SectionHeader } from "../../src/components/DesignSystem";
 
 export default function PlanoScreen() {
   const insets = useSafeAreaInsets();
@@ -97,54 +97,25 @@ export default function PlanoScreen() {
     <View style={{ flex: 1, backgroundColor: colors.surface }} testID="plano-screen">
       {/* Sticky header with day chips */}
       <View style={[styles.stickyHeader, { paddingTop: insets.top + spacing.md }]}>
-        <View style={styles.headerRow}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.eyebrow}>MEU PLANO</Text>
-            <Text style={styles.planName} numberOfLines={1}>{plan.name}</Text>
-          </View>
-          <Pressable
-            style={styles.editBtn}
-            onPress={() => router.push(`/editor/${plan.id}`)}
-            testID="edit-plan-btn"
-          >
-            <MaterialDesignIcons name="pencil" size={16} color={colors.onBrandPrimary} />
-            <Text style={styles.editBtnText}>Editar</Text>
-          </Pressable>
-          <Pressable style={styles.copyBtn} onPress={() => setCopyOpen(true)} testID="copy-day-btn"><MaterialDesignIcons name="content-copy" size={16} color={colors.onSurface} /></Pressable>
-        </View>
-
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.chipRowContent}
-          style={styles.chipRow}
-        >
-          {WEEKDAYS_SHORT.map((d, i) => {
-            const selected = i === selectedDay;
-            return (
-              <Pressable
-                key={i}
-                onPress={() => setSelectedDay(i)}
-                style={[styles.chip, selected && styles.chipSelected]}
-                testID={`day-chip-${i}`}
-              >
-                <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{d}</Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
+        <ContentContainer style={styles.headerContent} maxWidth={1100}>
+          <PageHeader eyebrow="PLANO ALIMENTAR" title={plan.name} description="Escolha o dia e acesse somente a refeição que deseja ajustar." action={<View style={styles.headerActions}><IconButton icon="content-copy" label="Duplicar programação do dia" onPress={() => setCopyOpen(true)} /><PrimaryButton icon="pencil" label="Editar plano" onPress={() => router.push(`/editor/${plan.id}`)} /></View>} />
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRowContent} style={styles.chipRow} accessibilityLabel="Dias da semana">
+            {WEEKDAYS_SHORT.map((d, i) => {
+              const selected = i === selectedDay;
+              return <Pressable key={i} accessibilityRole="tab" accessibilityState={{ selected }} onPress={() => setSelectedDay(i)} style={[styles.chip, selected && styles.chipSelected]} testID={`day-chip-${i}`}><Text style={[styles.chipText, selected && styles.chipTextSelected]}>{d}</Text></Pressable>;
+            })}
+          </ScrollView>
+        </ContentContainer>
       </View>
 
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={{
-          padding: spacing.lg,
-          paddingBottom: FLOATING_TAB_HEIGHT + Math.max(insets.bottom, FLOATING_TAB_MARGIN) + spacing.xl,
-        }}
+        contentContainerStyle={{ paddingVertical: spacing.lg, paddingBottom: FLOATING_TAB_HEIGHT + Math.max(insets.bottom, FLOATING_TAB_MARGIN) + spacing.xl }}
       >
-        <MacroSummary kcal={totals.kcal} protein={totals.protein} carbs={totals.carbs} fats={totals.fats} />
-        <Text style={styles.sectionTitle}>Refeições</Text>
-        <View style={{ gap: spacing.sm }}>
+        <ContentContainer style={styles.planContent} maxWidth={1100}>
+        <MacroSummary compact kcal={totals.kcal} protein={totals.protein} carbs={totals.carbs} fats={totals.fats} />
+        <SectionHeader title="Refeições" description={`${mealsForDay.length} ${mealsForDay.length === 1 ? "refeição" : "refeições"} programadas para ${WEEKDAYS_SHORT[selectedDay]}`} />
+        <ResponsiveGrid minItemWidth={300} maxColumns={3} gap={spacing.sm}>
           {mealsForDay.map((meal) => {
             const opt = meal.options[0];
             const mac = opt ? optionMacros(opt) : { kcal: 0, protein: 0, carbs: 0, fats: 0 };
@@ -156,6 +127,7 @@ export default function PlanoScreen() {
                 subtitle={`${meal.suggestedTime ? `${meal.suggestedTime} · ` : ""}${meal.options.length} opções · ${opt?.name ?? ""}`}
                 icon={iconForMeal(meal.type)}
                 kcal={mac.kcal}
+                compact
                 onPress={() => router.push(`/meal/${plan.id}/${meal.id}`)}
               />
             );
@@ -163,7 +135,8 @@ export default function PlanoScreen() {
           {mealsForDay.length === 0 ? (
             <Text style={styles.emptyDesc}>Nenhuma refeição. Toque em Editar para adicionar.</Text>
           ) : null}
-        </View>
+        </ResponsiveGrid>
+        </ContentContainer>
       </ScrollView>
       <Modal visible={copyOpen} transparent animationType="fade"><View style={styles.overlay}><View style={styles.modal}><Text style={styles.modalTitle}>Duplicar {WEEKDAYS_SHORT[selectedDay]}</Text><Text style={styles.modalText}>Escolha o dia que receberá a mesma programação. O histórico já registrado não será alterado.</Text><View style={styles.dayGrid}>{WEEKDAYS_SHORT.map((label, day) => <Pressable key={day} disabled={day === selectedDay} style={[styles.dayTarget, day === selectedDay && { opacity: 0.35 }]} onPress={() => void copyDay(day)}><Text style={styles.dayTargetText}>{label}</Text></Pressable>)}</View><Pressable style={styles.cancelBtn} onPress={() => setCopyOpen(false)}><Text style={styles.cancelText}>Cancelar</Text></Pressable></View></View></Modal>
     </View>
@@ -173,30 +146,11 @@ export default function PlanoScreen() {
 const styles = StyleSheet.create({
   stickyHeader: {
     backgroundColor: colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
     paddingBottom: spacing.sm,
   },
-  headerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: spacing.lg,
-    marginBottom: spacing.md,
-    gap: spacing.md,
-  },
-  eyebrow: { color: colors.brandPrimary, fontSize: 11, fontWeight: "800", letterSpacing: 1.5 },
-  planName: { color: colors.onSurface, fontSize: 20, fontWeight: "800", marginTop: 2 },
-  editBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs,
-    backgroundColor: colors.brandPrimary,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.pill,
-  },
-  editBtnText: { color: colors.onBrandPrimary, fontWeight: "700", fontSize: 13 },
-  copyBtn: { width: 36, height: 36, borderRadius: radius.pill, backgroundColor: colors.surfaceTertiary, alignItems: "center", justifyContent: "center" },
+  headerContent: { gap: spacing.md },
+  headerActions: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  planContent: { gap: spacing.md },
   chipRow: { height: 56 },
   chipRowContent: {
     paddingHorizontal: spacing.lg,
@@ -220,15 +174,6 @@ const styles = StyleSheet.create({
   },
   chipText: { color: colors.onSurfaceSecondary, fontWeight: "600", fontSize: 13 },
   chipTextSelected: { color: colors.onBrandPrimary, fontWeight: "800" },
-  sectionTitle: {
-    color: colors.onSurfaceTertiary,
-    fontSize: 12,
-    fontWeight: "700",
-    letterSpacing: 1,
-    marginTop: spacing.lg,
-    marginBottom: spacing.sm,
-    textTransform: "uppercase",
-  },
   empty: {
     flex: 1,
     backgroundColor: colors.surface,

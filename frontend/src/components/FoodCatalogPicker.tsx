@@ -1,10 +1,11 @@
 import MaterialDesignIcons from "@react-native-vector-icons/material-design-icons";
 import React, { useMemo, useRef, useState } from "react";
-import { ActivityIndicator, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from "react-native";
+import { ActivityIndicator, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { FoodCatalogItem } from "../types/plan";
 import { matchesSearch } from "../utils/search";
-import { breakpoints, colors, withAlpha, radius, spacing } from "../theme";
+import { colors, withAlpha, radius, spacing } from "../theme";
+import { useResponsiveLayout } from "../responsive";
 
 export function filterFoodCatalog(items: FoodCatalogItem[], query: string) {
   return items.filter((food) => matchesSearch(query, food.name, food.brand, food.category, food.source));
@@ -30,8 +31,8 @@ export default function FoodCatalogPicker({
   onSelect: (food: FoodCatalogItem) => void;
 }) {
   const insets = useSafeAreaInsets();
-  const { width, height } = useWindowDimensions();
-  const desktop = width >= breakpoints.tablet;
+  const { height, isPhone } = useResponsiveLayout();
+  const desktop = !isPhone;
   const [query, setQuery] = useState("");
   const inputRef = useRef<TextInput>(null);
   const results = useMemo(() => filterFoodCatalog(foods.filter((food) => !food.archived), query), [foods, query]);

@@ -1,10 +1,11 @@
 import MaterialDesignIcons from "@react-native-vector-icons/material-design-icons";
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import TrainingSessionCard from "../src/components/TrainingSessionCard";
-import { EmptyState, ErrorState, FeatureCard, FloatingActionMenu, FolderCard, LoadingSkeleton, SectionHeader } from "../src/components/ProgressiveUI";
+import { ContentContainer, PageHeader, ResponsiveGrid, SegmentedControl } from "../src/components/DesignSystem";
+import { EmptyState, ErrorState, FeatureCard, FloatingActionMenu, FolderCard, LoadingSkeleton } from "../src/components/ProgressiveUI";
 import { getCloudStatus, subscribeCloudStatus } from "../src/cloud/cloudSync";
 import { useCloudDataRefresh } from "../src/cloud/useCloudDataRefresh";
 import { addDays, dayEntries, localDate, startOfWeek } from "../src/training/calculations";
@@ -12,6 +13,7 @@ import { ACTIVITY_COLORS, ACTIVITY_LABELS } from "../src/training/catalog";
 import type { TrainingState } from "../src/training/types";
 import { getTrainingState, movePlannedSession, prepareTrainingRange } from "../src/store/trainingStore";
 import { colors, withAlpha, radius, spacing } from "../src/theme";
+import { useResponsiveLayout } from "../src/responsive";
 
 type ViewMode = "day" | "week" | "month";
 const DAY_NAMES = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
@@ -30,7 +32,7 @@ function monthBounds(date: string) {
 export default function TreinosScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { width } = useWindowDimensions();
+  const responsive = useResponsiveLayout();
   const [state, setState] = useState<TrainingState | null>(null);
   const [selectedDate, setSelectedDate] = useState(localDate());
   const [mode, setMode] = useState<ViewMode>("day");
@@ -85,22 +87,23 @@ export default function TreinosScreen() {
 
   return (
     <View style={styles.screen}>
-      <ScrollView refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={colors.brandPrimary} />} contentContainerStyle={[styles.content, { paddingTop: insets.top + spacing.lg }]}>
-        <SectionHeader eyebrow="TREINO" title="Sua semana, sem burocracia." description="Veja o que vem agora. Planos, exercícios e histórico ficam organizados em áreas próprias." />
+      <ScrollView refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={colors.brandPrimary} />} contentContainerStyle={{ paddingTop: insets.top + spacing.lg, paddingBottom: 148 }}>
+        <ContentContainer style={styles.content}>
+        <PageHeader eyebrow="TREINO" title="Sua semana, sem burocracia" description="Veja o que vem agora. Planos, exercícios e histórico ficam organizados em áreas próprias." />
 
-        <View style={[styles.summaryGrid, width >= 768 && styles.summaryGridWide]}>
+        <ResponsiveGrid minItemWidth={300} maxColumns={2} gap={spacing.sm}>
           <FeatureCard icon={nextEntry?.status === "in_progress" ? "play-circle-outline" : "calendar-clock"} title={nextEntry?.status === "in_progress" ? "EM ANDAMENTO" : "PRÓXIMA AÇÃO"} value={nextEntry?.planned.name ?? "Dia livre"} description={nextEntry ? `${nextEntry.planned.scheduledTime ?? "Sem horário"} · ${ACTIVITY_LABELS[nextEntry.planned.activityType]}` : "Você pode adicionar uma sessão quando quiser."} onPress={() => openEntry(nextEntry)} />
           <FeatureCard icon="check-circle-outline" title={selectedDate === localDate() ? "HOJE" : "DIA SELECIONADO"} value={`${completedOnSelectedDay}/${entries.length}`} description="sessões concluídas de forma independente" accent={colors.success} />
-        </View>
+        </ResponsiveGrid>
 
-        <View style={[styles.shortcuts, width >= 768 && styles.shortcutsDesktop]}>
+        <ResponsiveGrid minItemWidth={220} maxColumns={4} gap={spacing.sm}>
           <FolderCard icon="calendar-edit" title="Meus planos" description="Monte e organize sua semana" onPress={() => router.push("/treinos-planos")} />
           <FolderCard icon="dumbbell" title="Banco de exercícios" description="Pesquise, filtre e favorite" onPress={() => router.push("/treinos-exercicios")} />
           <FolderCard icon="history" title="Histórico" description="Sessões, volume e recordes" onPress={() => router.push("/treinos-historico")} />
           <FolderCard icon="chart-line" title="Evolução" description="Acompanhe seu progresso" onPress={() => router.push("/evolucao")} />
-        </View>
+        </ResponsiveGrid>
 
-        <View style={styles.modeRow}>{(["day", "week", "month"] as ViewMode[]).map((value) => <Pressable key={value} style={[styles.mode, mode === value && styles.modeActive]} onPress={() => setMode(value)}><Text style={[styles.modeText, mode === value && styles.modeTextActive]}>{value === "day" ? "Dia" : value === "week" ? "Semana" : "Mês"}</Text></Pressable>)}</View>
+        <SegmentedControl value={mode} label="Período do calendário" options={[{ value: "day", label: "Dia" }, { value: "week", label: "Semana" }, { value: "month", label: "Mês" }]} onChange={setMode} />
         <View style={styles.dateNav}><Pressable style={styles.navButton} onPress={() => shift(-1)} accessibilityLabel="Período anterior"><MaterialDesignIcons name="chevron-left" size={24} color={colors.onSurface} /></Pressable><Pressable style={styles.dateCenter} onPress={() => setSelectedDate(localDate())}><Text style={styles.dateTitle}>{mode === "month" ? new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" }).format(new Date(`${selectedDate}T12:00:00`)) : dateTitle(selectedDate)}</Text><Text style={styles.todayHint}>{selectedDate === localDate() ? "HOJE" : "TOQUE PARA VOLTAR A HOJE"}</Text></Pressable><Pressable style={styles.navButton} onPress={() => shift(1)} accessibilityLabel="Próximo período"><MaterialDesignIcons name="chevron-right" size={24} color={colors.onSurface} /></Pressable></View>
 
         {error ? <ErrorState title="Dados locais preservados" description={error} onRetry={() => void load()} /> : null}
@@ -110,12 +113,13 @@ export default function TreinosScreen() {
           {entries.length ? entries.map((entry) => <TrainingSessionCard key={entry.planned.id} entry={entry} onPress={() => router.push(`/treino-planejado/${entry.planned.id}`)} onMove={(direction) => void move(entry.planned.id, direction)} />) : <EmptyState icon="calendar-blank-outline" title="Dia livre por enquanto" description="Adicione uma sessão quando fizer sentido. Cada modalidade continua independente." actionLabel="Adicionar sessão" onAction={() => router.push(`/treino-novo?date=${selectedDate}`)} />}
         </View> : null}
 
-        {mode === "week" ? <View style={[styles.weekGrid, width >= 800 && styles.weekGridDesktop]}>{weekDates.map((date) => {
+        {mode === "week" ? <View style={[styles.weekGrid, !responsive.isPhone && styles.weekGridDesktop]}>{weekDates.map((date) => {
           const items = dayEntries(state, date);
           return <Pressable key={date} style={[styles.weekDay, date === selectedDate && styles.selected]} onPress={() => { setSelectedDate(date); setMode("day"); }}><Text style={styles.weekName}>{DAY_NAMES[new Date(`${date}T12:00:00`).getDay()]}</Text><Text style={styles.weekNumber}>{Number(date.slice(-2))}</Text><Text style={styles.weekCount}>{items.length ? `${items.length} sessão${items.length > 1 ? "ões" : ""}` : "Livre"}</Text>{items.slice(0, 3).map((entry) => <View key={entry.planned.id} style={[styles.miniBar, { backgroundColor: ACTIVITY_COLORS[entry.planned.activityType] }]} />)}</Pressable>;
         })}</View> : null}
 
         {mode === "month" ? <View style={styles.monthGrid}>{monthDates.map((date, index) => date ? <Pressable key={date} style={[styles.monthDay, date === selectedDate && styles.selected]} onPress={() => { setSelectedDate(date); setMode("day"); }}><Text style={styles.monthNumber}>{Number(date.slice(-2))}</Text><View style={styles.monthDots}>{dayEntries(state, date).slice(0, 4).map((entry) => <View key={entry.planned.id} style={[styles.monthDot, { backgroundColor: ACTIVITY_COLORS[entry.planned.activityType] }]} />)}</View></Pressable> : <View key={`empty-${index}`} style={styles.monthDay} />)}</View> : null}
+        </ContentContainer>
       </ScrollView>
       <FloatingActionMenu label="Adicionar" actions={[
         { id: "session", label: "Nova sessão", hint: "Escolha a modalidade na próxima etapa", icon: "calendar-plus", onPress: () => router.push(`/treino-novo?date=${selectedDate}`) },
@@ -127,10 +131,8 @@ export default function TreinosScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.surface }, content: { width: "100%", maxWidth: 1180, alignSelf: "center", paddingHorizontal: spacing.lg, paddingBottom: 148, gap: spacing.lg }, loading: { flex: 1, backgroundColor: colors.surface, justifyContent: "center", padding: spacing.lg },
+  screen: { flex: 1, backgroundColor: colors.surface }, content: { gap: spacing.lg }, loading: { flex: 1, backgroundColor: colors.surface, justifyContent: "center", padding: spacing.lg },
   header: { flexDirection: "row", alignItems: "center", gap: spacing.md }, back: { width: 44, height: 44, borderRadius: radius.md, backgroundColor: colors.surfaceSecondary, alignItems: "center", justifyContent: "center" }, eyebrow: { color: colors.brandPrimary, fontSize: 10, fontWeight: "900", letterSpacing: 1.3 }, title: { color: colors.onSurface, fontSize: 26, fontWeight: "900" }, primarySmall: { minHeight: 44, flexDirection: "row", alignItems: "center", gap: spacing.xs, backgroundColor: colors.brandPrimary, borderRadius: radius.pill, paddingHorizontal: spacing.md }, primarySmallText: { color: colors.onBrandPrimary, fontWeight: "900", fontSize: 12 },
-  summaryGrid: { gap: spacing.sm }, summaryGridWide: { flexDirection: "row" }, shortcuts: { gap: spacing.sm }, shortcutsDesktop: { flexDirection: "row" },
-  modeRow: { flexDirection: "row", padding: 4, borderRadius: radius.pill, backgroundColor: colors.surfaceSecondary }, mode: { flex: 1, minHeight: 40, borderRadius: radius.pill, alignItems: "center", justifyContent: "center" }, modeActive: { backgroundColor: colors.brandPrimary }, modeText: { color: colors.onSurfaceTertiary, fontWeight: "800" }, modeTextActive: { color: colors.onBrandPrimary },
   dateNav: { flexDirection: "row", alignItems: "center" }, navButton: { width: 44, height: 44, alignItems: "center", justifyContent: "center", backgroundColor: colors.surfaceSecondary, borderRadius: radius.md }, dateCenter: { flex: 1, alignItems: "center", paddingHorizontal: spacing.sm }, dateTitle: { color: colors.onSurface, fontSize: 16, fontWeight: "800", textTransform: "capitalize", textAlign: "center" }, todayHint: { color: colors.brandPrimary, fontSize: 8, fontWeight: "900", marginTop: 2 },
   list: { gap: spacing.sm }, sectionRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" }, sectionTitle: { color: colors.onSurfaceTertiary, fontSize: 11, letterSpacing: 1, fontWeight: "900", marginTop: spacing.sm }, sectionHint: { color: colors.brandPrimary, fontSize: 10, fontWeight: "700" },
   empty: { padding: spacing.xl, backgroundColor: colors.surfaceSecondary, borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, alignItems: "center", gap: spacing.sm }, emptyTitle: { color: colors.onSurface, fontWeight: "800", fontSize: 17 }, muted: { color: colors.onSurfaceTertiary, fontSize: 12, textAlign: "center" }, primary: { marginTop: spacing.sm, minHeight: 44, backgroundColor: colors.brandPrimary, borderRadius: radius.pill, alignItems: "center", justifyContent: "center", paddingHorizontal: spacing.lg }, primaryText: { color: colors.onBrandPrimary, fontWeight: "900" },

@@ -1,7 +1,7 @@
 import MaterialDesignIcons from "@react-native-vector-icons/material-design-icons";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AdvancedOptions, StepHeader, StickyActionBar } from "./ProgressiveUI";
 import { TrainingPrescriptionFields } from "../../app/treino-planejado/[plannedId]";
@@ -11,6 +11,7 @@ import { clonePrescription, createDefaultPrescription } from "../training/calcul
 import type { ActivityType, TrainingPlanItem, TrainingState, WorkoutPrescription } from "../training/types";
 import { addStrengthExerciseToPrescription, copyTrainingPlanDay, getTrainingState, moveTrainingPlanItem, removeTrainingPlanItem, savePersonalExercise, saveTrainingPlanItem } from "../store/trainingStore";
 import { colors, withAlpha, radius, spacing } from "../theme";
+import { useResponsiveLayout } from "../responsive";
 
 const DAYS = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
 const ORDER = [1, 2, 3, 4, 5, 6, 0];
@@ -22,8 +23,7 @@ export default function WeeklyTrainingEditor() {
   const { planId } = useLocalSearchParams<{ planId: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { width } = useWindowDimensions();
-  const desktop = width >= 768;
+  const desktop = !useResponsiveLayout().isPhone;
   const [state, setState] = useState<TrainingState | null>(null);
   const [loadState, setLoadState] = useState<LoadState>("idle");
   const [cloudReady, setCloudReady] = useState(getCloudStatus().readyForData);

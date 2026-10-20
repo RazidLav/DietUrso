@@ -14,6 +14,23 @@ interface Props {
 }
 
 export default function MacroSummary({ title, subtitle, kcal, protein, carbs, fats, fiber, compact }: Props) {
+  if (compact) {
+    return (
+      <View style={[styles.wrap, styles.wrapCompact]} testID="macro-summary">
+        <View style={styles.compactCalories}>
+          {title ? <Text style={styles.title}>{title}</Text> : null}
+          <View style={[styles.kcalRow, styles.kcalRowCompact]}><Text style={[styles.kcalValue, styles.kcalValueCompact]}>{Math.round(kcal).toLocaleString("pt-BR")}</Text><Text style={styles.kcalLabel}>kcal</Text></View>
+          {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+        </View>
+        <View style={[styles.macrosRow, styles.macrosRowCompact]}>
+          <MacroPill compact label="Proteína" value={protein} color={colors.protein} testID="macro-protein" />
+          <MacroPill compact label="Carbo" value={carbs} color={colors.carbs} testID="macro-carbs" />
+          <MacroPill compact label="Gordura" value={fats} color={colors.fats} testID="macro-fats" />
+          {fiber !== undefined ? <MacroPill compact label="Fibras" value={fiber} color={colors.onSurfaceTertiary} testID="macro-fiber" /> : null}
+        </View>
+      </View>
+    );
+  }
   return (
     <View style={[styles.wrap, compact && styles.wrapCompact]} testID="macro-summary">
       {title ? <Text style={styles.title}>{title}</Text> : null}
@@ -32,9 +49,9 @@ export default function MacroSummary({ title, subtitle, kcal, protein, carbs, fa
   );
 }
 
-function MacroPill({ label, value, color, testID }: { label: string; value: number; color: string; testID: string }) {
+function MacroPill({ label, value, color, testID, compact = false }: { label: string; value: number; color: string; testID: string; compact?: boolean }) {
   return (
-    <View style={styles.pill} testID={testID}>
+    <View style={[styles.pill, compact && styles.pillCompact]} testID={testID}>
       <View style={[styles.pillDot, { backgroundColor: color }]} />
       <View>
         <Text style={styles.pillValue}>{Math.round(value)}g</Text>
@@ -53,8 +70,14 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   wrapCompact: {
-    padding: spacing.md,
+    padding: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    borderWidth: 0,
+    borderRadius: radius.md,
   },
+  compactCalories: { minWidth: 96, flexShrink: 0 },
   title: { color: colors.brandPrimary, fontSize: 10, fontWeight: "800", letterSpacing: 1.2, marginBottom: spacing.sm },
   fiber: { color: colors.onSurfaceSecondary, fontSize: 11, fontWeight: "600", marginTop: spacing.md },
   subtitle: { color: colors.onSurfaceTertiary, fontSize: 11, marginTop: spacing.sm },
@@ -75,10 +98,13 @@ const styles = StyleSheet.create({
     color: colors.onSurfaceTertiary,
     fontWeight: "600",
   },
+  kcalRowCompact: { marginBottom: 0 },
+  kcalValueCompact: { fontSize: 26, letterSpacing: -0.4 },
   macrosRow: {
     flexDirection: "row",
     gap: spacing.sm,
   },
+  macrosRowCompact: { flex: 1, flexWrap: "wrap", justifyContent: "flex-end" },
   pill: {
     flex: 1,
     flexDirection: "row",
@@ -94,6 +120,7 @@ const styles = StyleSheet.create({
     height: 8,
     borderRadius: 999,
   },
+  pillCompact: { minWidth: 88, paddingVertical: spacing.xs, paddingHorizontal: spacing.sm, backgroundColor: "transparent" },
   pillValue: {
     fontSize: 16,
     fontWeight: "700",

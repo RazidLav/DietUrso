@@ -13,29 +13,30 @@ interface Props {
   status?: "planned" | "as_planned" | "modified" | "skipped";
   testID?: string;
   right?: React.ReactNode;
+  compact?: boolean;
 }
 
-export default function MealCard({ title, subtitle, icon, kcal, onPress, onToggleDone, status, testID, right }: Props) {
+export default function MealCard({ title, subtitle, icon, kcal, onPress, onToggleDone, status, testID, right, compact = false }: Props) {
   const done = status === "as_planned" || status === "modified" || status === "skipped";
   return (
     <Pressable
       onPress={onPress}
       testID={testID}
-      style={({ pressed }) => [styles.card, done && styles.cardDone, pressed && styles.cardPressed]}
+      style={({ pressed }) => [styles.card, compact && styles.cardCompact, done && styles.cardDone, pressed && styles.cardPressed]}
     >
       <View style={styles.left}>
-        <View style={styles.iconWrap}>
+        <View style={[styles.iconWrap, compact && styles.iconWrapCompact]}>
           <MaterialDesignIcons name={(icon as any) ?? "silverware-fork-knife"} size={22} color={colors.onSurface} />
         </View>
         <View style={styles.textCol}>
-          <Text style={[styles.title, done && styles.titleDone]} numberOfLines={1}>{title}</Text>
+          <Text style={[styles.title, compact && styles.titleCompact, done && styles.titleDone]} numberOfLines={1}>{title}</Text>
           {subtitle ? <Text style={styles.subtitle} numberOfLines={1}>{subtitle}</Text> : null}
         </View>
       </View>
       <View style={styles.right}>
         {kcal !== undefined ? (
           <View style={styles.kcalWrap}>
-            <Text style={styles.kcal}>{Math.round(kcal)}</Text>
+            <Text style={[styles.kcal, compact && styles.kcalCompact]}>{Math.round(kcal)}</Text>
             <Text style={styles.kcalUnit}>kcal</Text>
           </View>
         ) : null}
@@ -97,6 +98,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   cardPressed: { opacity: 0.85 },
+  cardCompact: { minHeight: 64, padding: 10, borderRadius: radius.md, borderWidth: 0 },
   cardDone: { borderColor: withAlpha(colors.brandPrimary, "55") },
   left: { flexDirection: "row", alignItems: "center", gap: spacing.md, flex: 1 },
   iconWrap: {
@@ -107,13 +109,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  iconWrapCompact: { width: 36, height: 36, borderRadius: radius.sm },
   textCol: { flex: 1 },
   title: { color: colors.onSurface, fontSize: 16, fontWeight: "700" },
+  titleCompact: { fontSize: 14 },
   titleDone: { color: colors.onSurfaceSecondary },
   subtitle: { color: colors.onSurfaceTertiary, fontSize: 12, marginTop: 2 },
   right: { flexDirection: "row", alignItems: "center", gap: spacing.md },
   kcalWrap: { alignItems: "flex-end" },
   kcal: { color: colors.onSurface, fontSize: 20, fontWeight: "800" },
+  kcalCompact: { fontSize: 17 },
   kcalUnit: { color: colors.onSurfaceTertiary, fontSize: 10, marginTop: -2 },
   badge: {
     width: 24,
