@@ -35,7 +35,6 @@ const EMPTY_ERRORS: Record<SectionKey, string | null> = { diet: null, water: nul
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { width, isDesktop: desktop, isPhone, isWide } = useResponsiveLayout();
-  const tablet = !isPhone;
   const stackHero = width < 520;
   const router = useRouter();
   const [selectedDate, setSelectedDate] = useState(todayISO());
@@ -166,48 +165,52 @@ export default function HomeScreen() {
           <Pressable accessibilityRole="button" style={styles.iconButton} accessibilityLabel="Abrir conquistas" onPress={() => router.push("/conquistas")}><MaterialDesignIcons name="bell-outline" size={21} color={colors.onSurface} />{pendingAchievement ? <View style={styles.notificationDot} /> : null}</Pressable>
         </View>
 
-        <WeekSelector days={weekDays} selectedDate={selectedDate} activityDates={activityDates} onSelect={setSelectedDate} onShift={(amount) => setSelectedDate(toISO(addDays(selected, amount * 7)))} />
+        <WeekSelector wide={!isPhone} days={weekDays} selectedDate={selectedDate} activityDates={activityDates} onSelect={setSelectedDate} onShift={(amount) => setSelectedDate(toISO(addDays(selected, amount * 7)))} />
 
-        <Pressable style={[styles.hero, stackHero && styles.heroStacked, desktop && styles.heroDesktop]} onPress={() => router.push(trainingEntries.length ? "/treinos" : "/conquistas")} accessibilityRole="button" testID="home-main-highlight">
-          <View style={[styles.heroCopy, stackHero && styles.heroCopyStacked]} testID="home-highlight-copy">
-            <Text style={styles.heroEyebrow}>{trainingEntries.length ? "SEU MOVIMENTO DE HOJE" : "PROGRESSO DA SEMANA"}</Text>
-            <Text style={styles.heroTitle}>{trainingEntries.length ? `${trainingEntries.length} ${trainingEntries.length === 1 ? "sessão planejada" : "sessões planejadas"}` : "Um passo por vez já conta."}</Text>
-            <Text style={styles.heroText}>{trainingEntries.length ? "Cada modalidade tem seu próprio ritmo e status." : "Registre o que fizer e acompanhe a constância sem cobrança."}</Text>
-            <View style={styles.heroCta}><Text style={styles.heroCtaText}>{trainingEntries.length ? "Ver treinos" : "Ver progresso"}</Text><MaterialDesignIcons name="arrow-right" size={16} color={colors.onBrandPrimary} /></View>
+        <View style={[styles.overview, desktop && styles.overviewDesktop]} testID="home-overview-columns">
+          <View style={styles.focusColumn}>
+            <Pressable style={[styles.hero, stackHero && styles.heroStacked, desktop && styles.heroDesktop]} onPress={() => router.push(trainingEntries.length ? "/treinos" : "/conquistas")} accessibilityRole="button" testID="home-main-highlight">
+              <View style={[styles.heroCopy, stackHero && styles.heroCopyStacked]} testID="home-highlight-copy">
+                <Text style={styles.heroEyebrow}>{trainingEntries.length ? "SEU MOVIMENTO DE HOJE" : "PROGRESSO DA SEMANA"}</Text>
+                <Text style={styles.heroTitle}>{trainingEntries.length ? `${trainingEntries.length} ${trainingEntries.length === 1 ? "sessão planejada" : "sessões planejadas"}` : "Um passo por vez já conta."}</Text>
+                <Text style={styles.heroText}>{trainingEntries.length ? "Cada modalidade tem seu próprio ritmo e status." : "Registre o que fizer e acompanhe a constância sem cobrança."}</Text>
+                <View style={styles.heroCta}><Text style={styles.heroCtaText}>{trainingEntries.length ? "Ver treinos" : "Ver progresso"}</Text><MaterialDesignIcons name="arrow-right" size={16} color={colors.onBrandPrimary} /></View>
+              </View>
+              <View style={[styles.heroArtwork, stackHero && styles.heroArtworkStacked]} testID="home-highlight-artwork">
+                <Image source={require("../../assets/images/home-progress-v2.png")} style={styles.heroMascot} resizeMode="contain" accessibilityLabel="Mascote UrsoFit celebrando o progresso" />
+              </View>
+            </Pressable>
+
+            <View style={styles.quickRow}>
+              <QuickAction icon="silverware-fork-knife" label="Registrar refeição" onPress={() => router.push("/alimentacao")} />
+              <QuickAction icon="water-plus-outline" label="Adicionar água" onPress={() => void handleWater()} disabled={savingWater} />
+              <QuickAction icon="dumbbell" label="Iniciar treino" onPress={() => router.push("/treinos")} />
+            </View>
           </View>
-          <View style={[styles.heroArtwork, stackHero && styles.heroArtworkStacked]} testID="home-highlight-artwork">
-            <Image source={require("../../assets/images/home-progress-v2.png")} style={styles.heroMascot} resizeMode="contain" accessibilityLabel="Mascote UrsoFit celebrando o progresso" />
-          </View>
-        </Pressable>
 
-        <View style={styles.quickRow}>
-          <QuickAction icon="silverware-fork-knife" label="Registrar refeição" onPress={() => router.push("/alimentacao")} />
-          <QuickAction icon="water-plus-outline" label="Adicionar água" onPress={() => void handleWater()} disabled={savingWater} />
-          <QuickAction icon="dumbbell" label="Iniciar treino" onPress={() => router.push("/treinos")} />
-        </View>
-
-        <View style={[styles.dashboard, tablet && styles.dashboardWide]}>
-          <View style={[styles.column, tablet && styles.columnWide]}>
+          <View style={[styles.dashboard, !isPhone && styles.dashboardWide, desktop && styles.dashboardDesktop]}>
+          <View style={[styles.column, !isPhone && styles.columnWide, desktop && styles.columnDesktop]}>
             <SectionTitle title="Alimentação" action="Abrir dieta" onPress={() => router.push("/alimentacao")} />
             {loading && !plan ? <SkeletonCard height={230} /> : sectionErrors.diet ? <ErrorCard message={sectionErrors.diet} onRetry={load} /> : plan && totals ? <>
-              <MacroSummary title={today ? "CONSUMIDO HOJE" : "CONSUMIDO NO DIA"} kcal={consumedTotals.kcal} protein={consumedTotals.protein} carbs={consumedTotals.carbs} fats={consumedTotals.fats} fiber={consumedTotals.fiber} subtitle={`Meta: ${Math.round(totals.kcal)} kcal · ${doneCount}/${dayMeals.length} refeições registradas`} />
+              <MacroSummary compact title={today ? "CONSUMIDO HOJE" : "CONSUMIDO NO DIA"} kcal={consumedTotals.kcal} protein={consumedTotals.protein} carbs={consumedTotals.carbs} fats={consumedTotals.fats} fiber={consumedTotals.fiber} subtitle={`Meta: ${Math.round(totals.kcal)} kcal · ${doneCount}/${dayMeals.length} refeições registradas`} />
               <View style={styles.progressTrack}><View style={[styles.progressFill, { width: `${dayMeals.length ? Math.min(100, (doneCount / dayMeals.length) * 100) : 0}%` }]} /></View>
             </> : <EmptyCard icon="food-apple-outline" title="Nenhum plano alimentar ativo" text="Crie ou ative um plano para acompanhar o dia." action="Ir para planos" onPress={() => router.push("/ajustes")} />}
           </View>
 
-          <View style={[styles.column, tablet && styles.columnWide]}>
+          <View style={[styles.column, !isPhone && styles.columnWide, desktop && styles.columnDesktop]}>
             <SectionTitle title="Hidratação" action="Abrir hidratação" onPress={() => router.push("/hidratacao")} />
             {loading && !water ? <SkeletonCard height={230} /> : sectionErrors.water ? <ErrorCard message={sectionErrors.water} onRetry={load} /> : water ? <WaterCard summary={water} onQuickAdd={handleWater} onPress={() => router.push("/hidratacao")} saving={savingWater} /> : null}
           </View>
 
-          <View style={[styles.column, tablet && styles.columnWide]}>
+          <View style={[styles.column, !isPhone && styles.columnWide, desktop && styles.columnDesktop]}>
+            <SectionTitle title="Conquistas" action="Ver todas" onPress={() => router.push("/conquistas")} />
+            {loading && !gamification ? <SkeletonCard height={250} /> : sectionErrors.game ? <ErrorCard message={sectionErrors.game} onRetry={load} /> : gamification ? <GamificationSummaryCard summary={gamification} onPress={() => router.push("/conquistas")} /> : null}
+          </View>
+
+          <View style={[styles.column, !isPhone && styles.columnWide, desktop && styles.columnDesktop]}>
             <SectionTitle title="Treinos" action="Abrir agenda" onPress={() => router.push("/treinos")} />
             {loading && !trainingEntries.length ? <SkeletonCard height={190} /> : sectionErrors.training ? <ErrorCard message={sectionErrors.training} onRetry={load} /> : <TrainingSummaryCard entries={trainingEntries} onPress={() => router.push("/treinos")} />}
           </View>
-
-          <View style={[styles.column, tablet && styles.columnWide]}>
-            <SectionTitle title="Conquistas" action="Ver todas" onPress={() => router.push("/conquistas")} />
-            {loading && !gamification ? <SkeletonCard height={250} /> : sectionErrors.game ? <ErrorCard message={sectionErrors.game} onRetry={load} /> : gamification ? <GamificationSummaryCard summary={gamification} onPress={() => router.push("/conquistas")} /> : null}
           </View>
         </View>
 
@@ -227,8 +230,8 @@ export default function HomeScreen() {
   );
 }
 
-function WeekSelector({ days, selectedDate, activityDates, onSelect, onShift }: { days: ReturnType<typeof weekFor>; selectedDate: string; activityDates: Set<string>; onSelect: (date: string) => void; onShift: (amount: number) => void }) {
-  return <View style={styles.weekWrap} testID="home-week-selector"><Pressable accessibilityRole="button" style={styles.weekArrow} onPress={() => onShift(-1)} accessibilityLabel="Semana anterior"><MaterialDesignIcons name="chevron-left" size={21} color={colors.onSurfaceSecondary} /></Pressable><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.weekDays}>{days.map((day) => { const active = day.iso === selectedDate; const current = day.iso === todayISO(); return <Pressable key={day.iso} style={[styles.day, active && styles.dayActive]} onPress={() => onSelect(day.iso)} accessibilityRole="button" accessibilityState={{ selected: active }} accessibilityLabel={`${WEEKDAYS_LONG[day.date.getDay()]}, dia ${day.date.getDate()}${current ? ", hoje" : ""}`} testID={`week-day-${day.iso}`}><Text style={[styles.dayName, active && styles.dayNameActive]}>{WEEKDAYS_SHORT[day.date.getDay()]}</Text><Text style={[styles.dayNumber, active && styles.dayNumberActive]}>{day.date.getDate()}</Text><View style={[styles.dayDot, activityDates.has(day.iso) && styles.dayDotOn, active && activityDates.has(day.iso) && styles.dayDotActive]} /></Pressable>; })}</ScrollView><Pressable accessibilityRole="button" style={styles.weekArrow} onPress={() => onShift(1)} accessibilityLabel="Próxima semana"><MaterialDesignIcons name="chevron-right" size={21} color={colors.onSurfaceSecondary} /></Pressable></View>;
+function WeekSelector({ wide, days, selectedDate, activityDates, onSelect, onShift }: { wide: boolean; days: ReturnType<typeof weekFor>; selectedDate: string; activityDates: Set<string>; onSelect: (date: string) => void; onShift: (amount: number) => void }) {
+  return <View style={[styles.weekWrap, wide && styles.weekWrapWide]} testID="home-week-selector"><Pressable accessibilityRole="button" style={styles.weekArrow} onPress={() => onShift(-1)} accessibilityLabel="Semana anterior"><MaterialDesignIcons name="chevron-left" size={21} color={colors.onSurfaceSecondary} /></Pressable><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.weekDays}>{days.map((day) => { const active = day.iso === selectedDate; const current = day.iso === todayISO(); return <Pressable key={day.iso} style={[styles.day, active && styles.dayActive]} onPress={() => onSelect(day.iso)} accessibilityRole="button" accessibilityState={{ selected: active }} accessibilityLabel={`${WEEKDAYS_LONG[day.date.getDay()]}, dia ${day.date.getDate()}${current ? ", hoje" : ""}`} testID={`week-day-${day.iso}`}><Text style={[styles.dayName, active && styles.dayNameActive]}>{WEEKDAYS_SHORT[day.date.getDay()]}</Text><Text style={[styles.dayNumber, active && styles.dayNumberActive]}>{day.date.getDate()}</Text><View style={[styles.dayDot, activityDates.has(day.iso) && styles.dayDotOn, active && activityDates.has(day.iso) && styles.dayDotActive]} /></Pressable>; })}</ScrollView><Pressable accessibilityRole="button" style={styles.weekArrow} onPress={() => onShift(1)} accessibilityLabel="Próxima semana"><MaterialDesignIcons name="chevron-right" size={21} color={colors.onSurfaceSecondary} /></Pressable></View>;
 }
 
 function QuickAction({ icon, label, onPress, disabled }: { icon: string; label: string; onPress: () => void; disabled?: boolean }) {
@@ -265,6 +268,7 @@ const styles = StyleSheet.create({
   iconButton: { position: "relative", width: 44, height: 44, borderRadius: radius.md, alignItems: "center", justifyContent: "center", backgroundColor: colors.surfaceSecondary },
   notificationDot: { position: "absolute", right: 9, top: 8, width: 8, height: 8, borderRadius: 4, backgroundColor: colors.brandPrimary, borderWidth: 2, borderColor: colors.surfaceSecondary },
   weekWrap: { flexDirection: "row", alignItems: "center", gap: spacing.xs, padding: spacing.xs, borderRadius: radius.lg, backgroundColor: colors.surfaceSecondary },
+  weekWrapWide: { width: "100%", maxWidth: 680, alignSelf: "flex-start" },
   weekArrow: { width: 36, minHeight: 64, alignItems: "center", justifyContent: "center", borderRadius: radius.md },
   weekDays: { flexGrow: 1, justifyContent: "space-between", gap: 5 },
   day: { width: 52, minHeight: 64, alignItems: "center", justifyContent: "center", gap: 2, borderRadius: radius.md },
@@ -293,10 +297,15 @@ const styles = StyleSheet.create({
   quickAction: { flex: 1, minHeight: 58, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: spacing.sm, paddingHorizontal: spacing.sm, borderRadius: radius.md, backgroundColor: colors.surfaceSecondary },
   quickIcon: { width: 34, height: 34, borderRadius: radius.sm, alignItems: "center", justifyContent: "center", backgroundColor: withAlpha(colors.brandPrimary, 0.12) },
   quickText: { flexShrink: 1, color: colors.onSurfaceSecondary, fontSize: 10, lineHeight: 14, fontWeight: "800" },
-  dashboard: { gap: spacing.lg },
-  dashboardWide: { flexDirection: "row", flexWrap: "wrap" },
+  overview: { gap: spacing.lg },
+  overviewDesktop: { flexDirection: "row", alignItems: "flex-start" },
+  focusColumn: { flex: 0.9, minWidth: 0, gap: spacing.md },
+  dashboard: { flex: 1.1, minWidth: 0, gap: spacing.lg },
+  dashboardWide: { flexDirection: "row", flexWrap: "wrap", alignItems: "flex-start" },
+  dashboardDesktop: { gap: spacing.md },
   column: { gap: spacing.sm },
   columnWide: { width: "48.8%", flexGrow: 1 },
+  columnDesktop: { width: "48%", flexGrow: 1 },
   sectionHeading: { minHeight: 28, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.md },
   sectionTitle: { color: colors.onSurface, fontSize: 17, fontWeight: "900" },
   sectionAction: { color: colors.brandPrimary, fontSize: 10, fontWeight: "800" },
