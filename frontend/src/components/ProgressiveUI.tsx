@@ -15,6 +15,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors, radius, spacing, withAlpha, zIndex } from "../theme";
+import { useResponsiveLayout } from "../responsive";
 
 export type ProgressiveAction = {
   id: string;
@@ -87,11 +88,14 @@ export function StickyActionBar({ primaryLabel, onPrimary, primaryDisabled, seco
 export function FloatingActionMenu({ actions, label = "Adicionar", bottom = 92 }: { actions: ProgressiveAction[]; label?: string; bottom?: number }) {
   const [open, setOpen] = useState(false);
   const insets = useSafeAreaInsets();
+  const { isPhone } = useResponsiveLayout();
   const closeAndRun = (action: ProgressiveAction) => { setOpen(false); action.onPress(); };
   return <>
-    <Pressable accessibilityRole="button" accessibilityLabel={open ? "Fechar menu de ações" : label} accessibilityState={{ expanded: open }} onPress={() => setOpen((value) => !value)} style={[styles.fab, { bottom: bottom + insets.bottom }]}>
-      <MaterialDesignIcons name={open ? "close" : "plus"} size={25} color={colors.onBrandPrimary} /><Text style={styles.fabText}>{open ? "Fechar" : label}</Text>
-    </Pressable>
+    <View pointerEvents="box-none" style={styles.fabLayer}>
+      <Pressable accessibilityRole="button" accessibilityLabel={open ? "Fechar menu de ações" : label} accessibilityState={{ expanded: open }} onPress={() => setOpen((value) => !value)} style={[styles.fab, isPhone && styles.fabPhone, { bottom: (isPhone ? bottom : spacing.lg) + insets.bottom }]}>
+        <MaterialDesignIcons name={open ? "close" : "plus"} size={25} color={colors.onBrandPrimary} />{!isPhone ? <Text style={styles.fabText}>{open ? "Fechar" : label}</Text> : null}
+      </Pressable>
+    </View>
     <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
       <Pressable accessibilityLabel="Fechar menu de ações" style={styles.actionOverlay} onPress={() => setOpen(false)}>
         <View style={[styles.actionSheet, { paddingBottom: Math.max(insets.bottom, spacing.lg) }]}>
@@ -159,7 +163,9 @@ const styles = StyleSheet.create({
   secondaryButton: { minHeight: 50, paddingHorizontal: spacing.lg, alignItems: "center", justifyContent: "center", borderRadius: radius.pill, backgroundColor: colors.surfaceTertiary },
   secondaryText: { color: colors.onSurfaceSecondary, fontWeight: "850" as never, fontSize: 12 },
   disabled: { opacity: 0.45 },
-  fab: { position: "absolute", right: spacing.lg, minHeight: 52, flexDirection: "row", alignItems: "center", gap: spacing.xs, paddingHorizontal: spacing.lg, borderRadius: radius.pill, backgroundColor: colors.brandPrimary, zIndex: zIndex.navigation, ...(Platform.OS === "web" ? ({ boxShadow: "0 12px 30px rgba(0,0,0,.35)" } as never) : { elevation: 14 }) },
+  fabLayer: { position: "absolute", top: 0, right: 0, bottom: 0, left: 0, zIndex: zIndex.navigation },
+  fab: { position: "absolute", right: spacing.lg, minHeight: 52, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: spacing.xs, paddingHorizontal: spacing.lg, borderRadius: radius.pill, backgroundColor: colors.brandPrimary, ...(Platform.OS === "web" ? ({ boxShadow: "0 12px 30px rgba(0,0,0,.35)" } as never) : { elevation: 14 }) },
+  fabPhone: { width: 52, paddingHorizontal: 0 },
   fabText: { color: colors.onBrandPrimary, fontSize: 12, fontWeight: "900" },
   actionOverlay: { flex: 1, justifyContent: "flex-end", padding: spacing.md, backgroundColor: colors.overlay },
   actionSheet: { width: "100%", maxWidth: 560, alignSelf: "center", padding: spacing.lg, gap: spacing.sm, borderRadius: radius.lg, backgroundColor: colors.surfaceElevated },

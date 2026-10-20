@@ -53,12 +53,31 @@ test("as três telas-piloto usam a nova hierarquia responsiva", () => {
 });
 
 test("os hubs principais usam grades proporcionais em vez de cards de largura total", () => {
-  for (const path of ["../app/(tabs)/alimentacao.tsx", "../app/hidratacao.tsx", "../app/treinos.tsx", "../app/perfil.tsx"]) {
+  for (const path of ["../app/(tabs)/alimentacao.tsx", "../app/treinos.tsx", "../app/perfil.tsx"]) {
     assert.match(read(path), /ResponsiveGrid/, path);
   }
+  const hydration = read("../app/hidratacao.tsx");
+  assert.match(hydration, /hydration-workspace-columns/);
+  assert.match(hydration, /workspaceWide/);
+  assert.match(hydration, /summaryColumnWide: \{ width: 350/);
   const navigation = read("../src/components/AppNavigation.tsx");
   assert.match(navigation, /desktopCanvas: \{[^}]*maxWidth: layout\.editorMax/);
   assert.doesNotMatch(navigation, /desktopCanvas: \{[^}]*borderWidth/);
+});
+
+test("a segunda revisão de densidade reduz escolhas simultâneas e fixa o FAB ao viewport", () => {
+  const home = read("../app/(tabs)/index.tsx");
+  const hydration = read("../app/hidratacao.tsx");
+  const progressive = read("../src/components/ProgressiveUI.tsx");
+
+  assert.match(home, /home-overview-columns/);
+  assert.match(home, /weekWrapWide: \{ width: "100%", maxWidth: 680/);
+  assert.match(hydration, /PRIMARY_QUICK_AMOUNTS = \[250, 500, 1000\]/);
+  assert.match(hydration, /showMoreAmounts/);
+  assert.match(hydration, /hydration-more-amounts/);
+  assert.match(progressive, /fabLayer: \{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0/);
+  assert.match(progressive, /isPhone \? bottom : spacing\.lg/);
+  assert.match(progressive, /fabPhone/);
 });
 
 test("o banco de exercícios preserva filtros e ações existentes", () => {
