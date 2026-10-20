@@ -1,4 +1,5 @@
 import MaterialDesignIcons from "@react-native-vector-icons/material-design-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { usePathname, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
@@ -14,16 +15,21 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { NAVIGATION, getActiveChild, getActiveSection, normalizePathname, shouldHideNavigation, type NavigationItem } from "../navigation/config";
-import { breakpoints, colors, withAlpha, radius, spacing, zIndex } from "../theme";
+import { useResponsiveLayout } from "../responsive";
+import { breakpoints, colors, withAlpha, layout, radius, spacing, zIndex } from "../theme";
 
 export const DESKTOP_BREAKPOINT = breakpoints.desktop;
 export const MOBILE_DOCK_HEIGHT = 68;
+const SIDEBAR_PREFERENCE_KEY = "urso:navigation.sidebar";
+type SidebarMode = "expanded" | "compact" | "hidden";
 
 export default function AppNavigation({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { width } = useWindowDimensions();
+  const responsive = useResponsiveLayout();
   const insets = useSafeAreaInsets();
-  const isDesktop = width >= DESKTOP_BREAKPOINT;
+  const useSideNavigation = width >= breakpoints.navigationRail;
+  const [sidebarMode, setSidebarMode] = useState<SidebarMode>(responsive.isDesktop ? "expanded" : "compact");
   const [keyboardVisible, setKeyboardVisible] = useState(false);
 
   useEffect(() => {
@@ -32,13 +38,26 @@ export default function AppNavigation({ children }: { children: React.ReactNode 
     return () => { show.remove(); hide.remove(); };
   }, []);
 
+  useEffect(() => {
+    void AsyncStorage.getItem(SIDEBAR_PREFERENCE_KEY).then((saved) => {
+      if (responsive.isDesktop && (saved === "expanded" || saved === "compact" || saved === "hidden")) setSidebarMode(saved);
+      if (!responsive.isDesktop) setSidebarMode("compact");
+    });
+  }, [responsive.isDesktop]);
+
+  const changeSidebarMode = (next: SidebarMode) => {
+    setSidebarMode(next);
+    if (responsive.isDesktop) void AsyncStorage.setItem(SIDEBAR_PREFERENCE_KEY, next);
+  };
+
   const hideNavigation = shouldHideNavigation(pathname);
   if (hideNavigation) return <View style={styles.fullScreen}>{children}</View>;
 
-  if (isDesktop) {
+  if (useSideNavigation) {
+    const effectiveMode = responsive.isDesktop ? sidebarMode : "compact";
     return (
       <View style={styles.desktopShell} testID="desktop-app-shell">
-        <DesktopSidebar pathname={pathname} topInset={insets.top} bottomInset={insets.bottom} />
+        {effectiveMode === "hidden" ? <Pressable accessibilityRole="button" accessibilityLabel="Abrir navegação" style={[styles.reopenNavigation, { top: Math.max(insets.top, spacing.lg) }]} onPress={() => changeSidebarMode("compact")}><MaterialDesignIcons name="menu" size={23} color={colors.onSurface} /></Pressable> : <DesktopSidebar pathname={pathname} topInset={insets.top} bottomInset={insets.bottom} mode={effectiveMode} onModeChange={changeSidebarMode} />}
         <View style={styles.desktopMain}><View style={styles.desktopCanvas}>{children}</View></View>
       </View>
     );
@@ -56,14 +75,15 @@ function navigate(router: ReturnType<typeof useRouter>, href: string) {
   router.push(href as never);
 }
 
-function DesktopSidebar({ pathname, topInset, bottomInset }: { pathname: string; topInset: number; bottomInset: number }) {
+function DesktopSidebar({ pathname, topInset, bottomInset, mode, onModeChange }: { pathname: string; topInset: number; bottomInset: number; mode: Exclude<SidebarMode, "hidden">; onModeChange: (mode: SidebarMode) => void }) {
   const router = useRouter();
   const activeSection = getActiveSection(pathname);
+  const compact = mode === "compact";
   return (
-    <View style={[styles.sidebarFrame, { marginTop: Math.max(topInset, spacing.lg), marginBottom: Math.max(bottomInset, spacing.lg) }]} testID="desktop-sidebar">
-      <View style={styles.brandRow}>
+    <View style={[styles.sidebarFrame, compact && styles.sidebarFrameCompact, { marginTop: Math.max(topInset, spacing.lg), marginBottom: Math.max(bottomInset, spacing.lg) }]} testID={compact ? "tablet-navigation-rail" : "desktop-sidebar"}>
+      <View style={[styles.brandRow, compact && styles.brandRowCompact]}>
         <View style={styles.brandMark}><Image source={require("../../assets/images/ursofit-logo.png")} style={styles.brandLogo} accessibilityLabel="Logo do UrsoFit" /></View>
-        <View><Text style={styles.brandName}>UrsoFit</Text><Text style={styles.brandTag}>ROTINA COM FORÇA</Text></View>
+        {!compact ? <View><Text style={styles.brandName}>UrsoFit</Text><Text style={styles.brandTag}>ROTINA COM FORÇA</Text></View> : null}
       </View>
       <ScrollView style={styles.sidebarScroll} contentContainerStyle={styles.sidebarContent} showsVerticalScrollIndicator={false}>
         {NAVIGATION.map((section) => {
@@ -76,19 +96,24 @@ function DesktopSidebar({ pathname, topInset, bottomInset }: { pathname: string;
                 sectionActive={sectionActive}
                 onPress={() => navigate(router, section.href)}
                 style="section"
+                compact={compact}
               />
-              {section.children.map((child) => (
-                <NavPressable key={child.id} item={child} active={Boolean(getActiveChild(section, pathname)?.id === child.id)} onPress={() => navigate(router, child.href)} style="child" />
-              ))}
+              {!compact && sectionActive ? section.children.map((child) => (
+                <NavPressable key={child.id} item={child} active={Boolean(getActiveChild(section, pathname)?.id === child.id)} onPress={() => navigate(router, child.href)} style="child" compact={false} />
+              )) : null}
             </View>
           );
         })}
       </ScrollView>
+      <View style={[styles.sidebarControls, compact && styles.sidebarControlsCompact]}>
+        <Pressable accessibilityRole="button" accessibilityLabel={compact ? "Expandir navegação" : "Recolher navegação"} style={styles.sidebarControl} onPress={() => onModeChange(compact ? "expanded" : "compact")}><MaterialDesignIcons name={compact ? "chevron-double-right" : "chevron-double-left"} size={20} color={colors.onSurfaceTertiary} />{!compact ? <Text style={styles.sidebarControlText}>Recolher</Text> : null}</Pressable>
+        {!compact ? <Pressable accessibilityRole="button" accessibilityLabel="Ocultar navegação" style={styles.sidebarControl} onPress={() => onModeChange("hidden")}><MaterialDesignIcons name="eye-off-outline" size={19} color={colors.onSurfaceTertiary} /><Text style={styles.sidebarControlText}>Ocultar</Text></Pressable> : null}
+      </View>
     </View>
   );
 }
 
-function NavPressable({ item, active, sectionActive = false, onPress, style }: { item: NavigationItem; active: boolean; sectionActive?: boolean; onPress: () => void; style: "section" | "child" }) {
+function NavPressable({ item, active, sectionActive = false, onPress, style, compact }: { item: NavigationItem; active: boolean; sectionActive?: boolean; onPress: () => void; style: "section" | "child"; compact: boolean }) {
   const aria = { "aria-current": active ? "page" : undefined } as Record<string, unknown>;
   return (
     <Pressable
@@ -100,6 +125,7 @@ function NavPressable({ item, active, sectionActive = false, onPress, style }: {
       onPress={onPress}
       style={({ pressed }) => [
         style === "section" ? styles.sidebarSection : styles.sidebarChild,
+        compact && styles.sidebarSectionCompact,
         sectionActive && style === "section" && styles.sidebarSectionContext,
         active && (style === "section" ? styles.sidebarSectionActive : styles.sidebarChildActive),
         pressed && styles.pressed,
@@ -107,7 +133,7 @@ function NavPressable({ item, active, sectionActive = false, onPress, style }: {
       testID={`nav-${item.id}`}
     >
       <MaterialDesignIcons name={item.icon as never} size={style === "section" ? 20 : 17} color={active ? colors.brandPrimary : sectionActive ? colors.onSurface : colors.onSurfaceTertiary} />
-      <Text style={[style === "section" ? styles.sidebarSectionText : styles.sidebarChildText, (active || (sectionActive && style === "section")) && styles.navTextActive]} numberOfLines={1}>{item.label}</Text>
+      {!compact ? <Text style={[style === "section" ? styles.sidebarSectionText : styles.sidebarChildText, (active || (sectionActive && style === "section")) && styles.navTextActive]} numberOfLines={1}>{item.label}</Text> : null}
       {active ? <View style={styles.activeDot} /> : null}
     </Pressable>
   );
@@ -172,8 +198,10 @@ const styles = StyleSheet.create({
   dockLabel: { width: "100%", color: colors.onSurfaceTertiary, fontSize: 8.5, fontWeight: "700", textAlign: "center" },
   dockLabelActive: { color: colors.brandPrimary, fontWeight: "900" },
   desktopShell: { flex: 1, flexDirection: "row", backgroundColor: colors.surface },
-  sidebarFrame: { width: 248, marginLeft: spacing.lg, borderRadius: radius.lg, backgroundColor: colors.surfaceSecondary, borderWidth: 1, borderColor: colors.borderStrong, overflow: "hidden", ...(Platform.OS === "web" ? ({ boxShadow: "0 16px 48px rgba(0,0,0,.35)" } as never) : {}) },
+  sidebarFrame: { width: layout.sidebarExpanded, marginLeft: spacing.lg, borderRadius: radius.lg, backgroundColor: colors.surfaceSecondary, borderWidth: 1, borderColor: colors.borderSubtle, overflow: "hidden", ...(Platform.OS === "web" ? ({ boxShadow: "0 16px 48px rgba(0,0,0,.24)" } as never) : {}) },
+  sidebarFrameCompact: { width: layout.sidebarCompact },
   brandRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, padding: spacing.lg, borderBottomWidth: 1, borderBottomColor: colors.border },
+  brandRowCompact: { justifyContent: "center", paddingHorizontal: spacing.sm },
   brandMark: { width: 38, height: 38, borderRadius: radius.md, overflow: "hidden", backgroundColor: colors.brandPrimary },
   brandLogo: { width: "100%", height: "100%" },
   brandName: { color: colors.onSurface, fontSize: 18, fontWeight: "900" },
@@ -182,6 +210,7 @@ const styles = StyleSheet.create({
   sidebarContent: { padding: spacing.sm, paddingBottom: spacing.lg, gap: spacing.sm },
   desktopGroup: { gap: 2 },
   sidebarSection: { minHeight: 44, flexDirection: "row", alignItems: "center", gap: spacing.sm, paddingHorizontal: spacing.md, borderRadius: radius.md },
+  sidebarSectionCompact: { justifyContent: "center", paddingHorizontal: 0 },
   sidebarSectionContext: { backgroundColor: colors.surfaceTertiary },
   sidebarSectionActive: { backgroundColor: withAlpha(colors.brandPrimary, "1F") },
   sidebarSectionText: { flex: 1, color: colors.onSurfaceSecondary, fontSize: 12, fontWeight: "800" },
@@ -190,7 +219,12 @@ const styles = StyleSheet.create({
   sidebarChildText: { flex: 1, color: colors.onSurfaceTertiary, fontSize: 10.5, fontWeight: "650" as never },
   navTextActive: { color: colors.onSurface, fontWeight: "900" },
   activeDot: { width: 6, height: 6, borderRadius: radius.pill, backgroundColor: colors.brandPrimary },
+  sidebarControls: { gap: spacing.xs, padding: spacing.sm, borderTopWidth: 1, borderTopColor: colors.borderSubtle },
+  sidebarControlsCompact: { alignItems: "center" },
+  sidebarControl: { minHeight: 40, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: spacing.sm, paddingHorizontal: spacing.sm, borderRadius: radius.sm },
+  sidebarControlText: { color: colors.onSurfaceTertiary, fontSize: 10, fontWeight: "700" },
+  reopenNavigation: { position: "absolute", left: spacing.md, zIndex: zIndex.navigation, width: 44, height: 44, borderRadius: radius.md, alignItems: "center", justifyContent: "center", backgroundColor: colors.surfaceElevated, borderWidth: 1, borderColor: colors.borderSubtle },
   desktopMain: { flex: 1, minWidth: 0, padding: spacing.lg },
-  desktopCanvas: { flex: 1, width: "100%", maxWidth: 1380, alignSelf: "center", borderRadius: radius.lg, overflow: "hidden", backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
+  desktopCanvas: { flex: 1, width: "100%", maxWidth: layout.editorMax, alignSelf: "center", overflow: "hidden", backgroundColor: colors.surface },
   pressed: { opacity: 0.72 },
 });

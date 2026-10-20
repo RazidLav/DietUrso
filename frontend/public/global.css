@@ -6,6 +6,9 @@
 
 :root,
 :root[data-urso-theme="emo"] {
+  --uf-background: #101114;
+  --uf-surface-interactive: #25282d;
+  --uf-border-subtle: #272a30;
   --uf-surface: #101114;
   --uf-on-surface: #f3f5ef;
   --uf-surface-secondary: #1a1c20;
@@ -43,6 +46,9 @@
 }
 
 :root[data-urso-theme="gratiluz"] {
+  --uf-background: #f7f3ea;
+  --uf-surface-interactive: #ece7dc;
+  --uf-border-subtle: #e7e0d4;
   --uf-surface: #f7f3ea;
   --uf-on-surface: #22251f;
   --uf-surface-secondary: #fffdf8;
@@ -135,6 +141,15 @@ body > div:first-child {
 [role="tab"]:focus-visible,
 input:focus-visible,
 textarea:focus-visible {
+  outline: 3px solid var(--uf-focus-ring) !important;
+  outline-offset: 2px !important;
+}
+
+select:focus-visible,
+[role="checkbox"]:focus-visible,
+[role="radio"]:focus-visible,
+[role="switch"]:focus-visible,
+[tabindex]:focus-visible {
   outline: 3px solid var(--uf-focus-ring) !important;
   outline-offset: 2px !important;
 }

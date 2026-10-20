@@ -1,14 +1,15 @@
 import MaterialDesignIcons from "@react-native-vector-icons/material-design-icons";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { createTextPost, listFeed, listFriendships, requestFriendshipByUsername, respondFriendship, togglePostReaction, type Audience, type SocialPost } from "../src/social/service";
 import { colors, radius, spacing, withAlpha } from "../src/theme";
+import { useResponsiveLayout } from "../src/responsive";
 
 type Tab = "friends" | "explore" | "connections";
 export default function CommunityScreen() {
-  const router = useRouter(); const insets = useSafeAreaInsets(); const { width } = useWindowDimensions(); const desktop = width >= 960;
+  const router = useRouter(); const insets = useSafeAreaInsets(); const desktop = useResponsiveLayout().isDesktop;
   const [tab, setTab] = useState<Tab>("friends"); const [posts, setPosts] = useState<SocialPost[]>([]); const [friendships, setFriendships] = useState<Awaited<ReturnType<typeof listFriendships>>>([]);
   const [status, setStatus] = useState<"loading"|"success"|"error">("loading"); const [error, setError] = useState<string | null>(null); const [body, setBody] = useState(""); const [audience, setAudience] = useState<Audience>("friends"); const [username, setUsername] = useState(""); const [busy, setBusy] = useState(false);
   const load = useCallback(async () => { setStatus("loading"); setError(null); try { const [nextPosts, nextFriends] = await Promise.all([listFeed(tab === "explore" ? "explore" : "friends"), listFriendships()]); setPosts(nextPosts); setFriendships(nextFriends); setStatus("success"); } catch (e) { setError(e instanceof Error ? e.message : "Não foi possível abrir a comunidade."); setStatus("error"); } }, [tab]);

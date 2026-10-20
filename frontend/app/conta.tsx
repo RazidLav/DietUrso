@@ -1,7 +1,7 @@
 import MaterialDesignIcons from "@react-native-vector-icons/material-design-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from "react-native";
+import { ActivityIndicator, Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   getCloudStatus, resendConfirmation, sendPasswordReset, signInToCloud, signOutFromCloud, signUpForCloud,
@@ -11,14 +11,14 @@ import { authErrorMessage, normalizeEmail } from "../src/cloud/authFlow";
 import { completeOnboarding } from "../src/store/onboardingStore";
 import { colors, radius, spacing, withAlpha } from "../src/theme";
 import { useAppTheme } from "../src/components/ThemeProvider";
+import { useResponsiveLayout } from "../src/responsive";
 
 type AuthMode = "signin" | "signup" | "forgot";
 
 export default function AccountScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { width } = useWindowDimensions();
-  const desktop = width >= 900;
+  const desktop = useResponsiveLayout().isDesktop;
   const params = useLocalSearchParams<{ onboarding?: string; auth_callback?: string; recovery?: string; mode?: string }>();
   const [mode, setMode] = useState<AuthMode>(params.mode === "signup" ? "signup" : "signin");
   const [cloud, setCloud] = useState<CloudStatus>(getCloudStatus());

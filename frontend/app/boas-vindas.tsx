@@ -1,14 +1,14 @@
 import MaterialDesignIcons from "@react-native-vector-icons/material-design-icons";
 import { useRouter } from "expo-router";
-import { Image, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { Image, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
 import { completeOnboarding } from "../src/store/onboardingStore";
 import { colors, radius, spacing, withAlpha } from "../src/theme";
 import { useAppTheme } from "../src/components/ThemeProvider";
+import { useResponsiveLayout } from "../src/responsive";
 
 export default function WelcomeScreen() {
   const router = useRouter();
-  const { width } = useWindowDimensions();
-  const desktop = width >= 900;
+  const desktop = useResponsiveLayout().isDesktop;
   const { preference, setPreference } = useAppTheme();
 
   const continueOffline = async () => {

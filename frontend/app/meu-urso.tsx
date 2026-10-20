@@ -1,16 +1,17 @@
 import MaterialDesignIcons from "@react-native-vector-icons/material-design-icons";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
-import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { evaluateGamification } from "../src/gamification/engine";
 import { AVATAR_DEFINITIONS, TITLE_DEFINITIONS, type CosmeticDefinition } from "../src/gamification/cosmetics";
 import { equipCosmetic, getProfileState, saveProfileState, unlockEligibleCosmetics } from "../src/profile/store";
 import type { ProfileState } from "../src/profile/types";
 import { colors, radius, spacing, withAlpha } from "../src/theme";
+import { useResponsiveLayout } from "../src/responsive";
 
 export default function BearClosetScreen() {
-  const router = useRouter(); const insets = useSafeAreaInsets(); const { width } = useWindowDimensions();
+  const router = useRouter(); const insets = useSafeAreaInsets(); const { width } = useResponsiveLayout();
   const [state, setState] = useState<ProfileState | null>(null); const [loading, setLoading] = useState(true); const [notice, setNotice] = useState<string | null>(null);
   const columns = width >= 1000 ? 4 : width >= 620 ? 3 : 2;
   const load = useCallback(async () => { setLoading(true); try { const [profile, game] = await Promise.all([getProfileState(), evaluateGamification()]); const next = unlockEligibleCosmetics(profile, game); if (Object.keys(next.unlockedCosmetics).length !== Object.keys(profile.unlockedCosmetics).length) await saveProfileState(next); setState(next); } catch (error) { setNotice(error instanceof Error ? error.message : "Não foi possível abrir o armário."); } finally { setLoading(false); } }, []);

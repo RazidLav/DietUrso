@@ -1,6 +1,7 @@
 export type ThemePreference = "emo" | "gratiluz";
 
 export type SemanticColors = {
+  background: string; surfaceInteractive: string; borderSubtle: string;
   surface: string; onSurface: string; surfaceSecondary: string; onSurfaceSecondary: string;
   surfaceTertiary: string; onSurfaceTertiary: string; surfaceElevated: string;
   surfaceInverse: string; onSurfaceInverse: string;
@@ -14,6 +15,7 @@ export type SemanticColors = {
 
 export const themePalettes: Record<ThemePreference, SemanticColors> = {
   emo: {
+    background: "#101114", surfaceInteractive: "#25282D", borderSubtle: "#272A30",
     surface: "#101114", onSurface: "#F3F5EF", surfaceSecondary: "#1A1C20", onSurfaceSecondary: "#DEE2D9",
     surfaceTertiary: "#25282D", onSurfaceTertiary: "#A8AEA4", surfaceElevated: "#202329",
     surfaceInverse: "#F3F5EF", onSurfaceInverse: "#151712",
@@ -26,6 +28,7 @@ export const themePalettes: Record<ThemePreference, SemanticColors> = {
     protein: "#65D982", carbs: "#79AFFF", fats: "#FFAD5B",
   },
   gratiluz: {
+    background: "#F7F3EA", surfaceInteractive: "#ECE7DC", borderSubtle: "#E7E0D4",
     surface: "#F7F3EA", onSurface: "#22251F", surfaceSecondary: "#FFFDF8", onSurfaceSecondary: "#3E433A",
     surfaceTertiary: "#ECE7DC", onSurfaceTertiary: "#6E736A", surfaceElevated: "#FFFFFF",
     surfaceInverse: "#22251F", onSurfaceInverse: "#FFFDF8",
@@ -58,10 +61,28 @@ export function withAlpha(color: string, opacity: number | string) {
   return color.startsWith("#") && (color.length === 4 || color.length === 7) ? `${color}${alpha}` : color;
 }
 
-export const spacing = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32, xxxl: 48 };
-export const radius = { sm: 8, md: 14, lg: 24, pill: 999 };
-export const breakpoints = { compact: 320, mobile: 390, tablet: 768, desktop: 1024, wide: 1440 };
-export const motion = { contextExitMs: 90, contextEnterMs: 130, contextTotalMs: 220 };
+export const spacing = { xxs: 2, xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32, xxxl: 48, huge: 64 };
+export const radius = { xs: 6, sm: 8, md: 14, lg: 20, xl: 28, pill: 999 };
+export const breakpoints = { compact: 320, mobile: 390, tablet: 768, navigationRail: 840, desktop: 1024, wide: 1440 };
+export const layout = {
+  contentMax: 1280,
+  readingMax: 760,
+  editorMax: 1440,
+  sidebarExpanded: 236,
+  sidebarCompact: 76,
+  touchTarget: 44,
+  control: 46,
+};
+export const typeScale = {
+  pageTitle: { fontSize: 28, lineHeight: 34 },
+  sectionTitle: { fontSize: 18, lineHeight: 24 },
+  componentTitle: { fontSize: 15, lineHeight: 20 },
+  body: { fontSize: 13, lineHeight: 19 },
+  secondary: { fontSize: 11, lineHeight: 16 },
+  caption: { fontSize: 10, lineHeight: 14 },
+  metric: { fontSize: 24, lineHeight: 29 },
+};
+export const motion = { fastMs: 120, standardMs: 180, contextExitMs: 90, contextEnterMs: 130, contextTotalMs: 220 };
 export const zIndex = { content: 0, navigation: 20, modal: 100, toast: 120 };
 export const typography = {
   display: "BarlowCondensed_700Bold", displayMedium: "BarlowCondensed_600SemiBold", displayRegular: "BarlowCondensed_400Regular",
@@ -69,5 +90,5 @@ export const typography = {
 };
 
 export function useTheme() {
-  return { colors, spacing, radius, typography, breakpoints, motion, zIndex };
+  return { colors, spacing, radius, typography, typeScale, breakpoints, layout, motion, zIndex };
 }
