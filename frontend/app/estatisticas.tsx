@@ -1,272 +1,32 @@
-import React, { useCallback, useState } from "react";
-import { ScrollView, StyleSheet, Text, View, Pressable } from "react-native";
-import { useFocusEffect, useRouter } from "expo-router";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import MaterialDesignIcons from "@react-native-vector-icons/material-design-icons";
-import { colors, withAlpha, radius, spacing } from "../src/theme";
-import { getActivePlan, listConsumption } from "../src/store/planStore";
-import { computeStats, type Stats } from "../src/utils/stats";
-import { WEEKDAYS_SHORT } from "../src/utils/date";
-import { useCloudDataRefresh } from "../src/cloud/useCloudDataRefresh";
+import { useFocusEffect, useRouter } from "expo-router";
+import React, { useCallback, useState } from "react";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { getHydrationState } from "../src/store/hydrationStore";
+import { listConsumption } from "../src/store/planStore";
+import { getTrainingState } from "../src/store/trainingStore";
+import { colors, layout, radius, spacing, withAlpha } from "../src/theme";
+import { computeIntegratedStats, type IntegratedStats, type StatsPeriod } from "../src/utils/integratedStats";
 
-const EMPTY_STATS: Stats = {
-  totalMeals: 0,
-  totalAsPlanned: 0,
-  totalModified: 0,
-  daysActive: 0,
-  daysComplete: 0,
-  currentStreak: 0,
-  bestStreak: 0,
-  last7: [],
-};
-
+const PERIODS: { id: StatsPeriod; label: string }[] = [{ id: "week", label: "Semana" }, { id: "month", label: "Mês" }, { id: "year", label: "Ano" }];
 export default function EstatisticasScreen() {
-  const insets = useSafeAreaInsets();
-  const router = useRouter();
-  const [stats, setStats] = useState<Stats>(EMPTY_STATS);
-
-  const load = useCallback(async () => {
-    const p = await getActivePlan();
-    const entries = await listConsumption();
-    setStats(computeStats(entries, p));
-  }, []);
-
-  useFocusEffect(useCallback(() => { load(); }, [load]));
-  useCloudDataRefresh(load);
-
-  return (
-    <View style={{ flex: 1, backgroundColor: colors.surface }} testID="estatisticas-screen">
-      <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
-        <View style={styles.headerRow}>
-          <Pressable style={styles.backBtn} onPress={() => router.back()} testID="stats-back-btn">
-            <MaterialDesignIcons name="chevron-left" size={26} color={colors.onSurface} />
-          </Pressable>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.eyebrow}>PROGRESSO</Text>
-            <Text style={styles.title}>Estatísticas</Text>
-          </View>
-        </View>
-      </View>
-
-      <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: 140, gap: spacing.md }}>
-        {/* Streak hero */}
-        <View style={styles.streakCard} testID="streak-card">
-          <View style={styles.flameWrap}>
-            <MaterialDesignIcons name="fire" size={42} color={colors.brandTertiary} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.streakLabel}>SEQUÊNCIA ATUAL</Text>
-            <View style={styles.streakRow}>
-              <Text style={styles.streakValue} testID="current-streak">{stats.currentStreak}</Text>
-              <Text style={styles.streakUnit}>
-                {stats.currentStreak === 1 ? "dia" : "dias"}
-              </Text>
-            </View>
-            <Text style={styles.streakSub}>
-              {stats.currentStreak === 0 && stats.bestStreak > 0
-                ? "O urso deu uma cochilada. Bora começar de novo? 💤"
-                : `Melhor: ${stats.bestStreak} ${stats.bestStreak === 1 ? "dia" : "dias"}`}
-            </Text>
-          </View>
-        </View>
-
-        {/* Counters grid */}
-        <View style={styles.grid}>
-          <CounterCard
-            icon="silverware-fork-knife"
-            value={stats.totalMeals}
-            label="refeições registradas"
-            color={colors.brandPrimary}
-            testID="stat-total-meals"
-          />
-          <CounterCard
-            icon="calendar-check"
-            value={stats.daysComplete}
-            label="dias completos"
-            color={colors.brandSecondary}
-            testID="stat-days-complete"
-          />
-          <CounterCard
-            icon="check-circle-outline"
-            value={stats.totalAsPlanned}
-            label="conforme o plano"
-            color={colors.brandPrimary}
-            testID="stat-as-planned"
-          />
-          <CounterCard
-            icon="pencil-circle-outline"
-            value={stats.totalModified}
-            label="com alteração"
-            color={colors.brandTertiary}
-            testID="stat-modified"
-          />
-        </View>
-
-        {/* Last 7 days chart */}
-        <View style={styles.chartCard}>
-          <Text style={styles.chartTitle}>Últimos 7 dias</Text>
-          <Text style={styles.chartSub}>
-            Refeições registradas por dia (meta conforme a programação)
-          </Text>
-          <View style={styles.barsRow}>
-            {stats.last7.map((d) => {
-              const heightPct = d.total > 0 ? Math.min(d.count / d.total, 1) : 0;
-              const full = d.total > 0 && d.count >= d.total;
-              const dayOfWeek = new Date(d.date + "T00:00:00").getDay();
-              return (
-                <View key={d.date} style={styles.barCol}>
-                  <View style={styles.barTrack}>
-                    <View
-                      style={[
-                        styles.barFill,
-                        {
-                          height: `${Math.max(heightPct * 100, 4)}%`,
-                          backgroundColor: full ? colors.brandPrimary : colors.brandSecondary,
-                          opacity: heightPct > 0 ? 1 : 0.3,
-                        },
-                      ]}
-                    />
-                  </View>
-                  <Text style={styles.barLabel}>{WEEKDAYS_SHORT[dayOfWeek][0]}</Text>
-                  <Text style={styles.barValue}>{d.count}</Text>
-                </View>
-              );
-            })}
-          </View>
-        </View>
-
-        {stats.totalMeals === 0 ? (
-          <View style={styles.emptyBox}>
-            <MaterialDesignIcons name="chart-line" size={32} color={colors.onSurfaceTertiary} />
-            <Text style={styles.emptyText}>
-              Marque suas refeições em Hoje para ver o progresso acumular aqui.
-            </Text>
-          </View>
-        ) : null}
-      </ScrollView>
-    </View>
-  );
+  const insets = useSafeAreaInsets(); const router = useRouter(); const [period, setPeriod] = useState<StatsPeriod>("week"); const [stats, setStats] = useState<IntegratedStats | null>(null); const [selectedDate, setSelectedDate] = useState<string | null>(null); const [error, setError] = useState<string | null>(null);
+  const load = useCallback(async () => { try { const [consumption, training, hydration] = await Promise.all([listConsumption(), getTrainingState(), getHydrationState()]); setStats(computeIntegratedStats(consumption, training, hydration, period)); setError(null); } catch (cause) { setError(cause instanceof Error ? cause.message : "Não foi possível calcular as estatísticas."); } }, [period]);
+  useFocusEffect(useCallback(() => { void load(); }, [load]));
+  return <ScrollView style={styles.screen} contentContainerStyle={[styles.content, { paddingTop: insets.top + spacing.lg, paddingBottom: insets.bottom + spacing.xxxl }]} testID="integrated-stats-screen">
+    <View style={styles.header}><Pressable style={styles.back} onPress={() => router.back()} accessibilityLabel="Voltar"><MaterialDesignIcons name="chevron-left" size={25} color={colors.onSurface} /></Pressable><View style={{ flex: 1 }}><Text style={styles.eyebrow}>EVOLUÇÃO REAL</Text><Text style={styles.title}>Estatísticas</Text>{stats ? <Text style={styles.range}>{formatDate(stats.from)} — {formatDate(stats.to)}</Text> : null}</View></View>
+    <View style={styles.periods}>{PERIODS.map((item) => <Pressable key={item.id} style={[styles.period, period === item.id && styles.periodOn]} onPress={() => setPeriod(item.id)} accessibilityState={{ selected: period === item.id }}><Text style={[styles.periodText, period === item.id && styles.periodTextOn]}>{item.label}</Text></Pressable>)}</View>
+    {error ? <Empty title="Os dados não carregaram" text={error} action={() => void load()} /> : !stats ? <Empty text="Calculando seus registros…" /> : <>
+      <Section title="Treino"><Metric icon="dumbbell" label="Sessões" value={String(stats.workouts)} /><Metric icon="timer-outline" label="Tempo" value={`${stats.trainingMinutes} min`} /><Metric icon="shape-outline" label="Modalidades" value={String(stats.modalities)} /><Metric icon="weight-lifter" label="Volume válido" value={stats.strengthVolume ? `${Math.round(stats.strengthVolume)} kg·rep` : "Sem dados"} muted={!stats.strengthVolume} /></Section>
+      <Section title="Alimentação"><Metric icon="silverware-fork-knife" label="Refeições registradas" value={String(stats.meals)} /><Metric icon="calendar-check-outline" label="Dias acompanhados" value={String(stats.nutritionDays)} /><Metric icon="fire" label="Média nos dias registrados" value={stats.averageKcal == null ? "Sem dados" : `${Math.round(stats.averageKcal)} kcal`} muted={stats.averageKcal == null} /><Metric icon="food-drumstick-outline" label="Proteína média" value={stats.averageProtein == null ? "Sem dados" : `${Math.round(stats.averageProtein)} g`} muted={stats.averageProtein == null} /></Section>
+      <Section title="Hidratação"><Metric icon="water-outline" label="Média nos dias registrados" value={stats.averageWaterMl == null ? "Sem dados" : `${Math.round(stats.averageWaterMl)} ml`} muted={stats.averageWaterMl == null} /><Metric icon="bullseye-arrow" label="Dias com meta" value={String(stats.hydrationGoalDays)} /><Metric icon="percent-outline" label="Cumprimento acompanhado" value={stats.hydrationGoalRate == null ? "Sem dados" : `${Math.round(stats.hydrationGoalRate)}%`} muted={stats.hydrationGoalRate == null} /></Section>
+      <View style={styles.calendarCard}><View><Text style={styles.cardTitle}>Calendário de atividade</Text><Text style={styles.muted}>Sem registro significa informação insuficiente — não fracasso.</Text></View><View style={styles.calendar}>{stats.calendar.map((day) => <Pressable key={day.date} onPress={() => setSelectedDate(day.date)} style={[styles.day, day.status === "complete" && styles.dayComplete, day.status === "partial" && styles.dayPartial, day.status === "future" && styles.dayFuture, selectedDate === day.date && styles.daySelected]} accessibilityLabel={`${formatDate(day.date)}: ${day.status}`}><Text style={[styles.dayText, (day.status === "complete" || day.status === "partial") && styles.dayTextActive]}>{Number(day.date.slice(-2))}</Text></Pressable>)}</View>{selectedDate ? (() => { const day = stats.calendar.find((item) => item.date === selectedDate); return day ? <View style={styles.dayDetail}><Text style={styles.dayDetailTitle}>{formatDate(day.date)}</Text><Text style={styles.muted}>{day.workouts} treino(s) · {day.meals} refeição(ões) · {day.waterMl} ml registrados</Text></View> : null; })() : null}</View>
+    </>}
+  </ScrollView>;
 }
-
-function CounterCard({
-  icon,
-  value,
-  label,
-  color,
-  testID,
-}: {
-  icon: string;
-  value: number;
-  label: string;
-  color: string;
-  testID?: string;
-}) {
-  return (
-    <View style={styles.counter} testID={testID}>
-      <View style={[styles.counterIcon, { backgroundColor: color + "22" }]}>
-        <MaterialDesignIcons name={icon as any} size={20} color={color} />
-      </View>
-      <Text style={styles.counterValue}>{value}</Text>
-      <Text style={styles.counterLabel}>{label}</Text>
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
-  header: {
-    backgroundColor: colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    paddingBottom: spacing.md,
-    paddingHorizontal: spacing.lg,
-  },
-  headerRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
-  backBtn: {
-    width: 40, height: 40, borderRadius: radius.md,
-    backgroundColor: colors.surfaceSecondary,
-    alignItems: "center", justifyContent: "center",
-  },
-  eyebrow: { color: colors.brandPrimary, fontSize: 11, fontWeight: "800", letterSpacing: 1.5 },
-  title: { color: colors.onSurface, fontSize: 20, fontWeight: "800" },
-  streakCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.md,
-    backgroundColor: colors.surfaceSecondary,
-    padding: spacing.lg,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  flameWrap: {
-    width: 64, height: 64,
-    borderRadius: radius.pill,
-    backgroundColor: withAlpha(colors.brandTertiary, "22"),
-    alignItems: "center", justifyContent: "center",
-  },
-  streakLabel: { color: colors.onSurfaceTertiary, fontSize: 10, fontWeight: "800", letterSpacing: 1.5 },
-  streakRow: { flexDirection: "row", alignItems: "baseline", gap: spacing.xs, marginTop: 2 },
-  streakValue: { color: colors.onSurface, fontSize: 40, fontWeight: "800", letterSpacing: -1 },
-  streakUnit: { color: colors.onSurfaceTertiary, fontSize: 14, fontWeight: "700" },
-  streakSub: { color: colors.onSurfaceSecondary, fontSize: 12, marginTop: 2 },
-  grid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: spacing.sm,
-  },
-  counter: {
-    flexBasis: "48%",
-    flexGrow: 1,
-    backgroundColor: colors.surfaceSecondary,
-    padding: spacing.md,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    gap: 4,
-  },
-  counterIcon: {
-    width: 36, height: 36, borderRadius: radius.sm,
-    alignItems: "center", justifyContent: "center", marginBottom: 4,
-  },
-  counterValue: { color: colors.onSurface, fontSize: 26, fontWeight: "800", letterSpacing: -0.5 },
-  counterLabel: { color: colors.onSurfaceTertiary, fontSize: 11, fontWeight: "600" },
-  chartCard: {
-    backgroundColor: colors.surfaceSecondary,
-    padding: spacing.lg,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    gap: spacing.md,
-  },
-  chartTitle: { color: colors.onSurface, fontSize: 15, fontWeight: "700" },
-  chartSub: { color: colors.onSurfaceTertiary, fontSize: 12, marginTop: -8 },
-  barsRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-end",
-    height: 120,
-    gap: spacing.xs,
-  },
-  barCol: { flex: 1, alignItems: "center", gap: 4 },
-  barTrack: {
-    width: "100%",
-    flex: 1,
-    backgroundColor: colors.surfaceTertiary,
-    borderRadius: radius.sm,
-    justifyContent: "flex-end",
-    overflow: "hidden",
-  },
-  barFill: { width: "100%", borderRadius: radius.sm },
-  barLabel: { color: colors.onSurfaceTertiary, fontSize: 10, fontWeight: "700" },
-  barValue: { color: colors.onSurface, fontSize: 11, fontWeight: "800" },
-  emptyBox: {
-    alignItems: "center",
-    gap: spacing.sm,
-    padding: spacing.xl,
-    backgroundColor: colors.surfaceSecondary,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  emptyText: { color: colors.onSurfaceTertiary, fontSize: 13, textAlign: "center" },
-});
+function Section({ title, children }: { title: string; children: React.ReactNode }) { return <View style={styles.sectionWrap}><Text style={styles.section}>{title.toUpperCase()}</Text><View style={styles.grid}>{children}</View></View>; }
+function Metric({ icon, label, value, muted }: { icon: string; label: string; value: string; muted?: boolean }) { return <View style={styles.metric}><View style={styles.metricIcon}><MaterialDesignIcons name={icon as never} size={20} color={colors.brandPrimary} /></View><Text style={[styles.metricValue, muted && styles.mutedValue]}>{value}</Text><Text style={styles.metricLabel}>{label}</Text></View>; }
+function Empty({ title, text, action }: { title?: string; text: string; action?: () => void }) { return <View style={styles.empty}>{title ? <Text style={styles.emptyTitle}>{title}</Text> : null}<Text style={styles.muted}>{text}</Text>{action ? <Pressable onPress={action}><Text style={styles.retry}>Tentar novamente</Text></Pressable> : null}</View>; }
+function formatDate(value: string) { return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(`${value}T12:00:00`)); }
+const styles = StyleSheet.create({ screen: { flex: 1, backgroundColor: colors.surface }, content: { width: "100%", maxWidth: layout.editorMax, alignSelf: "center", paddingHorizontal: spacing.lg, gap: spacing.md }, header: { flexDirection: "row", alignItems: "center", gap: spacing.md }, back: { width: 44, height: 44, alignItems: "center", justifyContent: "center", borderRadius: radius.md, backgroundColor: colors.surfaceSecondary }, eyebrow: { color: colors.brandPrimary, fontSize: 9, fontWeight: "900", letterSpacing: 1.2 }, title: { color: colors.onSurface, fontSize: 26, fontWeight: "900" }, range: { color: colors.onSurfaceTertiary, fontSize: 9, marginTop: 2 }, periods: { flexDirection: "row", alignSelf: "flex-start", padding: 4, borderRadius: radius.pill, backgroundColor: colors.surfaceSecondary }, period: { minHeight: 38, justifyContent: "center", paddingHorizontal: spacing.lg, borderRadius: radius.pill }, periodOn: { backgroundColor: colors.brandPrimary }, periodText: { color: colors.onSurfaceSecondary, fontSize: 10, fontWeight: "800" }, periodTextOn: { color: colors.onBrandPrimary }, sectionWrap: { gap: spacing.sm }, section: { color: colors.onSurfaceTertiary, fontSize: 9, fontWeight: "900", letterSpacing: 1.2, marginTop: spacing.sm }, grid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm }, metric: { flexBasis: 180, flexGrow: 1, minHeight: 112, gap: 4, padding: spacing.md, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surfaceSecondary }, metricIcon: { width: 36, height: 36, alignItems: "center", justifyContent: "center", borderRadius: radius.md, backgroundColor: withAlpha(colors.brandPrimary, 0.12) }, metricValue: { color: colors.onSurface, fontSize: 19, fontWeight: "900", marginTop: spacing.xs }, mutedValue: { color: colors.onSurfaceTertiary, fontSize: 13 }, metricLabel: { color: colors.onSurfaceTertiary, fontSize: 9 }, calendarCard: { gap: spacing.md, padding: spacing.lg, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surfaceSecondary }, cardTitle: { color: colors.onSurface, fontSize: 16, fontWeight: "900" }, muted: { color: colors.onSurfaceTertiary, fontSize: 9, lineHeight: 14 }, calendar: { flexDirection: "row", flexWrap: "wrap", gap: 6 }, day: { width: 34, height: 34, alignItems: "center", justifyContent: "center", borderRadius: radius.pill, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surfaceTertiary }, dayComplete: { borderColor: colors.brandPrimary, backgroundColor: colors.brandPrimary }, dayPartial: { borderColor: colors.brandSecondary, backgroundColor: withAlpha(colors.brandSecondary, 0.2) }, dayFuture: { opacity: 0.32 }, daySelected: { borderWidth: 3, borderColor: colors.onSurface }, dayText: { color: colors.onSurfaceTertiary, fontSize: 9, fontWeight: "800" }, dayTextActive: { color: colors.onBrandPrimary }, dayDetail: { padding: spacing.md, borderRadius: radius.md, backgroundColor: colors.surfaceTertiary }, dayDetailTitle: { color: colors.onSurface, fontSize: 11, fontWeight: "900" }, empty: { alignItems: "center", gap: spacing.sm, padding: spacing.xl, borderRadius: radius.lg, backgroundColor: colors.surfaceSecondary }, emptyTitle: { color: colors.onSurface, fontSize: 15, fontWeight: "900" }, retry: { color: colors.brandPrimary, fontSize: 11, fontWeight: "900" } });

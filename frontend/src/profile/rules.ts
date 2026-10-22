@@ -1,6 +1,6 @@
 import { COSMETIC_DEFINITIONS, findCosmetic, type CosmeticKind } from "../gamification/cosmetics";
 import type { GamificationSummary } from "../gamification/types";
-import type { ProfileFeaturedItem, ProfileState } from "./types";
+import type { ProfileFeaturedItem, ProfileState, WellnessProfile } from "./types";
 
 export const USERNAME_MIN = 3;
 export const USERNAME_MAX = 24;
@@ -28,6 +28,7 @@ export function createInitialProfileState(now = new Date().toISOString()): Profi
       profileVisibility: "private",
       contentVisibility: { workouts: "friends", nutrition: "private", hydration: "private", achievements: "friends", evolution: "private", photos: "private", rugidos: "friends", challenges: "friends" },
     },
+    wellness: { activities: [], usualMealTimes: [], sensitiveDataConsent: false },
     unlockedCosmetics: { "avatar-01": now, "frame-classic": now, "banner-cave": now, "title-legacy-1": now },
     equipped: { avatar: "avatar-01", frame: "frame-classic", banner: "banner-cave", title: "title-legacy-1" },
     featured: [], favoriteCollections: [], updatedAt: now,
@@ -40,6 +41,8 @@ export function sanitizeProfileState(value: unknown): ProfileState {
   const candidate = value as Partial<ProfileState>;
   const profile = candidate.profile && typeof candidate.profile === "object" ? candidate.profile : initial.profile;
   const username = typeof profile.username === "string" ? validateUsername(profile.username) : null;
+  const wellness = candidate.wellness && typeof candidate.wellness === "object" ? candidate.wellness as Partial<WellnessProfile> : {};
+  const number = (value: unknown, min: number, max: number) => typeof value === "number" && Number.isFinite(value) && value >= min && value <= max ? value : undefined;
   return {
     version: 1,
     profile: {
@@ -55,6 +58,25 @@ export function sanitizeProfileState(value: unknown): ProfileState {
       showProgressStats: Boolean(profile.showProgressStats),
       showStreakStats: Boolean(profile.showStreakStats),
       joinedAt: typeof profile.joinedAt === "string" ? profile.joinedAt : initial.profile.joinedAt,
+    },
+    wellness: {
+      completedAt: typeof wellness.completedAt === "string" ? wellness.completedAt : undefined,
+      skippedAt: typeof wellness.skippedAt === "string" ? wellness.skippedAt : undefined,
+      birthDate: typeof wellness.birthDate === "string" ? wellness.birthDate : undefined,
+      heightCm: number(wellness.heightCm, 80, 250), currentWeightKg: number(wellness.currentWeightKg, 20, 500), targetWeightKg: number(wellness.targetWeightKg, 20, 500),
+      primaryGoal: ["weight_loss", "hypertrophy", "conditioning", "performance", "maintenance", "wellbeing", "custom"].includes(String(wellness.primaryGoal)) ? wellness.primaryGoal : undefined,
+      customGoal: typeof wellness.customGoal === "string" ? wellness.customGoal.slice(0, 120) : undefined,
+      experienceLevel: ["beginner", "intermediate", "advanced"].includes(String(wellness.experienceLevel)) ? wellness.experienceLevel : undefined,
+      activities: Array.isArray(wellness.activities) ? wellness.activities.filter((item): item is string => typeof item === "string").slice(0, 20) : [],
+      trainingDaysPerWeek: number(wellness.trainingDaysPerWeek, 0, 7), sessionMinutes: number(wellness.sessionMinutes, 5, 360), trainingGoal: typeof wellness.trainingGoal === "string" ? wellness.trainingGoal.slice(0, 160) : undefined,
+      physicalConsiderations: typeof wellness.physicalConsiderations === "string" ? wellness.physicalConsiderations.slice(0, 500) : undefined,
+      nutritionGoal: typeof wellness.nutritionGoal === "string" ? wellness.nutritionGoal.slice(0, 120) : undefined, mealsPerDay: number(wellness.mealsPerDay, 1, 12), dietaryPreferences: typeof wellness.dietaryPreferences === "string" ? wellness.dietaryPreferences.slice(0, 500) : undefined,
+      usualMealTimes: Array.isArray(wellness.usualMealTimes) ? wellness.usualMealTimes.filter((item): item is string => /^([01]\d|2[0-3]):[0-5]\d$/.test(String(item))).slice(0, 12) : [],
+      followsProfessionalPlan: typeof wellness.followsProfessionalPlan === "boolean" ? wellness.followsProfessionalPlan : undefined,
+      usualWaterLiters: number(wellness.usualWaterLiters, 0, 15), hydrationGoalLiters: number(wellness.hydrationGoalLiters, 0.1, 15), hydrationReminders: typeof wellness.hydrationReminders === "boolean" ? wellness.hydrationReminders : undefined,
+      sleepTime: typeof wellness.sleepTime === "string" ? wellness.sleepTime : undefined, wakeTime: typeof wellness.wakeTime === "string" ? wellness.wakeTime : undefined, desiredSleepHours: number(wellness.desiredSleepHours, 1, 16), variableSchedule: typeof wellness.variableSchedule === "boolean" ? wellness.variableSchedule : undefined,
+      preferredTrainingPeriod: ["morning", "afternoon", "evening", "varies"].includes(String(wellness.preferredTrainingPeriod)) ? wellness.preferredTrainingPeriod : undefined,
+      sensitiveDataConsent: Boolean(wellness.sensitiveDataConsent), updatedAt: typeof wellness.updatedAt === "string" ? wellness.updatedAt : undefined,
     },
     unlockedCosmetics: candidate.unlockedCosmetics && typeof candidate.unlockedCosmetics === "object" ? candidate.unlockedCosmetics : initial.unlockedCosmetics,
     equipped: candidate.equipped && typeof candidate.equipped === "object" ? candidate.equipped : initial.equipped,

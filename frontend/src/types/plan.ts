@@ -105,6 +105,8 @@ export interface Meal {
   archived?: boolean;
   options: MealOption[];
   suggestedTime?: string;
+  /** Horários locais opcionais por dia da semana (0 = domingo). */
+  scheduleByWeekday?: Partial<Record<number, string>>;
   guidance?: string;
   daysOfWeek?: number[];
   order?: number;
@@ -140,6 +142,7 @@ export interface PlannedMealSnapshot {
   mealName: string;
   mealType: string;
   suggestedTime?: string;
+  plannedTime?: string;
   optionId?: string;
   optionName?: string;
   items: ConsumedItemSnapshot[];

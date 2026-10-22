@@ -7,6 +7,7 @@ import AchievementUnlockModal from "../../src/components/AchievementUnlockModal"
 import GamificationSummaryCard from "../../src/components/GamificationSummaryCard";
 import MacroSummary from "../../src/components/MacroSummary";
 import MealCard, { iconForMeal } from "../../src/components/MealCard";
+import NextMealCard from "../../src/components/NextMealCard";
 import TrainingSummaryCard from "../../src/components/TrainingSummaryCard";
 import WaterCard from "../../src/components/WaterCard";
 import { getCloudStatus, subscribeCloudStatus, syncCloudNow } from "../../src/cloud/cloudSync";
@@ -15,6 +16,7 @@ import { dismissAchievement, evaluateGamification, getPendingAchievement } from 
 import type { AchievementDefinition, GamificationSummary } from "../../src/gamification/types";
 import type { HydrationSummary } from "../../src/hydration/types";
 import { createPlanConsumption, dayConsumedNutrients, entryNutrients } from "../../src/nutrition/records";
+import { mealTimeForWeekday, resolveMealScheduleFocus, scheduledMealsForDate } from "../../src/nutrition/mealSchedule";
 import { addHydrationRecord, getHydrationSummary } from "../../src/store/hydrationStore";
 import { listFoodCatalog } from "../../src/store/nutritionStore";
 import { addConsumption, dayMacrosDefault, getActivePlan, getChosenOption, listConsumption, optionMacros, removeConsumptionForDayMeal } from "../../src/store/planStore";
@@ -126,7 +128,11 @@ export default function HomeScreen() {
     else {
       const meal = plan?.meals.find((candidate) => candidate.id === mealId);
       const option = meal?.options.find((candidate) => candidate.id === optionId) ?? meal?.options[0];
-      if (plan && meal && option) await addConsumption(createPlanConsumption({ plan, meal, option, date: selectedDate, catalog: await listFoodCatalog() }));
+      if (plan && meal && option) {
+        const current = new Date();
+        const clock = `${String(current.getHours()).padStart(2, "0")}:${String(current.getMinutes()).padStart(2, "0")}`;
+        await addConsumption(createPlanConsumption({ plan, meal, option, date: selectedDate, actualAt: new Date(`${selectedDate}T${clock}:00`).toISOString(), catalog: await listFoodCatalog() }));
+      }
     }
     await load();
   };
@@ -153,6 +159,8 @@ export default function HomeScreen() {
   const consumedTotals = dayConsumedNutrients(consumption, selectedDate);
   const doneToday = new Set(consumption.filter((entry) => entry.date === selectedDate && entry.status !== "off_plan").map((entry) => entry.mealId));
   const doneCount = dayMeals.filter((meal) => doneToday.has(meal.id)).length;
+  const scheduledMeals = plan ? scheduledMealsForDate(plan, consumption, selectedDate, today ? new Date() : new Date(`${selectedDate}T00:00:00`), chosen) : [];
+  const nextMeal = resolveMealScheduleFocus(scheduledMeals);
   const firstName = cloudName(getCloudStatus().email);
   const loading = loadState === "idle" || loadState === "loading" || !cloudReady;
 
@@ -192,6 +200,7 @@ export default function HomeScreen() {
           <View style={[styles.column, !isPhone && styles.columnWide, desktop && styles.columnDesktop]}>
             <SectionTitle title="Alimentação" action="Abrir dieta" onPress={() => router.push("/alimentacao")} />
             {loading && !plan ? <SkeletonCard height={230} /> : sectionErrors.diet ? <ErrorCard message={sectionErrors.diet} onRetry={load} /> : plan && totals ? <>
+              <NextMealCard item={nextMeal} onOpen={() => nextMeal ? router.push(`/meal/${plan.id}/${nextMeal.meal.id}?date=${selectedDate}`) : router.push("/plano")} onRegister={nextMeal && nextMeal.state !== "completed" && nextMeal.option ? () => void toggleQuickDone(nextMeal.meal.id, nextMeal.option?.id) : undefined} />
               <MacroSummary compact title={today ? "CONSUMIDO HOJE" : "CONSUMIDO NO DIA"} kcal={consumedTotals.kcal} protein={consumedTotals.protein} carbs={consumedTotals.carbs} fats={consumedTotals.fats} fiber={consumedTotals.fiber} subtitle={`Meta: ${Math.round(totals.kcal)} kcal · ${doneCount}/${dayMeals.length} refeições registradas`} />
               <View style={styles.progressTrack}><View style={[styles.progressFill, { width: `${dayMeals.length ? Math.min(100, (doneCount / dayMeals.length) * 100) : 0}%` }]} /></View>
             </> : <EmptyCard icon="food-apple-outline" title="Nenhum plano alimentar ativo" text="Crie ou ative um plano para acompanhar o dia." action="Ir para planos" onPress={() => router.push("/ajustes")} />}
@@ -221,7 +230,8 @@ export default function HomeScreen() {
             const macros = option ? optionMacros(option) : { kcal: 0, protein: 0, carbs: 0, fats: 0, fiber: 0, sodium: 0 };
             const entry = consumption.find((candidate) => candidate.date === selectedDate && candidate.mealId === meal.id);
             const status = entry ? (entry.status === "off_plan" ? "modified" : entry.status) : "planned";
-            return <View key={meal.id} style={desktop ? [styles.mealCell, isWide && styles.mealCellWide] : undefined}><MealCard compact title={meal.name} subtitle={entry ? `${entry.status === "as_planned" ? "Conforme o plano" : entry.status === "skipped" ? "Não realizada" : "Com alterações"} · ${option?.name ?? ""}` : `${meal.suggestedTime ? `${meal.suggestedTime} · ` : ""}${option?.name ?? "Sem opções"}`} icon={iconForMeal(meal.type)} kcal={entry ? entryNutrients(entry).kcal : macros.kcal} status={status} onPress={() => router.push(`/meal/${plan.id}/${meal.id}?date=${selectedDate}`)} onToggleDone={() => void toggleQuickDone(meal.id, option?.id)} /></View>;
+            const plannedTime = mealTimeForWeekday(meal, selected.getDay());
+            return <View key={meal.id} style={desktop ? [styles.mealCell, isWide && styles.mealCellWide] : undefined}><MealCard compact title={meal.name} subtitle={entry ? `${entry.status === "as_planned" ? "Conforme o plano" : entry.status === "skipped" ? "Não realizada" : "Com alterações"} · ${option?.name ?? ""}` : `${plannedTime ? `${plannedTime} · ` : ""}${option?.name ?? "Sem opções"}`} icon={iconForMeal(meal.type)} kcal={entry ? entryNutrients(entry).kcal : macros.kcal} status={status} onPress={() => router.push(`/meal/${plan.id}/${meal.id}?date=${selectedDate}`)} onToggleDone={() => void toggleQuickDone(meal.id, option?.id)} /></View>;
           })}</View>
         </View> : null}
       </ScrollView>

@@ -34,13 +34,13 @@ export default function AccountScreen() {
   const signedIn = cloud.authenticated;
   const recovering = signedIn && (cloud.passwordRecovery || params.recovery === "1");
 
-  const finish = useCallback(async () => {
+  const finish = useCallback(async (offerPersonalization = false) => {
     await completeOnboarding();
-    router.replace("/(tabs)");
+    router.replace((offerPersonalization ? "/anamnese" : "/(tabs)") as never);
   }, [router]);
 
   useEffect(() => {
-    if (params.auth_callback === "1" && signedIn && cloud.readyForData && !recovering) void finish();
+    if (params.auth_callback === "1" && signedIn && cloud.readyForData && !recovering) void finish(true);
   }, [params.auth_callback, signedIn, cloud.readyForData, recovering, finish]);
 
   const changeMode = (next: AuthMode) => { setMode(next); setNotice(null); setPassword(""); setShowPassword(false); };
@@ -61,7 +61,7 @@ export default function AccountScreen() {
         await signInToCloud(email, password); await finish();
       } else {
         const result = await signUpForCloud(email, password);
-        if (!result.needsEmailConfirmation) await finish();
+        if (!result.needsEmailConfirmation) await finish(true);
         else setNotice("Conta criada. Confirme o link enviado ao seu e-mail antes de entrar.");
       }
     } catch (error) { setNotice(authErrorMessage(error)); }
@@ -104,7 +104,7 @@ export default function AccountScreen() {
               <View style={styles.connectedIcon}><MaterialDesignIcons name="cloud-check" size={29} color={colors.brandPrimary} /></View>
               <Text style={styles.connectedTitle}>Tudo pronto</Text>
               <Text style={styles.connectedText}>Planos, refeições, água, XP, conquistas e aparência serão sincronizados.</Text>
-              <Pressable accessibilityRole="button" style={[styles.primaryButton, !cloud.readyForData && styles.disabled]} disabled={!cloud.readyForData} onPress={finish}><Text style={styles.primaryText}>{cloud.readyForData ? "Ir para o UrsoFit" : "Preparando seus dados…"}</Text></Pressable>
+              <Pressable accessibilityRole="button" style={[styles.primaryButton, !cloud.readyForData && styles.disabled]} disabled={!cloud.readyForData} onPress={() => void finish()}><Text style={styles.primaryText}>{cloud.readyForData ? "Ir para o UrsoFit" : "Preparando seus dados…"}</Text></Pressable>
               <Pressable accessibilityRole="button" style={styles.linkButton} onPress={() => void signOutFromCloud()}><Text style={styles.linkText}>Sair desta conta</Text></Pressable>
             </View>
           ) : (
@@ -130,7 +130,7 @@ export default function AccountScreen() {
             </View>
           )}
 
-          {params.onboarding === "1" && !signedIn ? <Pressable accessibilityRole="button" style={styles.offlineButton} onPress={finish}><Text style={styles.offlineText}>Continuar sem conta por enquanto</Text></Pressable> : null}
+          {params.onboarding === "1" && !signedIn ? <Pressable accessibilityRole="button" style={styles.offlineButton} onPress={() => void finish(true)}><Text style={styles.offlineText}>Continuar sem conta por enquanto</Text></Pressable> : null}
         </View>
       </ScrollView>
     </KeyboardAvoidingView>

@@ -123,6 +123,8 @@ export default function ProfileScreen() {
       <FolderCard icon="trophy-outline" title="Conquistas" description="Nível, jornada e Caverna de Troféus" onPress={() => router.push("/conquistas")} />
       <FolderCard icon="teddy-bear" title="Meu Urso" description="Títulos, coleções e recompensas" onPress={() => router.push("/meu-urso")} />
       <FolderCard icon="chart-line" title="Evolução" description="Progresso e registros físicos" onPress={() => router.push("/evolucao")} />
+      <FolderCard icon="chart-box-outline" title="Estatísticas" description="Treino, alimentação, água e calendário" onPress={() => router.push("/estatisticas")} />
+      <FolderCard icon="clipboard-account-outline" title="Minhas preferências" description="Anamnese privada e rotina" onPress={() => router.push("/anamnese" as never)} />
       <FolderCard icon="account-group-outline" title="Comunidade" description="Pessoas, perfil social e descobertas" onPress={() => router.push("/comunidade")} />
       <FolderCard icon="bullhorn-outline" title="Rugidos" description="Suas publicações e interações" onPress={() => router.push("/rugidos")} />
       <FolderCard icon="flag-checkered" title="Desafios" description="Metas coletivas e pessoais" onPress={() => router.push("/desafios")} />
@@ -137,6 +139,8 @@ export default function ProfileScreen() {
       </Pressable>
     </View>}
     <ResponsiveSheet visible={moreAreasOpen} title="Mais espaços da sua toca" description="Recursos sociais e metas ficam guardados aqui para manter o perfil limpo." onClose={() => setMoreAreasOpen(false)}>
+      <FolderCard icon="chart-box-outline" title="Estatísticas" description="Indicadores reais por período" onPress={() => { setMoreAreasOpen(false); router.push("/estatisticas"); }} />
+      <FolderCard icon="clipboard-account-outline" title="Minhas preferências" description="Anamnese privada e editável" onPress={() => { setMoreAreasOpen(false); router.push("/anamnese" as never); }} />
       <FolderCard icon="account-group-outline" title="Comunidade" description="Pessoas, perfil social e descobertas" onPress={() => { setMoreAreasOpen(false); router.push("/comunidade"); }} />
       <FolderCard icon="bullhorn-outline" title="Rugidos" description="Suas publicações e interações" onPress={() => { setMoreAreasOpen(false); router.push("/rugidos"); }} />
       <FolderCard icon="flag-checkered" title="Desafios" description="Metas coletivas e pessoais" onPress={() => { setMoreAreasOpen(false); router.push("/desafios"); }} />
