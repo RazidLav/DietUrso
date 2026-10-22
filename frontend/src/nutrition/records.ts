@@ -9,6 +9,7 @@ import type {
   Plan,
   Substitution,
 } from "../types/plan";
+import { mealTimeForWeekday } from "./mealSchedule";
 import { addNutrients, foodNutrients, normalizeNutrients, sameDimension, scaleNutrients, ZERO_NUTRIENTS } from "./calculations";
 
 export type SubstitutionSelection = Record<string, string>;
@@ -110,7 +111,7 @@ export function snapshotPlanFood(
   };
 }
 
-export function createPlannedMealSnapshot(plan: Plan, meal: Meal, option: MealOption) {
+export function createPlannedMealSnapshot(plan: Plan, meal: Meal, option: MealOption, date?: string) {
   const items = option.foods.map((food) => snapshotPlanFood(food));
   return {
     planId: plan.id,
@@ -119,6 +120,7 @@ export function createPlannedMealSnapshot(plan: Plan, meal: Meal, option: MealOp
     mealName: meal.name,
     mealType: meal.type,
     suggestedTime: meal.suggestedTime,
+    plannedTime: date ? mealTimeForWeekday(meal, new Date(`${date}T12:00:00`).getDay()) : meal.suggestedTime,
     optionId: option.id,
     optionName: option.name,
     items,
@@ -158,7 +160,7 @@ export function createPlanConsumption(input: {
   isFreeMeal?: boolean;
   catalog?: FoodCatalogItem[];
 }): Omit<ConsumptionEntry, "id" | "createdAt"> {
-  const plannedSnapshot = createPlannedMealSnapshot(input.plan, input.meal, input.option);
+  const plannedSnapshot = createPlannedMealSnapshot(input.plan, input.meal, input.option, input.date);
   const plannedDay = createPlannedDaySnapshot(input.plan, input.date, input.meal.id, input.option);
   const consumedItems = input.option.foods.map((food) =>
     snapshotPlanFood(food, input.substitutions?.[food.id], input.quantities?.[food.id], input.catalog)

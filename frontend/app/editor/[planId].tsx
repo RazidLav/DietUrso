@@ -323,6 +323,8 @@ function MealForm({ planId, meal, onDone, onCancel }: any) {
   const [name, setName] = useState<string>(meal?.name ?? "");
   const [type, setType] = useState<string>(meal?.type ?? "lanche");
   const [suggestedTime, setSuggestedTime] = useState<string>(meal?.suggestedTime ?? "");
+  const [scheduleByWeekday, setScheduleByWeekday] = useState<Partial<Record<number, string>>>(meal?.scheduleByWeekday ?? {});
+  const [customSchedule, setCustomSchedule] = useState(Boolean(meal?.scheduleByWeekday && Object.keys(meal.scheduleByWeekday).length));
   const [guidance, setGuidance] = useState<string>(meal?.guidance ?? "");
   const [daysOfWeek, setDaysOfWeek] = useState<number[]>(meal?.daysOfWeek ?? [0, 1, 2, 3, 4, 5, 6]);
   const submit = async () => {
@@ -332,6 +334,9 @@ function MealForm({ planId, meal, onDone, onCancel }: any) {
       name: name.trim() || "Nova refeição",
       options: meal?.options ?? [],
       suggestedTime: suggestedTime.trim() || undefined,
+      scheduleByWeekday: customSchedule
+        ? Object.fromEntries(Object.entries(scheduleByWeekday).filter(([, value]) => /^([01]\d|2[0-3]):[0-5]\d$/.test(value ?? "")))
+        : undefined,
       guidance: guidance.trim() || undefined,
       daysOfWeek,
       order: meal?.order ?? 999,
@@ -358,6 +363,13 @@ function MealForm({ planId, meal, onDone, onCancel }: any) {
       </View>
       <Text style={mStyles.label}>Horário sugerido</Text>
       <TextInput style={mStyles.input} value={suggestedTime} onChangeText={setSuggestedTime} placeholder="Ex.: 12:30" placeholderTextColor={colors.onSurfaceTertiary} />
+      <Pressable style={mStyles.scheduleToggle} onPress={() => setCustomSchedule((value) => !value)} accessibilityRole="button" accessibilityState={{ expanded: customSchedule }}>
+        <View style={{ flex: 1 }}><Text style={mStyles.scheduleToggleTitle}>Horários diferentes por dia</Text><Text style={mStyles.scheduleToggleText}>Opcional · o horário geral continua como padrão</Text></View>
+        <MaterialDesignIcons name={customSchedule ? "chevron-up" : "chevron-down"} size={20} color={colors.onSurfaceSecondary} />
+      </Pressable>
+      {customSchedule ? <View style={mStyles.dayScheduleGrid}>{WEEKDAYS_SHORT.map((label, day) => (
+        <View key={day} style={mStyles.dayScheduleField}><Text style={mStyles.dayScheduleLabel}>{label}</Text><TextInput accessibilityLabel={`Horário de ${label}`} style={mStyles.dayScheduleInput} value={scheduleByWeekday[day] ?? ""} onChangeText={(value) => setScheduleByWeekday((current) => ({ ...current, [day]: value }))} placeholder={suggestedTime || "--:--"} placeholderTextColor={colors.onSurfaceTertiary} maxLength={5} keyboardType="numbers-and-punctuation" /></View>
+      ))}</View> : null}
       <Text style={mStyles.label}>Dias de uso</Text>
       <View style={mStyles.chipRow}>{WEEKDAYS_SHORT.map((label, day) => { const selected = daysOfWeek.includes(day); return <Pressable key={day} style={[mStyles.chip, selected && mStyles.chipSelected]} onPress={() => setDaysOfWeek((current) => selected ? current.filter((value) => value !== day) : [...current, day].sort())}><Text style={[mStyles.chipText, selected && mStyles.chipTextSel]}>{label}</Text></Pressable>; })}</View>
       <Text style={mStyles.label}>Orientações</Text>
@@ -721,6 +733,13 @@ const mStyles = StyleSheet.create({
   chipSelected: { backgroundColor: colors.brandPrimary },
   chipText: { color: colors.onSurfaceSecondary, fontSize: 12, fontWeight: "600" },
   chipTextSel: { color: colors.onBrandPrimary, fontWeight: "800" },
+  scheduleToggle: { minHeight: 52, flexDirection: "row", alignItems: "center", gap: spacing.sm, marginTop: spacing.md, padding: spacing.sm, borderRadius: radius.md, backgroundColor: colors.surfaceTertiary },
+  scheduleToggleTitle: { color: colors.onSurface, fontSize: 12, fontWeight: "800" },
+  scheduleToggleText: { color: colors.onSurfaceTertiary, fontSize: 9, marginTop: 2 },
+  dayScheduleGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs, marginTop: spacing.sm },
+  dayScheduleField: { width: "23%", minWidth: 86, flexGrow: 1, gap: 3 },
+  dayScheduleLabel: { color: colors.onSurfaceTertiary, fontSize: 9, fontWeight: "800" },
+  dayScheduleInput: { minHeight: 40, paddingHorizontal: spacing.sm, borderRadius: radius.sm, backgroundColor: colors.surfaceTertiary, color: colors.onSurface, textAlign: "center" },
   unitRow: {
     flexDirection: "row", gap: 4,
     backgroundColor: colors.surfaceTertiary,

@@ -74,7 +74,7 @@ export default function ExerciseCatalogScreen() {
 
   if (!state) return <View style={styles.loading}>{loadError ? <ErrorState description={loadError} onRetry={() => void load()} /> : <LoadingSkeleton rows={5} title={cloudReady ? "Carregando exercícios…" : "Preparando seus dados…"} />}</View>;
 
-  const detailPanel = detail ? <ExerciseDetail exercise={detail} onClose={() => setDetail(null)} onVariant={async () => { const copy = await createPersonalExerciseVariant(detail.id); setDetail(null); setDraft(copy); await load(); }} onEdit={() => { setDraft({ ...detail }); setDetail(null); }} onArchive={async () => { await setPersonalExerciseArchived(detail.id, !detail.archivedAt); setDetail(null); await load(); }} /> : null;
+  const detailPanel = detail ? <ExerciseDetail exercise={detail} sessions={state.sessions} onClose={() => setDetail(null)} onVariant={async () => { const copy = await createPersonalExerciseVariant(detail.id); setDetail(null); setDraft(copy); await load(); }} onEdit={() => { setDraft({ ...detail }); setDetail(null); }} onArchive={async () => { await setPersonalExerciseArchived(detail.id, !detail.archivedAt); setDetail(null); await load(); }} /> : null;
 
   return <View style={styles.screen} testID="exercise-catalog-screen">
     <ScrollView contentContainerStyle={{ paddingTop: insets.top + spacing.lg, paddingBottom: spacing.huge }} keyboardShouldPersistTaps="handled">
@@ -135,10 +135,13 @@ function ExerciseCard({ exercise, onPress, onFavorite, selected, grid = false }:
   </CompactCard>;
 }
 
-function ExerciseDetail({ exercise, onClose, onVariant, onEdit, onArchive }: { exercise: ExerciseDefinition; onClose: () => void; onVariant: () => void; onEdit: () => void; onArchive: () => void }) {
+function ExerciseDetail({ exercise, sessions, onClose, onVariant, onEdit, onArchive }: { exercise: ExerciseDefinition; sessions: TrainingState["sessions"]; onClose: () => void; onVariant: () => void; onEdit: () => void; onArchive: () => void }) {
+  const history = sessions.flatMap((session) => session.result.strengthSets.filter((set) => set.exerciseId === exercise.id && set.status === "completed").map((set) => ({ session, set }))).sort((a, b) => b.session.startedAt.localeCompare(a.session.startedAt));
+  const last = history[0];
   return <View style={styles.detailPanel} testID="exercise-detail-panel">
     <View style={styles.detailHeader}><View style={[styles.detailIcon, { backgroundColor: withAlpha(ACTIVITY_COLORS[exercise.activityType], 0.13) }]}><MaterialDesignIcons name={ACTIVITY_ICONS[exercise.activityType] as never} size={25} color={ACTIVITY_COLORS[exercise.activityType]} /></View><View style={styles.exerciseCopy}><Text style={styles.detailTitle}>{exercise.name}</Text><Text style={styles.exerciseMeta}>{ACTIVITY_LABELS[exercise.activityType]}</Text></View><IconButton icon="close" label="Fechar detalhes" onPress={onClose} /></View>
     <Info label="Grupo principal" value={exercise.primaryMuscle} /><Info label="Grupos secundários" value={exercise.secondaryMuscles.join(", ")} /><Info label="Equipamento" value={exercise.equipment} /><Info label="Execução" value={exercise.instructions} /><Info label="Cuidados" value={exercise.cautions} />
+    <View style={styles.progressPanel}><Text style={styles.infoLabel}>PROGRESSO PESSOAL</Text>{last ? <><Text style={styles.progressValue}>{last.set.performedLoad != null ? `${last.set.performedLoad} ${last.set.loadUnit ?? "kg"}` : "Carga não informada"} · {last.set.performedReps ?? "—"} reps</Text><Text style={styles.exerciseMeta}>Última execução em {new Date(last.session.startedAt).toLocaleDateString("pt-BR")} · {history.length} série(s) registrada(s)</Text></> : <Text style={styles.exerciseMeta}>Ainda não há execução real suficiente para mostrar evolução.</Text>}</View>
     <View style={styles.detailActions}>{exercise.scope === "global" ? <PrimaryButton label="Criar versão pessoal" onPress={onVariant} /> : <><Pressable style={styles.secondaryButton} onPress={onEdit}><Text style={styles.secondaryText}>Editar</Text></Pressable><Pressable style={styles.secondaryButton} onPress={onArchive}><Text style={styles.secondaryText}>{exercise.archivedAt ? "Restaurar" : "Arquivar"}</Text></Pressable></>}</View>
   </View>;
 }
@@ -201,6 +204,8 @@ const styles = StyleSheet.create({
   info: { gap: 2 },
   infoLabel: { color: colors.onSurfaceTertiary, fontSize: 9, fontWeight: "850" as never, letterSpacing: 0.6 },
   infoText: { color: colors.onSurfaceSecondary, fontSize: 12, lineHeight: 18 },
+  progressPanel: { gap: 3, padding: spacing.md, borderRadius: radius.md, backgroundColor: colors.surfaceInteractive },
+  progressValue: { color: colors.onSurface, fontSize: 14, fontWeight: "900" },
   form: { gap: spacing.md },
   formRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md },
   fieldGrow: { flex: 1, minWidth: 180 },

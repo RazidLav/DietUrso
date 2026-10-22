@@ -12,6 +12,7 @@ import { FLOATING_TAB_HEIGHT, FLOATING_TAB_MARGIN } from "./_layout";
 import { useCloudDataRefresh } from "../../src/cloud/useCloudDataRefresh";
 import { getCloudStatus, subscribeCloudStatus, syncCloudNow } from "../../src/cloud/cloudSync";
 import { resolvePlanView, type DataLoadState } from "../../src/cloud/planViewState";
+import { mealTimeForWeekday } from "../../src/nutrition/mealSchedule";
 import { ContentContainer, IconButton, PageHeader, PrimaryButton, ResponsiveGrid, SectionHeader } from "../../src/components/DesignSystem";
 
 export default function PlanoScreen() {
@@ -87,7 +88,8 @@ export default function PlanoScreen() {
       const days = sourceIncluded
         ? Array.from(new Set([...meal.daysOfWeek, targetDay])).sort()
         : meal.daysOfWeek.filter((day) => day !== targetDay);
-      return { ...meal, daysOfWeek: days };
+      const sourceTime = mealTimeForWeekday(meal, selectedDay);
+      return { ...meal, daysOfWeek: days, scheduleByWeekday: sourceIncluded && sourceTime ? { ...meal.scheduleByWeekday, [targetDay]: sourceTime } : meal.scheduleByWeekday };
     });
     await updatePlan({ ...plan, meals, updatedAt: new Date().toISOString() });
     setCopyOpen(false); setSelectedDay(targetDay); await load();
@@ -124,7 +126,7 @@ export default function PlanoScreen() {
                 key={meal.id}
                 testID={`plan-meal-${meal.id}`}
                 title={meal.name}
-                subtitle={`${meal.suggestedTime ? `${meal.suggestedTime} · ` : ""}${meal.options.length} opções · ${opt?.name ?? ""}`}
+                subtitle={`${mealTimeForWeekday(meal, selectedDay) ? `${mealTimeForWeekday(meal, selectedDay)} · ` : ""}${meal.options.length} opções · ${opt?.name ?? ""}`}
                 icon={iconForMeal(meal.type)}
                 kcal={mac.kcal}
                 compact

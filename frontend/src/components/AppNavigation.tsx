@@ -17,6 +17,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { NAVIGATION, getActiveChild, getActiveSection, normalizePathname, shouldHideNavigation, type NavigationItem } from "../navigation/config";
 import { useResponsiveLayout } from "../responsive";
 import { breakpoints, colors, withAlpha, layout, radius, spacing, zIndex } from "../theme";
+import WorkoutMiniPlayer from "./WorkoutMiniPlayer";
 
 export const DESKTOP_BREAKPOINT = breakpoints.desktop;
 export const MOBILE_DOCK_HEIGHT = 68;
@@ -51,14 +52,17 @@ export default function AppNavigation({ children }: { children: React.ReactNode 
   };
 
   const hideNavigation = shouldHideNavigation(pathname);
-  if (hideNavigation) return <View style={styles.fullScreen}>{children}</View>;
+  if (hideNavigation) {
+    const privateEntry = pathname.startsWith("/boas-vindas") || pathname.startsWith("/conta") || pathname.startsWith("/anamnese");
+    return <View style={styles.fullScreen}>{children}{privateEntry ? null : <WorkoutMiniPlayer />}</View>;
+  }
 
   if (useSideNavigation) {
     const effectiveMode = responsive.isDesktop ? sidebarMode : "compact";
     return (
       <View style={styles.desktopShell} testID="desktop-app-shell">
         {effectiveMode === "hidden" ? <Pressable accessibilityRole="button" accessibilityLabel="Abrir navegação" style={[styles.reopenNavigation, { top: Math.max(insets.top, spacing.lg) }]} onPress={() => changeSidebarMode("compact")}><MaterialDesignIcons name="menu" size={23} color={colors.onSurface} /></Pressable> : <DesktopSidebar pathname={pathname} topInset={insets.top} bottomInset={insets.bottom} mode={effectiveMode} onModeChange={changeSidebarMode} />}
-        <View style={styles.desktopMain}><View style={styles.desktopCanvas}>{children}</View></View>
+        <View style={styles.desktopMain}><View style={styles.desktopCanvas}>{children}</View><WorkoutMiniPlayer /></View>
       </View>
     );
   }
@@ -66,6 +70,7 @@ export default function AppNavigation({ children }: { children: React.ReactNode 
   return (
     <View style={styles.mobileShell} testID="mobile-app-shell">
       <View style={styles.mobileMain}>{children}</View>
+      <WorkoutMiniPlayer />
       {!keyboardVisible ? <MobileNavigation pathname={pathname} bottomInset={insets.bottom} /> : null}
     </View>
   );
