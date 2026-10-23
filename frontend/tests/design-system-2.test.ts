@@ -121,14 +121,14 @@ test("o perfil reúne edição e logout em um menu compacto", () => {
   assert.doesNotMatch(profile, /accessibilityLabel="Editar perfil"><MaterialDesignIcons/);
 });
 
-test("a dock mobile anima a cápsula e revela o nome somente na área ativa", () => {
+test("a dock mobile usa transições CSS seguras no Safari e revela o nome somente na área ativa", () => {
   const navigation = read("../src/components/AppNavigation.tsx");
   assert.match(navigation, /function MobileDockItem/);
-  assert.match(navigation, /Animated\.timing\(progress/);
-  assert.match(navigation, /duration: 240/);
+  assert.doesNotMatch(navigation, /Animated\.timing|new Animated\.Value/);
+  assert.match(navigation, /transitionDuration: "240ms"/);
+  assert.match(navigation, /transitionProperty: "flex-basis, flex-grow, background-color, transform"/);
   assert.match(navigation, /useReducedMotion\(\)/);
-  assert.match(navigation, /opacity: progress/);
-  assert.match(navigation, /outputRange: \[0, 76\]/);
+  assert.match(navigation, /dockLabelActive: \{ maxWidth: 76, opacity: 1/);
   assert.match(navigation, /maxWidth: 560/);
 });
 
