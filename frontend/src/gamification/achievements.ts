@@ -299,7 +299,7 @@ export const ACHIEVEMENTS: AchievementDefinition[] = [
   },
   {
     id: "hidraturso",
-    title: "HidratUrso",
+    title: "Hidratação",
     description: "Bateu a meta diária de água.",
     lockedHint: "Complete sua meta diária de água.",
     icon: "water",

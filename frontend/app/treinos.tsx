@@ -89,7 +89,7 @@ export default function TreinosScreen() {
     <View style={styles.screen}>
       <ScrollView refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={colors.brandPrimary} />} contentContainerStyle={{ paddingTop: insets.top + spacing.lg, paddingBottom: 148 }}>
         <ContentContainer style={styles.content}>
-        <PageHeader eyebrow="TREINO" title="Sua semana, sem burocracia" description="Veja o que vem agora. Planos, exercícios e histórico ficam organizados em áreas próprias." />
+        <PageHeader eyebrow="TREINO" title="Sua semana, sem burocracia" description="Veja o que vem agora. Planos, exercícios e histórico ficam organizados em áreas próprias." onBack={() => router.back()} />
 
         <ResponsiveGrid minItemWidth={300} maxColumns={2} gap={spacing.sm}>
           <FeatureCard icon={nextEntry?.status === "in_progress" ? "play-circle-outline" : "calendar-clock"} title={nextEntry?.status === "in_progress" ? "EM ANDAMENTO" : "PRÓXIMA AÇÃO"} value={nextEntry?.planned.name ?? "Dia livre"} description={nextEntry ? `${nextEntry.planned.scheduledTime ?? "Sem horário"} · ${ACTIVITY_LABELS[nextEntry.planned.activityType]}` : "Você pode adicionar uma sessão quando quiser."} onPress={() => openEntry(nextEntry)} />

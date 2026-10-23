@@ -138,7 +138,7 @@ export default function HydrationScreen() {
     <View style={styles.screen} testID="hydration-screen">
       <ScrollView contentContainerStyle={{ paddingTop: insets.top + spacing.lg, paddingBottom: 120 }}>
         <ContentContainer style={styles.content} maxWidth={1380}>
-        <PageHeader eyebrow="HIDRATAÇÃO INTELIGENTE" title="HidratUrso" description="Registre água em poucos toques e acompanhe o ritmo do seu dia." onBack={() => router.back()} />
+        <PageHeader eyebrow="HIDRATAÇÃO INTELIGENTE" title="Hidratação" description="Registre água em poucos toques e acompanhe o ritmo do seu dia." onBack={() => router.back()} />
         {error ? <Pressable style={styles.error} onPress={() => setError(null)}><MaterialDesignIcons name="alert-circle-outline" size={18} color={colors.error} /><Text style={styles.errorText}>{error}</Text><MaterialDesignIcons name="close" size={16} color={colors.onSurfaceTertiary} /></Pressable> : null}
         {activeAlert ? <View style={styles.alert}><View style={styles.alertIcon}><MaterialDesignIcons name="water-alert-outline" size={24} color={colors.brandSecondary} /></View><View style={{ flex: 1 }}><Text style={styles.alertTitle}>{activeAlert.title}</Text><Text style={styles.alertText}>{activeAlert.message}</Text><View style={styles.alertActions}><Pressable onPress={() => void handleAlert("snooze")}><Text style={styles.alertAction}>Lembrar depois</Text></Pressable><Pressable onPress={() => void handleAlert("dismiss")}><Text style={styles.alertAction}>Dispensar</Text></Pressable></View></View></View> : null}
 

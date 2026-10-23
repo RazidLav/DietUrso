@@ -59,7 +59,7 @@ export default function HydrationConfigScreen() {
 
   if (!config) return <View style={styles.loading}><ActivityIndicator color={colors.brandSecondary} size="large" /></View>;
   return <View style={styles.screen} testID="hydration-config-screen">
-    <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}><Pressable style={styles.iconButton} onPress={() => router.back()}><MaterialDesignIcons name="chevron-left" size={26} color={colors.onSurface} /></Pressable><View style={{ flex: 1 }}><Text style={styles.eyebrow}>HIDRATURSO</Text><Text style={styles.title}>Preferências</Text></View></View>
+    <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}><Pressable style={styles.iconButton} onPress={() => router.back()}><MaterialDesignIcons name="chevron-left" size={26} color={colors.onSurface} /></Pressable><View style={{ flex: 1 }}><Text style={styles.eyebrow}>HIDRATAÇÃO</Text><Text style={styles.title}>Preferências</Text></View></View>
     <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: 100, gap: spacing.lg }}>
       {error ? <View style={styles.error}><MaterialDesignIcons name="alert-circle-outline" size={18} color={colors.error} /><Text style={styles.errorText}>{error}</Text></View> : null}
       <Section title="META DIÁRIA" subtitle="A meta atual foi preservada. Mudanças valem para hoje e os próximos dias; o histórico mantém a meta de cada data.">
