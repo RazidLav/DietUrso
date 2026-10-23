@@ -120,3 +120,11 @@ test("o perfil reúne edição e logout em um menu compacto", () => {
   assert.match(profile, /router\.replace\("\/conta\?mode=signin"/);
   assert.doesNotMatch(profile, /accessibilityLabel="Editar perfil"><MaterialDesignIcons/);
 });
+
+test("a dock mobile mostra o nome somente na área ativa", () => {
+  const navigation = read("../src/components/AppNavigation.tsx");
+  assert.match(navigation, /active \? <Text numberOfLines=\{1\} style=\{styles\.dockLabelActive\}>\{section\.label\}<\/Text> : null/);
+  assert.match(navigation, /dockItemActive: \{ flexBasis: 100, flexGrow: 1, maxWidth: 132/);
+  assert.match(navigation, /maxWidth: 560/);
+  assert.doesNotMatch(navigation, /style=\{\[styles\.dockLabel, active && styles\.dockLabelActive\]\}/);
+});
