@@ -164,8 +164,8 @@ function MobileNavigation({ pathname, bottomInset }: { pathname: string; bottomI
               style={({ pressed }) => [styles.dockItem, active && styles.dockItemActive, pressed && styles.pressed]}
               testID={`dock-${section.id}`}
             >
-              <View style={[styles.dockIcon, active && styles.dockIconActive]}><MaterialDesignIcons name={section.icon as never} size={21} color={active ? colors.onBrandPrimary : colors.onSurfaceTertiary} /></View>
-              <Text numberOfLines={1} style={[styles.dockLabel, active && styles.dockLabelActive]}>{section.label}</Text>
+              <View style={[styles.dockIcon, active && styles.dockIconActive]}><MaterialDesignIcons name={section.icon as never} size={22} color={active ? colors.brandPrimary : colors.onSurfaceTertiary} /></View>
+              {active ? <Text numberOfLines={1} style={styles.dockLabelActive}>{section.label}</Text> : null}
             </Pressable>
           );
         })}
@@ -178,14 +178,16 @@ const styles = StyleSheet.create({
   fullScreen: { flex: 1, backgroundColor: colors.surface },
   mobileShell: { flex: 1, backgroundColor: colors.surface },
   mobileMain: { flex: 1, minHeight: 0 },
-  mobileNav: { flexShrink: 0, zIndex: zIndex.navigation, backgroundColor: colors.surface },
+  mobileNav: { flexShrink: 0, zIndex: zIndex.navigation, alignItems: "center", paddingHorizontal: spacing.sm, backgroundColor: colors.surface },
   dock: {
+    width: "100%",
+    maxWidth: 560,
     minHeight: MOBILE_DOCK_HEIGHT,
     flexDirection: "row",
     alignItems: "center",
-    gap: 2,
+    justifyContent: "space-between",
+    gap: spacing.xs,
     marginTop: spacing.sm,
-    marginHorizontal: spacing.sm,
     paddingHorizontal: spacing.xs,
     paddingVertical: spacing.xs,
     borderRadius: radius.lg,
@@ -196,12 +198,11 @@ const styles = StyleSheet.create({
       ? ({ boxShadow: "0 12px 32px rgba(0,0,0,.46), 0 1px 0 rgba(255,255,255,.035) inset" } as never)
       : { shadowColor: "#000000", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.38, shadowRadius: 16, elevation: 12 }),
   },
-  dockItem: { flex: 1, minWidth: 0, minHeight: 58, alignItems: "center", justifyContent: "center", gap: 2, paddingHorizontal: 2, borderRadius: radius.md },
-  dockItemActive: { backgroundColor: withAlpha(colors.brandPrimary, "12") },
+  dockItem: { flexBasis: 44, flexGrow: 0, flexShrink: 1, minWidth: 42, minHeight: 54, flexDirection: "row", alignItems: "center", justifyContent: "center", borderRadius: radius.pill },
+  dockItemActive: { flexBasis: 100, flexGrow: 1, maxWidth: 132, gap: spacing.xs, paddingHorizontal: spacing.md, backgroundColor: colors.surfaceTertiary },
   dockIcon: { width: 34, height: 28, alignItems: "center", justifyContent: "center", borderRadius: radius.pill },
-  dockIconActive: { backgroundColor: colors.brandPrimary },
-  dockLabel: { width: "100%", color: colors.onSurfaceTertiary, fontSize: 8.5, fontWeight: "700", textAlign: "center" },
-  dockLabelActive: { color: colors.brandPrimary, fontWeight: "900" },
+  dockIconActive: { backgroundColor: withAlpha(colors.brandPrimary, 0.1) },
+  dockLabelActive: { flexShrink: 1, color: colors.onSurface, fontSize: 11, fontWeight: "900" },
   desktopShell: { flex: 1, flexDirection: "row", backgroundColor: colors.surface },
   sidebarFrame: { width: layout.sidebarExpanded, marginLeft: spacing.lg, borderRadius: radius.lg, backgroundColor: colors.surfaceSecondary, borderWidth: 1, borderColor: colors.borderSubtle, overflow: "hidden", ...(Platform.OS === "web" ? ({ boxShadow: "0 16px 48px rgba(0,0,0,.24)" } as never) : {}) },
   sidebarFrameCompact: { width: layout.sidebarCompact },
