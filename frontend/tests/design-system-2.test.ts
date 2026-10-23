@@ -110,3 +110,13 @@ test("o banco de exercícios preserva filtros e ações existentes", () => {
     assert.match(source, new RegExp(action));
   }
 });
+
+test("o perfil reúne edição e logout em um menu compacto", () => {
+  const profile = read("../app/perfil.tsx");
+  assert.match(profile, /accessibilityLabel="Abrir menu do perfil"/);
+  assert.match(profile, /testID="profile-menu-edit"/);
+  assert.match(profile, /testID="profile-menu-logout"/);
+  assert.match(profile, /await signOutFromCloud\(\)/);
+  assert.match(profile, /router\.replace\("\/conta\?mode=signin"/);
+  assert.doesNotMatch(profile, /accessibilityLabel="Editar perfil"><MaterialDesignIcons/);
+});
