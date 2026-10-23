@@ -121,10 +121,27 @@ test("o perfil reúne edição e logout em um menu compacto", () => {
   assert.doesNotMatch(profile, /accessibilityLabel="Editar perfil"><MaterialDesignIcons/);
 });
 
-test("a dock mobile mostra o nome somente na área ativa", () => {
+test("a dock mobile anima a cápsula e revela o nome somente na área ativa", () => {
   const navigation = read("../src/components/AppNavigation.tsx");
-  assert.match(navigation, /active \? <Text numberOfLines=\{1\} style=\{styles\.dockLabelActive\}>\{section\.label\}<\/Text> : null/);
-  assert.match(navigation, /dockItemActive: \{ flexBasis: 100, flexGrow: 1, maxWidth: 132/);
+  assert.match(navigation, /function MobileDockItem/);
+  assert.match(navigation, /Animated\.timing\(progress/);
+  assert.match(navigation, /duration: 240/);
+  assert.match(navigation, /useReducedMotion\(\)/);
+  assert.match(navigation, /opacity: progress/);
+  assert.match(navigation, /outputRange: \[0, 76\]/);
   assert.match(navigation, /maxWidth: 560/);
-  assert.doesNotMatch(navigation, /style=\{\[styles\.dockLabel, active && styles\.dockLabelActive\]\}/);
+});
+
+test("as áreas principais têm retorno consistente e a marca pública usa Hidratação", () => {
+  const diet = read("../app/(tabs)/alimentacao.tsx");
+  const training = read("../app/treinos.tsx");
+  const hydration = read("../app/hidratacao.tsx");
+  const profile = read("../app/perfil.tsx");
+  assert.match(diet, /onBack=\{\(\) => router\.back\(\)\}/);
+  assert.match(training, /onBack=\{\(\) => router\.back\(\)\}/);
+  assert.match(hydration, /onBack=\{\(\) => router\.back\(\)\}/);
+  assert.match(profile, /accessibilityLabel="Voltar"/);
+  for (const path of ["../app/hidratacao.tsx", "../app/hidratacao-config.tsx", "../app/hidratacao-historico.tsx", "../app/hidratacao-recipientes.tsx", "../src/components/WaterCard.tsx", "../src/gamification/achievements.ts"]) {
+    assert.doesNotMatch(read(path), /HidratUrso|HIDRATURSO/, path);
+  }
 });

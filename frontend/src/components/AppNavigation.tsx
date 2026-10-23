@@ -3,6 +3,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { usePathname, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
+  Animated,
+  Easing,
   Image,
   Keyboard,
   Platform,
@@ -15,7 +17,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { NAVIGATION, getActiveChild, getActiveSection, normalizePathname, shouldHideNavigation, type NavigationItem } from "../navigation/config";
-import { useResponsiveLayout } from "../responsive";
+import { useReducedMotion, useResponsiveLayout } from "../responsive";
 import { breakpoints, colors, withAlpha, layout, radius, spacing, zIndex } from "../theme";
 import WorkoutMiniPlayer from "./WorkoutMiniPlayer";
 
@@ -147,31 +149,59 @@ function NavPressable({ item, active, sectionActive = false, onPress, style, com
 function MobileNavigation({ pathname, bottomInset }: { pathname: string; bottomInset: number }) {
   const router = useRouter();
   const activeSection = getActiveSection(pathname);
+  const reducedMotion = useReducedMotion();
   return (
     <View style={[styles.mobileNav, { paddingBottom: Math.max(bottomInset, spacing.sm) }]} testID="mobile-navigation">
       <View style={styles.dock} accessibilityRole="tablist" testID="mobile-dock">
         {NAVIGATION.map((section) => {
           const active = activeSection.id === section.id;
-          const aria = { "aria-current": active ? "page" : undefined } as Record<string, unknown>;
-          return (
-            <Pressable
-              {...aria}
-              key={section.id}
-              accessibilityRole="tab"
-              accessibilityLabel={section.label}
-              accessibilityState={{ selected: active }}
-              onPress={() => navigate(router, section.href)}
-              style={({ pressed }) => [styles.dockItem, active && styles.dockItemActive, pressed && styles.pressed]}
-              testID={`dock-${section.id}`}
-            >
-              <View style={[styles.dockIcon, active && styles.dockIconActive]}><MaterialDesignIcons name={section.icon as never} size={22} color={active ? colors.brandPrimary : colors.onSurfaceTertiary} /></View>
-              {active ? <Text numberOfLines={1} style={styles.dockLabelActive}>{section.label}</Text> : null}
-            </Pressable>
-          );
+          return <MobileDockItem key={section.id} section={section} active={active} reducedMotion={reducedMotion} onPress={() => navigate(router, section.href)} />;
         })}
       </View>
     </View>
   );
+}
+
+function MobileDockItem({ section, active, reducedMotion, onPress }: { section: NavigationItem; active: boolean; reducedMotion: boolean; onPress: () => void }) {
+  const [progress] = useState(() => new Animated.Value(active ? 1 : 0));
+
+  useEffect(() => {
+    if (reducedMotion) {
+      progress.setValue(active ? 1 : 0);
+      return;
+    }
+    Animated.timing(progress, {
+      toValue: active ? 1 : 0,
+      duration: 240,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
+    }).start();
+  }, [active, progress, reducedMotion]);
+
+  const aria = { "aria-current": active ? "page" : undefined } as Record<string, unknown>;
+  return <Animated.View style={[styles.dockItem, {
+    flexBasis: progress.interpolate({ inputRange: [0, 1], outputRange: [44, 100] }),
+    flexGrow: progress,
+    backgroundColor: progress.interpolate({ inputRange: [0, 1], outputRange: ["rgba(0,0,0,0)", colors.surfaceTertiary] }),
+    transform: [{ scale: progress.interpolate({ inputRange: [0, 1], outputRange: [0.98, 1] }) }],
+  }]}>
+    <Pressable
+      {...aria}
+      accessibilityRole="tab"
+      accessibilityLabel={section.label}
+      accessibilityState={{ selected: active }}
+      onPress={onPress}
+      style={({ pressed }) => [styles.dockPressable, pressed && styles.pressed]}
+      testID={`dock-${section.id}`}
+    >
+      <View style={[styles.dockIcon, active && styles.dockIconActive]}><MaterialDesignIcons name={section.icon as never} size={22} color={active ? colors.brandPrimary : colors.onSurfaceTertiary} /></View>
+      <Animated.Text numberOfLines={1} style={[styles.dockLabel, {
+        maxWidth: progress.interpolate({ inputRange: [0, 1], outputRange: [0, 76] }),
+        opacity: progress,
+        marginLeft: progress.interpolate({ inputRange: [0, 1], outputRange: [0, spacing.xs] }),
+      }]}>{section.label}</Animated.Text>
+    </Pressable>
+  </Animated.View>;
 }
 
 const styles = StyleSheet.create({
@@ -198,11 +228,11 @@ const styles = StyleSheet.create({
       ? ({ boxShadow: "0 12px 32px rgba(0,0,0,.46), 0 1px 0 rgba(255,255,255,.035) inset" } as never)
       : { shadowColor: "#000000", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.38, shadowRadius: 16, elevation: 12 }),
   },
-  dockItem: { flexBasis: 44, flexGrow: 0, flexShrink: 1, minWidth: 42, minHeight: 54, flexDirection: "row", alignItems: "center", justifyContent: "center", borderRadius: radius.pill },
-  dockItemActive: { flexBasis: 100, flexGrow: 1, maxWidth: 132, gap: spacing.xs, paddingHorizontal: spacing.md, backgroundColor: colors.surfaceTertiary },
+  dockItem: { flexBasis: 44, flexGrow: 0, flexShrink: 1, minWidth: 42, maxWidth: 132, minHeight: 54, overflow: "hidden", borderRadius: radius.pill },
+  dockPressable: { flex: 1, minWidth: 0, flexDirection: "row", alignItems: "center", justifyContent: "center", paddingHorizontal: spacing.sm },
   dockIcon: { width: 34, height: 28, alignItems: "center", justifyContent: "center", borderRadius: radius.pill },
   dockIconActive: { backgroundColor: withAlpha(colors.brandPrimary, 0.1) },
-  dockLabelActive: { flexShrink: 1, color: colors.onSurface, fontSize: 11, fontWeight: "900" },
+  dockLabel: { overflow: "hidden", color: colors.onSurface, fontSize: 11, fontWeight: "900" },
   desktopShell: { flex: 1, flexDirection: "row", backgroundColor: colors.surface },
   sidebarFrame: { width: layout.sidebarExpanded, marginLeft: spacing.lg, borderRadius: radius.lg, backgroundColor: colors.surfaceSecondary, borderWidth: 1, borderColor: colors.borderSubtle, overflow: "hidden", ...(Platform.OS === "web" ? ({ boxShadow: "0 16px 48px rgba(0,0,0,.24)" } as never) : {}) },
   sidebarFrameCompact: { width: layout.sidebarCompact },

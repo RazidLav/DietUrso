@@ -39,7 +39,7 @@ export default function AlimentacaoScreen() {
     <View style={styles.screen} testID="alimentacao-screen">
       <ScrollView contentContainerStyle={{ paddingTop: insets.top + spacing.lg, paddingBottom: FLOATING_TAB_HEIGHT + Math.max(insets.bottom, FLOATING_TAB_MARGIN) + spacing.xl }}>
         <ContentContainer style={styles.content}>
-        <PageHeader eyebrow="ALIMENTAÇÃO" title="Sua despensa e seu diário" description="Plano, registros e preparações organizados sem misturar o que foi planejado com o que você realmente consumiu." />
+        <PageHeader eyebrow="ALIMENTAÇÃO" title="Sua despensa e seu diário" description="Plano, registros e preparações organizados sem misturar o que foi planejado com o que você realmente consumiu." onBack={() => router.back()} />
 
         <ResponsiveGrid minItemWidth={96} maxColumns={3} gap={spacing.sm} singleColumnOnPhone={false}>
           <SummaryCard compact icon="food-apple-outline" label="Alimentos" value={String(counts.foods)} />

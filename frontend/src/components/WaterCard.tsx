@@ -13,7 +13,7 @@ export default function WaterCard({ summary, onQuickAdd, onPress, saving = false
       <Pressable style={styles.mainRow} onPress={onPress} accessibilityRole="button" accessibilityLabel="Abrir hidratação inteligente">
         <View style={styles.iconWrap}><MaterialDesignIcons name="water" size={22} color={colors.brandSecondary} /></View>
         <View style={{ flex: 1 }}>
-          <View style={styles.titleRow}><Text style={styles.title}>HidratUrso</Text><Text style={[styles.pace, { color: paceColor }]}>{summary.pace === "ahead" ? "ADIANTADO" : summary.pace === "behind" ? "ATRASADO" : "NO RITMO"}</Text></View>
+          <View style={styles.titleRow}><Text style={styles.title}>Hidratação</Text><Text style={[styles.pace, { color: paceColor }]}>{summary.pace === "ahead" ? "ADIANTADO" : summary.pace === "behind" ? "ATRASADO" : "NO RITMO"}</Text></View>
           <Text style={styles.amount}>{formatHydrationVolume(summary.consumedMl)} <Text style={styles.goal}>de {formatHydrationVolume(summary.goalMl)} · {Math.round(summary.percentage)}%</Text></Text>
           <Text style={styles.subtitle}>{summaryMessage(summary)}</Text>
         </View>
