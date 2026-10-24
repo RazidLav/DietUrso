@@ -76,3 +76,24 @@ test("histórico abre snapshot somente de leitura e mostra evolução real", () 
   assert.match(exercises, /1RM estimado/);
   assert.match(exercises, /30d/);
 });
+
+test("o treino minimizado permanece flutuante no desktop e reage à persistência local", () => {
+  const navigation = read("../src/components/AppNavigation.tsx");
+  const miniPlayer = read("../src/components/WorkoutMiniPlayer.tsx");
+  const cloud = read("../src/cloud/cloudSync.ts");
+  const execution = read("../app/treino/[sessionId].tsx");
+  assert.match(navigation, /<WorkoutMiniPlayer floating \/>/);
+  assert.match(navigation, /desktopMain: \{ position: "relative"[^}]*minHeight: 0/);
+  assert.match(miniPlayer, /outerFloating: \{ position: "absolute"[^}]*bottom: spacing\.lg/);
+  assert.match(miniPlayer, /zIndex: zIndex\.navigation/);
+  assert.match(cloud, /pendingLocalChange = true;\s+notifyDataChanged\(\);\s+scheduleCloudPush\(\);/);
+  assert.match(execution, /router\.replace\("\/treinos"\); void saveTrainingDraft/);
+});
+
+test("a Home desktop ocupa a coluna principal sem deixar o diário isolado abaixo", () => {
+  const home = read("../app/(tabs)/index.tsx");
+  assert.match(home, /topbarDesktop: \{ flexDirection: "row"/);
+  assert.match(home, /\{desktop \? mealsSection : null\}/);
+  assert.match(home, /\{desktop \? null : mealsSection\}/);
+  assert.match(home, /maxWidth: layout\.editorMax/);
+});
