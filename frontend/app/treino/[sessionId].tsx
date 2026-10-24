@@ -39,7 +39,7 @@ export default function TrainingExecutionScreen() {
       progress={progress}
       accent={accent}
       topInset={insets.top}
-      onMinimize={async () => { await saveTrainingDraft(session); router.replace("/treinos"); }}
+      onMinimize={() => { router.replace("/treinos"); void saveTrainingDraft(session).catch(() => undefined); }}
       onPause={() => void togglePause()}
       onFinish={() => setFinishOpen(true)}
     />

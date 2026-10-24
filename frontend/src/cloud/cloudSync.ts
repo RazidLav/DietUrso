@@ -355,6 +355,7 @@ export async function markLocalChange(): Promise<void> {
   if (applyingRemote) return;
   await AsyncStorage.setItem(LOCAL_CHANGED_AT_KEY, new Date().toISOString());
   pendingLocalChange = true;
+  notifyDataChanged();
   scheduleCloudPush();
 }
 

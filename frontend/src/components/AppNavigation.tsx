@@ -62,7 +62,7 @@ export default function AppNavigation({ children }: { children: React.ReactNode 
     return (
       <View style={styles.desktopShell} testID="desktop-app-shell">
         {effectiveMode === "hidden" ? <Pressable accessibilityRole="button" accessibilityLabel="Abrir navegação" style={[styles.reopenNavigation, { top: Math.max(insets.top, spacing.lg) }]} onPress={() => changeSidebarMode("compact")}><MaterialDesignIcons name="menu" size={23} color={colors.onSurface} /></Pressable> : <DesktopSidebar pathname={pathname} topInset={insets.top} bottomInset={insets.bottom} mode={effectiveMode} onModeChange={changeSidebarMode} />}
-        <View style={styles.desktopMain}><View style={styles.desktopCanvas}>{children}</View><WorkoutMiniPlayer /></View>
+        <View style={styles.desktopMain}><View style={styles.desktopCanvas}>{children}</View><WorkoutMiniPlayer floating /></View>
       </View>
     );
   }
@@ -242,7 +242,7 @@ const styles = StyleSheet.create({
   sidebarControl: { minHeight: 40, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: spacing.sm, paddingHorizontal: spacing.sm, borderRadius: radius.sm },
   sidebarControlText: { color: colors.onSurfaceTertiary, fontSize: 10, fontWeight: "700" },
   reopenNavigation: { position: "absolute", left: spacing.md, zIndex: zIndex.navigation, width: 44, height: 44, borderRadius: radius.md, alignItems: "center", justifyContent: "center", backgroundColor: colors.surfaceElevated, borderWidth: 1, borderColor: colors.borderSubtle },
-  desktopMain: { flex: 1, minWidth: 0, padding: spacing.lg },
+  desktopMain: { position: "relative", flex: 1, minWidth: 0, minHeight: 0, padding: spacing.lg },
   desktopCanvas: { flex: 1, width: "100%", maxWidth: layout.editorMax, alignSelf: "center", overflow: "hidden", backgroundColor: colors.surface },
   pressed: { opacity: 0.72 },
 });

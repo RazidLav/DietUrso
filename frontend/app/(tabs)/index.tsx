@@ -23,7 +23,7 @@ import { addConsumption, dayMacrosDefault, getActivePlan, getChosenOption, listC
 import { getTrainingState, prepareTrainingRange } from "../../src/store/trainingStore";
 import { dayEntries } from "../../src/training/calculations";
 import type { TrainingDayEntry, TrainingState } from "../../src/training/types";
-import { colors, radius, spacing, withAlpha } from "../../src/theme";
+import { colors, layout, radius, spacing, withAlpha } from "../../src/theme";
 import type { ConsumptionEntry, Plan } from "../../src/types/plan";
 import { todayISO, WEEKDAYS_LONG, WEEKDAYS_SHORT } from "../../src/utils/date";
 import { FLOATING_TAB_HEIGHT, FLOATING_TAB_MARGIN } from "./_layout";
@@ -163,17 +163,29 @@ export default function HomeScreen() {
   const nextMeal = resolveMealScheduleFocus(scheduledMeals);
   const firstName = cloudName(getCloudStatus().email);
   const loading = loadState === "idle" || loadState === "loading" || !cloudReady;
+  const mealsSection = plan && dayMeals.length ? <View style={styles.mealsSection}>
+    <SectionTitle title="Refeições do dia" action="Diário" onPress={() => router.push("/historico-alimentar")} />
+    <View style={[styles.mealGrid, desktop && styles.mealGridDesktop]}>{dayMeals.map((meal) => {
+      const option = meal.options.find((candidate) => candidate.id === chosen[meal.id]) ?? meal.options[0];
+      const macros = option ? optionMacros(option) : { kcal: 0, protein: 0, carbs: 0, fats: 0, fiber: 0, sodium: 0 };
+      const entry = consumption.find((candidate) => candidate.date === selectedDate && candidate.mealId === meal.id);
+      const status = entry ? (entry.status === "off_plan" ? "modified" : entry.status) : "planned";
+      const plannedTime = mealTimeForWeekday(meal, selected.getDay());
+      return <View key={meal.id} style={desktop ? [styles.mealCell, isWide && styles.mealCellWide] : undefined}><MealCard compact title={meal.name} subtitle={entry ? `${entry.status === "as_planned" ? "Conforme o plano" : entry.status === "skipped" ? "Não realizada" : "Com alterações"} · ${option?.name ?? ""}` : `${plannedTime ? `${plannedTime} · ` : ""}${option?.name ?? "Sem opções"}`} icon={iconForMeal(meal.type)} kcal={entry ? entryNutrients(entry).kcal : macros.kcal} status={status} onPress={() => router.push(`/meal/${plan.id}/${meal.id}?date=${selectedDate}`)} onToggleDone={() => void toggleQuickDone(meal.id, option?.id)} /></View>;
+    })}</View>
+  </View> : null;
 
   return (
     <>
       <ScrollView style={styles.screen} contentContainerStyle={[styles.content, { paddingTop: insets.top + spacing.lg, paddingBottom: FLOATING_TAB_HEIGHT + Math.max(insets.bottom, FLOATING_TAB_MARGIN) + spacing.xl }]} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.brandPrimary} />} testID="home-screen">
-        <View style={styles.header}>
-          <View style={styles.avatar}><Image source={require("../../assets/images/mascot-whey.jpg")} style={styles.avatarImage} accessibilityLabel="Mascote UrsoFit" /></View>
-          <View style={{ flex: 1 }}><Text style={styles.greeting}>{dayGreeting()}, {firstName}</Text><Text style={styles.greetingMessage}>Vamos cuidar do urso hoje?</Text><Text style={styles.headerDate}>{formatLongDate(selected)}</Text></View>
-          <Pressable accessibilityRole="button" style={styles.iconButton} accessibilityLabel="Abrir conquistas" onPress={() => router.push("/conquistas")}><MaterialDesignIcons name="bell-outline" size={21} color={colors.onSurface} />{pendingAchievement ? <View style={styles.notificationDot} /> : null}</Pressable>
+        <View style={[styles.topbar, desktop && styles.topbarDesktop]}>
+          <View style={[styles.header, desktop && styles.headerDesktop]}>
+            <View style={styles.avatar}><Image source={require("../../assets/images/mascot-whey.jpg")} style={styles.avatarImage} accessibilityLabel="Mascote UrsoFit" /></View>
+            <View style={{ flex: 1 }}><Text style={styles.greeting}>{dayGreeting()}, {firstName}</Text><Text style={styles.greetingMessage}>Vamos cuidar do urso hoje?</Text><Text style={styles.headerDate}>{formatLongDate(selected)}</Text></View>
+            <Pressable accessibilityRole="button" style={styles.iconButton} accessibilityLabel="Abrir conquistas" onPress={() => router.push("/conquistas")}><MaterialDesignIcons name="bell-outline" size={21} color={colors.onSurface} />{pendingAchievement ? <View style={styles.notificationDot} /> : null}</Pressable>
+          </View>
+          <WeekSelector wide={!isPhone} desktop={desktop} days={weekDays} selectedDate={selectedDate} activityDates={activityDates} onSelect={setSelectedDate} onShift={(amount) => setSelectedDate(toISO(addDays(selected, amount * 7)))} />
         </View>
-
-        <WeekSelector wide={!isPhone} days={weekDays} selectedDate={selectedDate} activityDates={activityDates} onSelect={setSelectedDate} onShift={(amount) => setSelectedDate(toISO(addDays(selected, amount * 7)))} />
 
         <View style={[styles.overview, desktop && styles.overviewDesktop]} testID="home-overview-columns">
           <View style={[styles.focusColumn, desktop && styles.focusColumnDesktop]}>
@@ -194,6 +206,7 @@ export default function HomeScreen() {
               <QuickAction icon="water-plus-outline" label="Adicionar água" onPress={() => void handleWater()} disabled={savingWater} />
               <QuickAction icon="dumbbell" label="Iniciar treino" onPress={() => router.push("/treinos")} />
             </View>
+            {desktop ? mealsSection : null}
           </View>
 
           <View style={[styles.dashboard, !isPhone && styles.dashboardWide, desktop && styles.dashboardDesktop]}>
@@ -223,25 +236,15 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {plan && dayMeals.length ? <View style={styles.mealsSection}>
-          <SectionTitle title="Refeições do dia" action="Diário" onPress={() => router.push("/historico-alimentar")} />
-          <View style={[styles.mealGrid, desktop && styles.mealGridDesktop]}>{dayMeals.map((meal) => {
-            const option = meal.options.find((candidate) => candidate.id === chosen[meal.id]) ?? meal.options[0];
-            const macros = option ? optionMacros(option) : { kcal: 0, protein: 0, carbs: 0, fats: 0, fiber: 0, sodium: 0 };
-            const entry = consumption.find((candidate) => candidate.date === selectedDate && candidate.mealId === meal.id);
-            const status = entry ? (entry.status === "off_plan" ? "modified" : entry.status) : "planned";
-            const plannedTime = mealTimeForWeekday(meal, selected.getDay());
-            return <View key={meal.id} style={desktop ? [styles.mealCell, isWide && styles.mealCellWide] : undefined}><MealCard compact title={meal.name} subtitle={entry ? `${entry.status === "as_planned" ? "Conforme o plano" : entry.status === "skipped" ? "Não realizada" : "Com alterações"} · ${option?.name ?? ""}` : `${plannedTime ? `${plannedTime} · ` : ""}${option?.name ?? "Sem opções"}`} icon={iconForMeal(meal.type)} kcal={entry ? entryNutrients(entry).kcal : macros.kcal} status={status} onPress={() => router.push(`/meal/${plan.id}/${meal.id}?date=${selectedDate}`)} onToggleDone={() => void toggleQuickDone(meal.id, option?.id)} /></View>;
-          })}</View>
-        </View> : null}
+        {desktop ? null : mealsSection}
       </ScrollView>
       <AchievementUnlockModal achievement={pendingAchievement} onDismiss={handleDismissAchievement} />
     </>
   );
 }
 
-function WeekSelector({ wide, days, selectedDate, activityDates, onSelect, onShift }: { wide: boolean; days: ReturnType<typeof weekFor>; selectedDate: string; activityDates: Set<string>; onSelect: (date: string) => void; onShift: (amount: number) => void }) {
-  return <View style={[styles.weekWrap, wide && styles.weekWrapWide]} testID="home-week-selector"><Pressable accessibilityRole="button" style={styles.weekArrow} onPress={() => onShift(-1)} accessibilityLabel="Semana anterior"><MaterialDesignIcons name="chevron-left" size={21} color={colors.onSurfaceSecondary} /></Pressable><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.weekDays}>{days.map((day) => { const active = day.iso === selectedDate; const current = day.iso === todayISO(); return <Pressable key={day.iso} style={[styles.day, active && styles.dayActive]} onPress={() => onSelect(day.iso)} accessibilityRole="button" accessibilityState={{ selected: active }} accessibilityLabel={`${WEEKDAYS_LONG[day.date.getDay()]}, dia ${day.date.getDate()}${current ? ", hoje" : ""}`} testID={`week-day-${day.iso}`}><Text style={[styles.dayName, active && styles.dayNameActive]}>{WEEKDAYS_SHORT[day.date.getDay()]}</Text><Text style={[styles.dayNumber, active && styles.dayNumberActive]}>{day.date.getDate()}</Text><View style={[styles.dayDot, activityDates.has(day.iso) && styles.dayDotOn, active && activityDates.has(day.iso) && styles.dayDotActive]} /></Pressable>; })}</ScrollView><Pressable accessibilityRole="button" style={styles.weekArrow} onPress={() => onShift(1)} accessibilityLabel="Próxima semana"><MaterialDesignIcons name="chevron-right" size={21} color={colors.onSurfaceSecondary} /></Pressable></View>;
+function WeekSelector({ wide, desktop, days, selectedDate, activityDates, onSelect, onShift }: { wide: boolean; desktop: boolean; days: ReturnType<typeof weekFor>; selectedDate: string; activityDates: Set<string>; onSelect: (date: string) => void; onShift: (amount: number) => void }) {
+  return <View style={[styles.weekWrap, wide && !desktop && styles.weekWrapWide, desktop && styles.weekWrapDesktop]} testID="home-week-selector"><Pressable accessibilityRole="button" style={styles.weekArrow} onPress={() => onShift(-1)} accessibilityLabel="Semana anterior"><MaterialDesignIcons name="chevron-left" size={21} color={colors.onSurfaceSecondary} /></Pressable><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.weekDays}>{days.map((day) => { const active = day.iso === selectedDate; const current = day.iso === todayISO(); return <Pressable key={day.iso} style={[styles.day, active && styles.dayActive]} onPress={() => onSelect(day.iso)} accessibilityRole="button" accessibilityState={{ selected: active }} accessibilityLabel={`${WEEKDAYS_LONG[day.date.getDay()]}, dia ${day.date.getDate()}${current ? ", hoje" : ""}`} testID={`week-day-${day.iso}`}><Text style={[styles.dayName, active && styles.dayNameActive]}>{WEEKDAYS_SHORT[day.date.getDay()]}</Text><Text style={[styles.dayNumber, active && styles.dayNumberActive]}>{day.date.getDate()}</Text><View style={[styles.dayDot, activityDates.has(day.iso) && styles.dayDotOn, active && activityDates.has(day.iso) && styles.dayDotActive]} /></Pressable>; })}</ScrollView><Pressable accessibilityRole="button" style={styles.weekArrow} onPress={() => onShift(1)} accessibilityLabel="Próxima semana"><MaterialDesignIcons name="chevron-right" size={21} color={colors.onSurfaceSecondary} /></Pressable></View>;
 }
 
 function QuickAction({ icon, label, onPress, disabled }: { icon: string; label: string; onPress: () => void; disabled?: boolean }) {
@@ -268,8 +271,11 @@ function formatLongDate(date: Date) { return new Intl.DateTimeFormat("pt-BR", { 
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.surface },
-  content: { width: "100%", maxWidth: 1260, alignSelf: "center", paddingHorizontal: spacing.lg, gap: spacing.lg },
+  content: { width: "100%", maxWidth: layout.editorMax, alignSelf: "center", paddingHorizontal: spacing.lg, gap: spacing.lg },
+  topbar: { gap: spacing.md },
+  topbarDesktop: { flexDirection: "row", alignItems: "center" },
   header: { flexDirection: "row", alignItems: "center", gap: spacing.md },
+  headerDesktop: { flex: 0.78, minWidth: 360 },
   avatar: { width: 52, height: 52, borderRadius: 18, overflow: "hidden", borderWidth: 2, borderColor: colors.brandPrimary, backgroundColor: colors.surfaceSecondary },
   avatarImage: { width: "100%", height: "100%" },
   greeting: { color: colors.onSurface, fontSize: 18, fontWeight: "900", letterSpacing: -0.3 },
@@ -279,6 +285,7 @@ const styles = StyleSheet.create({
   notificationDot: { position: "absolute", right: 9, top: 8, width: 8, height: 8, borderRadius: 4, backgroundColor: colors.brandPrimary, borderWidth: 2, borderColor: colors.surfaceSecondary },
   weekWrap: { flexDirection: "row", alignItems: "center", gap: spacing.xs, padding: spacing.xs, borderRadius: radius.lg, backgroundColor: colors.surfaceSecondary },
   weekWrapWide: { width: "100%", maxWidth: 680, alignSelf: "flex-start" },
+  weekWrapDesktop: { flex: 1.22, maxWidth: 760 },
   weekArrow: { width: 36, minHeight: 64, alignItems: "center", justifyContent: "center", borderRadius: radius.md },
   weekDays: { flexGrow: 1, justifyContent: "space-between", gap: 5 },
   day: { width: 52, minHeight: 64, alignItems: "center", justifyContent: "center", gap: 2, borderRadius: radius.md },
@@ -308,7 +315,7 @@ const styles = StyleSheet.create({
   quickIcon: { width: 34, height: 34, borderRadius: radius.sm, alignItems: "center", justifyContent: "center", backgroundColor: withAlpha(colors.brandPrimary, 0.12) },
   quickText: { flexShrink: 1, color: colors.onSurfaceSecondary, fontSize: 10, lineHeight: 14, fontWeight: "800" },
   overview: { gap: spacing.lg },
-  overviewDesktop: { flexDirection: "row", alignItems: "flex-start" },
+  overviewDesktop: { flexDirection: "row", alignItems: "stretch" },
   focusColumn: { minWidth: 0, gap: spacing.md },
   focusColumnDesktop: { flex: 0.9 },
   dashboard: { minWidth: 0, gap: spacing.lg },
