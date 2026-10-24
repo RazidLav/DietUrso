@@ -49,6 +49,11 @@ test("planejamento e execução usam detalhes recolhidos e registros compactos",
   const planning = read("../app/treino-planejado/[plannedId].tsx");
   const execution = read("../app/treino/[sessionId].tsx");
   assert.match(planning, /Detalhes da sessão/);
-  assert.match(execution, /Detalhes desta série/);
+  assert.doesNotMatch(execution, /Detalhes desta série/);
+  assert.match(execution, /accessibilityLabel=\{`Detalhes da série/);
+  assert.match(execution, /Minimizar treino/);
+  assert.match(execution, /Adicionar série/);
+  assert.match(execution, /SessionMetric label="Duração"/);
+  assert.match(execution, /strengthVolume\(session\)/);
   assert.match(execution, /accessibilityRole="checkbox"/);
 });
