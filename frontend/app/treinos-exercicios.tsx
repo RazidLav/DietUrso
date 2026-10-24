@@ -10,6 +10,7 @@ import { useResponsiveLayout } from "../src/responsive";
 import { createPersonalExerciseVariant, getTrainingState, savePersonalExercise, setPersonalExerciseArchived, toggleExerciseFavorite } from "../src/store/trainingStore";
 import { ACTIVITY_COLORS, ACTIVITY_ICONS, ACTIVITY_LABELS } from "../src/training/catalog";
 import type { ActivityType, ExerciseDefinition, TrainingState } from "../src/training/types";
+import { addDays, exercisePerformanceSeries, localDate } from "../src/training/calculations";
 import { colors, layout, radius, spacing, typeScale, withAlpha } from "../src/theme";
 import { matchesSearch } from "../src/utils/search";
 
@@ -21,7 +22,7 @@ const emptyDraft = (): ExerciseDraft => ({ name: "", activityType: "strength", l
 
 export default function ExerciseCatalogScreen() {
   const router = useRouter();
-  const { new: createNew } = useLocalSearchParams<{ new?: string }>();
+  const { new: createNew, exercise: requestedExerciseId } = useLocalSearchParams<{ new?: string; exercise?: string }>();
   const insets = useSafeAreaInsets();
   const responsive = useResponsiveLayout();
   const [state, setState] = useState<TrainingState | null>(null);
@@ -46,9 +47,9 @@ export default function ExerciseCatalogScreen() {
 
   const load = useCallback(async () => {
     if (!getCloudStatus().readyForData) return;
-    try { setState(await getTrainingState()); setLoadError(null); }
+    try { const nextState = await getTrainingState(); setState(nextState); if (requestedExerciseId) setDetail(nextState.exercises.find((exercise) => exercise.id === requestedExerciseId) ?? null); setLoadError(null); }
     catch (cause) { setLoadError(cause instanceof Error ? cause.message : "Não foi possível carregar os exercícios."); }
-  }, []);
+  }, [requestedExerciseId]);
   useFocusEffect(useCallback(() => { if (cloudReady) void load(); }, [cloudReady, load]));
 
   const muscles = useMemo(() => Array.from(new Set(state?.exercises.map((exercise) => exercise.primaryMuscle).filter((value): value is string => Boolean(value)) ?? [])).sort(), [state]);
@@ -74,7 +75,7 @@ export default function ExerciseCatalogScreen() {
 
   if (!state) return <View style={styles.loading}>{loadError ? <ErrorState description={loadError} onRetry={() => void load()} /> : <LoadingSkeleton rows={5} title={cloudReady ? "Carregando exercícios…" : "Preparando seus dados…"} />}</View>;
 
-  const detailPanel = detail ? <ExerciseDetail exercise={detail} sessions={state.sessions} onClose={() => setDetail(null)} onVariant={async () => { const copy = await createPersonalExerciseVariant(detail.id); setDetail(null); setDraft(copy); await load(); }} onEdit={() => { setDraft({ ...detail }); setDetail(null); }} onArchive={async () => { await setPersonalExerciseArchived(detail.id, !detail.archivedAt); setDetail(null); await load(); }} /> : null;
+  const detailPanel = detail ? <ExerciseDetail exercise={detail} state={state} onClose={() => setDetail(null)} onVariant={async () => { const copy = await createPersonalExerciseVariant(detail.id); setDetail(null); setDraft(copy); await load(); }} onEdit={() => { setDraft({ ...detail }); setDetail(null); }} onArchive={async () => { await setPersonalExerciseArchived(detail.id, !detail.archivedAt); setDetail(null); await load(); }} /> : null;
 
   return <View style={styles.screen} testID="exercise-catalog-screen">
     <ScrollView contentContainerStyle={{ paddingTop: insets.top + spacing.lg, paddingBottom: spacing.huge }} keyboardShouldPersistTaps="handled">
@@ -135,16 +136,31 @@ function ExerciseCard({ exercise, onPress, onFavorite, selected, grid = false }:
   </CompactCard>;
 }
 
-function ExerciseDetail({ exercise, sessions, onClose, onVariant, onEdit, onArchive }: { exercise: ExerciseDefinition; sessions: TrainingState["sessions"]; onClose: () => void; onVariant: () => void; onEdit: () => void; onArchive: () => void }) {
-  const history = sessions.flatMap((session) => session.result.strengthSets.filter((set) => set.exerciseId === exercise.id && set.status === "completed").map((set) => ({ session, set }))).sort((a, b) => b.session.startedAt.localeCompare(a.session.startedAt));
-  const last = history[0];
+type EvolutionRange = "30" | "90" | "180" | "365" | "all";
+type EvolutionMetric = "maxLoad" | "volume" | "estimatedOneRepMax" | "frequency";
+function ExerciseDetail({ exercise, state, onClose, onVariant, onEdit, onArchive }: { exercise: ExerciseDefinition; state: TrainingState; onClose: () => void; onVariant: () => void; onEdit: () => void; onArchive: () => void }) {
+  const [range, setRange] = useState<EvolutionRange>("90");
+  const [metric, setMetric] = useState<EvolutionMetric>("maxLoad");
+  const from = range === "all" ? undefined : addDays(localDate(), -(Number(range) - 1));
+  const history = exercisePerformanceSeries(state, exercise.id, from);
+  const last = history.at(-1); const bestLoad = Math.max(0, ...history.map((point) => point.maxLoad)); const bestVolume = Math.max(0, ...history.map((point) => point.volume)); const bestOneRm = Math.max(0, ...history.map((point) => point.estimatedOneRepMax));
+  const values = history.map((point) => metric === "maxLoad" ? point.maxLoad : metric === "volume" ? point.volume : metric === "estimatedOneRepMax" ? point.estimatedOneRepMax : 1);
+  const max = Math.max(1, ...values);
   return <View style={styles.detailPanel} testID="exercise-detail-panel">
     <View style={styles.detailHeader}><View style={[styles.detailIcon, { backgroundColor: withAlpha(ACTIVITY_COLORS[exercise.activityType], 0.13) }]}><MaterialDesignIcons name={ACTIVITY_ICONS[exercise.activityType] as never} size={25} color={ACTIVITY_COLORS[exercise.activityType]} /></View><View style={styles.exerciseCopy}><Text style={styles.detailTitle}>{exercise.name}</Text><Text style={styles.exerciseMeta}>{ACTIVITY_LABELS[exercise.activityType]}</Text></View><IconButton icon="close" label="Fechar detalhes" onPress={onClose} /></View>
     <Info label="Grupo principal" value={exercise.primaryMuscle} /><Info label="Grupos secundários" value={exercise.secondaryMuscles.join(", ")} /><Info label="Equipamento" value={exercise.equipment} /><Info label="Execução" value={exercise.instructions} /><Info label="Cuidados" value={exercise.cautions} />
-    <View style={styles.progressPanel}><Text style={styles.infoLabel}>PROGRESSO PESSOAL</Text>{last ? <><Text style={styles.progressValue}>{last.set.performedLoad != null ? `${last.set.performedLoad} ${last.set.loadUnit ?? "kg"}` : "Carga não informada"} · {last.set.performedReps ?? "—"} reps</Text><Text style={styles.exerciseMeta}>Última execução em {new Date(last.session.startedAt).toLocaleDateString("pt-BR")} · {history.length} série(s) registrada(s)</Text></> : <Text style={styles.exerciseMeta}>Ainda não há execução real suficiente para mostrar evolução.</Text>}</View>
+    <View style={styles.progressPanel}><View style={styles.progressHeading}><View><Text style={styles.infoLabel}>EVOLUÇÃO</Text><Text style={styles.progressValue}>{history.length ? `${history.length} execuções concluídas` : "Sem histórico concluído"}</Text></View>{last ? <Text style={styles.lastDate}>Última · {new Date(`${last.date}T12:00:00`).toLocaleDateString("pt-BR")}</Text> : null}</View>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.rangeChips}>{(["30", "90", "180", "365", "all"] as EvolutionRange[]).map((value) => <FilterChip key={value} label={value === "all" ? "Tudo" : value === "30" ? "30d" : value === "90" ? "90d" : value === "180" ? "6m" : "1a"} active={range === value} onPress={() => setRange(value)} />)}</ScrollView>
+      <View style={styles.evolutionStats}><EvolutionStat label="Carga máx." value={bestLoad ? `${bestLoad} kg` : "—"} /><EvolutionStat label="Volume máx." value={bestVolume ? `${Math.round(bestVolume).toLocaleString("pt-BR")} kg` : "—"} /><EvolutionStat label="1RM estimado" value={bestOneRm ? `${bestOneRm} kg` : "—"} /></View>
+      <View style={styles.chartTabs}>{(["maxLoad", "volume", "estimatedOneRepMax", "frequency"] as EvolutionMetric[]).map((value) => <FilterChip key={value} label={value === "maxLoad" ? "Carga" : value === "volume" ? "Volume" : value === "estimatedOneRepMax" ? "1RM" : "Frequência"} active={metric === value} onPress={() => setMetric(value)} />)}</View>
+      {history.length ? <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.exerciseChart}>{history.slice(-12).map((point, index) => { const value = metric === "maxLoad" ? point.maxLoad : metric === "volume" ? point.volume : metric === "estimatedOneRepMax" ? point.estimatedOneRepMax : 1; return <View key={`${point.sessionId}-${index}`} style={styles.exerciseBarColumn}><Text style={styles.exerciseBarValue}>{metric === "volume" ? compactEvolution(value) : Math.round(value * 10) / 10}</Text><View style={styles.exerciseBarTrack}><View style={[styles.exerciseBar, { height: `${Math.max(6, (value / max) * 100)}%` }]} /></View><Text style={styles.exerciseBarLabel}>{point.date.slice(5).replace("-", "/")}</Text></View>; })}</ScrollView> : <View style={styles.evolutionEmpty}><MaterialDesignIcons name="chart-line" size={24} color={colors.onSurfaceTertiary} /><Text style={styles.exerciseMeta}>Conclua este exercício para iniciar a evolução. Nenhum valor é inventado.</Text></View>}
+    </View>
+    {history.length ? <View style={styles.executionHistory}><Text style={styles.infoLabel}>EXECUÇÕES ANTERIORES</Text>{history.slice().reverse().slice(0, 6).map((point) => <View key={point.sessionId} style={styles.executionRow}><View style={{ flex: 1 }}><Text style={styles.executionDate}>{new Date(`${point.date}T12:00:00`).toLocaleDateString("pt-BR")}</Text><Text style={styles.exerciseMeta}>{point.sets.length} séries · {point.sets.map((set) => `${set.performedLoad ?? "—"}kg × ${set.performedReps ?? "—"}`).join(" · ")}</Text></View><Text style={styles.executionVolume}>{Math.round(point.volume).toLocaleString("pt-BR")} kg</Text></View>)}</View> : null}
     <View style={styles.detailActions}>{exercise.scope === "global" ? <PrimaryButton label="Criar versão pessoal" onPress={onVariant} /> : <><Pressable style={styles.secondaryButton} onPress={onEdit}><Text style={styles.secondaryText}>Editar</Text></Pressable><Pressable style={styles.secondaryButton} onPress={onArchive}><Text style={styles.secondaryText}>{exercise.archivedAt ? "Restaurar" : "Arquivar"}</Text></Pressable></>}</View>
   </View>;
 }
+function EvolutionStat({ label, value }: { label: string; value: string }) { return <View style={styles.evolutionStat}><Text style={styles.infoLabel}>{label}</Text><Text style={styles.evolutionStatValue}>{value}</Text></View>; }
+function compactEvolution(value: number) { return value >= 1000 ? `${Math.round(value / 100) / 10}k` : `${Math.round(value)}`; }
 
 function ExerciseForm({ draft, onChange }: { draft: ExerciseDraft; onChange: (updates: Partial<ExerciseDraft>) => void }) {
   return <View style={styles.form}>
@@ -204,8 +220,26 @@ const styles = StyleSheet.create({
   info: { gap: 2 },
   infoLabel: { color: colors.onSurfaceTertiary, fontSize: 9, fontWeight: "850" as never, letterSpacing: 0.6 },
   infoText: { color: colors.onSurfaceSecondary, fontSize: 12, lineHeight: 18 },
-  progressPanel: { gap: 3, padding: spacing.md, borderRadius: radius.md, backgroundColor: colors.surfaceInteractive },
+  progressPanel: { gap: spacing.md, padding: spacing.md, borderRadius: radius.md, backgroundColor: colors.surfaceInteractive },
+  progressHeading: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: spacing.sm },
   progressValue: { color: colors.onSurface, fontSize: 14, fontWeight: "900" },
+  lastDate: { color: colors.onSurfaceTertiary, fontSize: 9 },
+  rangeChips: { gap: spacing.xs },
+  evolutionStats: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs },
+  evolutionStat: { flex: 1, minWidth: 92, gap: 2, padding: spacing.sm, borderRadius: radius.sm, backgroundColor: colors.surfaceSecondary },
+  evolutionStatValue: { color: colors.onSurface, fontSize: 12, fontWeight: "900" },
+  chartTabs: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs },
+  exerciseChart: { minWidth: "100%", height: 138, alignItems: "flex-end", gap: spacing.sm, paddingTop: spacing.sm },
+  exerciseBarColumn: { width: 42, height: 126, alignItems: "center", justifyContent: "flex-end", gap: 3 },
+  exerciseBarValue: { color: colors.onSurfaceTertiary, fontSize: 7 },
+  exerciseBarTrack: { width: 20, height: 92, justifyContent: "flex-end", overflow: "hidden", borderRadius: radius.pill, backgroundColor: colors.surfaceTertiary },
+  exerciseBar: { width: "100%", borderRadius: radius.pill, backgroundColor: colors.brandSecondary },
+  exerciseBarLabel: { color: colors.onSurfaceTertiary, fontSize: 7 },
+  evolutionEmpty: { minHeight: 100, alignItems: "center", justifyContent: "center", gap: spacing.sm },
+  executionHistory: { gap: spacing.xs },
+  executionRow: { minHeight: 54, flexDirection: "row", alignItems: "center", gap: spacing.sm, paddingVertical: spacing.sm, borderBottomWidth: 1, borderBottomColor: colors.divider },
+  executionDate: { color: colors.onSurface, fontSize: 11, fontWeight: "850" as never },
+  executionVolume: { color: colors.brandSecondary, fontSize: 10, fontWeight: "900" },
   form: { gap: spacing.md },
   formRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md },
   fieldGrow: { flex: 1, minWidth: 180 },

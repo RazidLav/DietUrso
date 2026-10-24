@@ -10,6 +10,7 @@ const STATUS_LABELS: Record<TrainingDayEntry["status"], string> = {
   in_progress: "Em andamento",
   completed: "Concluída",
   partial: "Parcial",
+  cancelled: "Cancelada",
   skipped: "Pulada",
   canceled: "Cancelada",
 };

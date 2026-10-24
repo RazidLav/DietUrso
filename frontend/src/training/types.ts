@@ -1,7 +1,7 @@
 export type ActivityType = "mobility" | "strength" | "crossfit" | "running" | "cycling" | "pilates" | "jiu_jitsu" | "muay_thai" | "hiit" | "cardio" | "custom";
 
 export type PlannedSessionStatus = "planned" | "skipped" | "canceled";
-export type WorkoutSessionStatus = "in_progress" | "completed" | "partial";
+export type WorkoutSessionStatus = "in_progress" | "completed" | "partial" | "cancelled";
 export type LoadUnit = "kg" | "lb";
 export type ExerciseScope = "global" | "personal";
 export type SetStatus = "pending" | "completed" | "skipped";
@@ -335,6 +335,7 @@ export interface WorkoutSession {
   startedAt: string;
   pausedAt?: string;
   completedAt?: string;
+  cancelledAt?: string;
   durationMinutes?: number;
   idempotencyKey?: string;
   createdAt: string;
@@ -347,9 +348,11 @@ export interface PersonalRecord {
   sessionId: string;
   exerciseId?: string;
   exerciseName?: string;
-  metric: "max_load" | "max_reps" | "set_volume" | "fastest_5k" | "fastest_10k" | "cycling_distance";
+  metric: "max_load" | "max_reps" | "set_volume" | "exercise_session_volume" | "estimated_1rm" | "fastest_5k" | "fastest_10k" | "cycling_distance";
   value: number;
   unit: string;
+  load?: number;
+  repetitions?: number;
   achievedAt: string;
   dedupeKey: string;
 }

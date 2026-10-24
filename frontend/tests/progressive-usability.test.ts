@@ -56,4 +56,23 @@ test("planejamento e execução usam detalhes recolhidos e registros compactos",
   assert.match(execution, /SessionMetric label="Duração"/);
   assert.match(execution, /strengthVolume\(session\)/);
   assert.match(execution, /accessibilityRole="checkbox"/);
+  assert.match(execution, /\+15s/);
+  assert.match(execution, /\+30s/);
+  assert.match(execution, /Cancelar treino/);
+  assert.match(execution, /Adicionar exercício/);
+  assert.match(execution, /Substituir/);
+  assert.match(execution, /Remover série/);
+});
+
+test("histórico abre snapshot somente de leitura e mostra evolução real", () => {
+  const history = read("../app/treinos-historico.tsx");
+  const detail = read("../app/treino-historico/[sessionId].tsx");
+  const exercises = read("../app/treinos-exercicios.tsx");
+  assert.match(history, /DESEMPENHO NO PERÍODO/);
+  assert.match(history, /treino-historico/);
+  assert.match(detail, /REGISTRO PRESERVADO/);
+  assert.match(detail, /snapshot da execução/);
+  assert.match(exercises, /exercisePerformanceSeries/);
+  assert.match(exercises, /1RM estimado/);
+  assert.match(exercises, /30d/);
 });

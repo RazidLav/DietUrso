@@ -258,7 +258,9 @@ export function beginSession(state: TrainingState, plannedSessionId: string, now
     plannedSessionId,
     name: planned.name,
     activityType: planned.activityType,
-    date: planned.date,
+    // The execution belongs to the day it actually started. Keeping the planned
+    // date here made valid workouts disappear from the default history window.
+    date: localDate(now),
     scheduledTime: planned.scheduledTime,
     status: "in_progress",
     isPaused: false,
@@ -300,11 +302,69 @@ export function finishSession(
   return updateSession(state, next);
 }
 
+export function cancelSession(state: TrainingState, sessionId: string, now = new Date()) {
+  const session = state.sessions.find((candidate) => candidate.id === sessionId);
+  if (!session) throw new Error("Sessão não encontrada.");
+  if (session.status !== "in_progress") return state;
+  return updateSession(state, {
+    ...session,
+    status: "cancelled",
+    isPaused: false,
+    pausedAt: undefined,
+    cancelledAt: now.toISOString(),
+    updatedAt: now.toISOString(),
+  });
+}
+
 export function strengthVolume(session: WorkoutSession) {
   return session.result.strengthSets.reduce((total, set) => {
     if (set.status !== "completed" || !set.performedLoad || !set.performedReps) return total;
     return total + set.performedLoad * set.performedReps;
   }, 0);
+}
+
+export function exerciseVolume(sets: StrengthSetResult[]) {
+  return sets.reduce((total, set) => set.status === "completed" && (set.performedLoad ?? 0) > 0 && (set.performedReps ?? 0) > 0 ? total + set.performedLoad! * set.performedReps! : total, 0);
+}
+
+export interface ExercisePerformancePoint {
+  sessionId: string;
+  date: string;
+  completedAt: string;
+  sets: StrengthSetResult[];
+  maxLoad: number;
+  maxRepetitions: number;
+  volume: number;
+  estimatedOneRepMax: number;
+}
+
+export function exercisePerformanceSeries(state: TrainingState, exerciseId: string, from?: string) {
+  return state.sessions
+    .filter((session) => session.status === "completed" && (!from || session.date >= from))
+    .flatMap((session) => {
+      const sets = session.result.strengthSets.filter((set) => set.status === "completed" && (set.exerciseId === exerciseId || set.executedExerciseId === exerciseId));
+      if (!sets.length) return [];
+      const loads = sets.map((set) => set.performedLoad ?? 0);
+      const repetitions = sets.map((set) => set.performedReps ?? 0);
+      const oneRepMaxes = sets.map((set) => estimatedOneRepMax(set.performedLoad ?? 0, set.performedReps ?? 0) ?? 0);
+      return [{ sessionId: session.id, date: session.date, completedAt: session.completedAt ?? session.updatedAt, sets, maxLoad: Math.max(0, ...loads), maxRepetitions: Math.max(0, ...repetitions), volume: exerciseVolume(sets), estimatedOneRepMax: Math.max(0, ...oneRepMaxes) } satisfies ExercisePerformancePoint];
+    })
+    .sort((a, b) => a.completedAt.localeCompare(b.completedAt));
+}
+
+export function performanceComparison(previous: StrengthSetResult[], current: StrengthSetResult[]) {
+  const before = previous.filter((set) => set.status === "completed");
+  const now = current.filter((set) => set.status === "completed");
+  if (!before.length || !now.length) return undefined;
+  const previousBestLoad = Math.max(...before.map((set) => set.performedLoad ?? 0));
+  const currentBestLoad = Math.max(...now.map((set) => set.performedLoad ?? 0));
+  if (currentBestLoad > previousBestLoad) return `Você aumentou sua maior carga em ${Math.round((currentBestLoad - previousBestLoad) * 100) / 100} kg.`;
+  const previousRepsAtLoad = Math.max(0, ...before.filter((set) => set.performedLoad === currentBestLoad).map((set) => set.performedReps ?? 0));
+  const currentRepsAtLoad = Math.max(0, ...now.filter((set) => set.performedLoad === currentBestLoad).map((set) => set.performedReps ?? 0));
+  if (currentBestLoad > 0 && currentRepsAtLoad > previousRepsAtLoad) return `Você realizou ${currentRepsAtLoad - previousRepsAtLoad} repetição(ões) a mais com ${currentBestLoad} kg.`;
+  const previousVolume = exerciseVolume(before); const currentVolume = exerciseVolume(now);
+  if (currentVolume > previousVolume) return `Seu volume neste exercício aumentou ${Math.round(currentVolume - previousVolume).toLocaleString("pt-BR")} kg·rep.`;
+  return undefined;
 }
 
 export function sessionProgress(session: WorkoutSession | undefined) {
@@ -383,12 +443,19 @@ function recordBeats(previous: PersonalRecord | undefined, metric: PersonalRecor
 export function newPersonalRecords(state: TrainingState, session: WorkoutSession): PersonalRecord[] {
   if (session.status !== "completed") return [];
   const candidates: Omit<PersonalRecord, "id" | "ownerId" | "achievedAt" | "dedupeKey">[] = [];
-  session.result.strengthSets.filter((set) => set.status === "completed" && (set.performedReps ?? 0) > 0).forEach((set) => {
-    if ((set.performedLoad ?? 0) > 0) {
-      candidates.push({ sessionId: session.id, exerciseId: set.exerciseId, exerciseName: set.exerciseName, metric: "max_load", value: set.performedLoad!, unit: set.loadUnit ?? "kg" });
-      candidates.push({ sessionId: session.id, exerciseId: set.exerciseId, exerciseName: set.exerciseName, metric: "set_volume", value: set.performedLoad! * set.performedReps!, unit: `${set.loadUnit ?? "kg"}·rep` });
+  const strengthByExercise = new Map<string, StrengthSetResult[]>();
+  session.result.strengthSets.filter((set) => set.status === "completed" && (set.performedReps ?? 0) > 0).forEach((set) => { const key = set.exerciseId ?? set.executedExerciseId ?? set.exerciseName; strengthByExercise.set(key, [...(strengthByExercise.get(key) ?? []), set]); });
+  strengthByExercise.forEach((sets) => {
+    const sample = sets[0]; const loaded = sets.filter((set) => (set.performedLoad ?? 0) > 0);
+    if (loaded.length) {
+      const heaviest = loaded.slice().sort((a, b) => (b.performedLoad ?? 0) - (a.performedLoad ?? 0) || (b.performedReps ?? 0) - (a.performedReps ?? 0))[0];
+      const bestOneRm = loaded.map((set) => ({ set, value: estimatedOneRepMax(set.performedLoad!, set.performedReps!) ?? 0 })).sort((a, b) => b.value - a.value)[0];
+      candidates.push({ sessionId: session.id, exerciseId: sample.exerciseId, exerciseName: sample.exerciseName, metric: "max_load", value: heaviest.performedLoad!, unit: heaviest.loadUnit ?? "kg", load: heaviest.performedLoad, repetitions: heaviest.performedReps });
+      candidates.push({ sessionId: session.id, exerciseId: sample.exerciseId, exerciseName: sample.exerciseName, metric: "exercise_session_volume", value: exerciseVolume(sets), unit: `${sample.loadUnit ?? "kg"}·rep` });
+      if (bestOneRm.value > 0) candidates.push({ sessionId: session.id, exerciseId: sample.exerciseId, exerciseName: sample.exerciseName, metric: "estimated_1rm", value: bestOneRm.value, unit: bestOneRm.set.loadUnit ?? "kg", load: bestOneRm.set.performedLoad, repetitions: bestOneRm.set.performedReps });
     }
-    candidates.push({ sessionId: session.id, exerciseId: set.exerciseId, exerciseName: set.exerciseName, metric: "max_reps", value: set.performedReps!, unit: "reps" });
+    const mostReps = sets.slice().sort((a, b) => (b.performedReps ?? 0) - (a.performedReps ?? 0))[0];
+    candidates.push({ sessionId: session.id, exerciseId: sample.exerciseId, exerciseName: sample.exerciseName, metric: "max_reps", value: mostReps.performedReps!, unit: "reps", load: mostReps.performedLoad, repetitions: mostReps.performedReps });
   });
   const running = session.result.running;
   if (running?.distanceKm && running.durationMinutes) {
@@ -414,7 +481,7 @@ export function filterSessions(state: TrainingState, filters: TrainingHistoryFil
     if (filters.from && session.date < filters.from) return false;
     if (filters.to && session.date > filters.to) return false;
     if (filters.activityType && session.activityType !== filters.activityType) return false;
-    if (filters.status && !["in_progress", "completed", "partial"].includes(filters.status)) return false;
+    if (filters.status && !["in_progress", "completed", "partial", "cancelled"].includes(filters.status)) return false;
     if (filters.status && session.status !== filters.status) return false;
     if (filters.planId) {
       const planned = state.plannedSessions.find((candidate) => candidate.id === session.plannedSessionId);
@@ -436,17 +503,17 @@ export function historySummary(state: TrainingState, filters: TrainingHistoryFil
     return true;
   }).length;
   const completed = sessions.filter((session) => session.status === "completed");
-  const dates = sessions.map((session) => session.date).sort();
+  const dates = completed.map((session) => session.date).sort();
   const spanDays = dates.length ? Math.max(1, Math.round((Date.parse(`${dates.at(-1)}T12:00:00Z`) - Date.parse(`${dates[0]}T12:00:00Z`)) / 86400000) + 1) : 7;
   return {
     planned,
     completed: completed.length,
     partial: sessions.filter((session) => session.status === "partial").length,
-    totalDurationMinutes: sessions.reduce((sum, session) => sum + (session.durationMinutes ?? 0), 0),
-    strengthVolume: sessions.reduce((sum, session) => sum + strengthVolume(session), 0),
-    runningDistanceKm: sessions.reduce((sum, session) => sum + (session.result.running?.distanceKm ?? 0), 0),
-    cyclingDistanceKm: sessions.reduce((sum, session) => sum + (session.result.cycling?.distanceKm ?? 0), 0),
-    mobilityMinutes: sessions.filter((session) => session.activityType === "mobility").reduce((sum, session) => sum + (session.durationMinutes ?? 0), 0),
+    totalDurationMinutes: completed.reduce((sum, session) => sum + (session.durationMinutes ?? 0), 0),
+    strengthVolume: completed.reduce((sum, session) => sum + strengthVolume(session), 0),
+    runningDistanceKm: completed.reduce((sum, session) => sum + (session.result.running?.distanceKm ?? 0), 0),
+    cyclingDistanceKm: completed.reduce((sum, session) => sum + (session.result.cycling?.distanceKm ?? 0), 0),
+    mobilityMinutes: completed.filter((session) => session.activityType === "mobility").reduce((sum, session) => sum + (session.durationMinutes ?? 0), 0),
     weeklyFrequency: Math.round((completed.length / Math.max(1, spanDays / 7)) * 10) / 10,
   };
 }

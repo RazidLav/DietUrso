@@ -18,6 +18,7 @@ import {
   upsertExerciseState,
   upsertTrainingPlanState,
   archiveTrainingPlanState,
+  cancelSession,
   duplicateTrainingPlanState,
 } from "../training/calculations";
 import { persistTrainingWithRollback } from "../training/transaction";
@@ -441,6 +442,23 @@ export async function updateStrengthSet(sessionId: string, result: StrengthSetRe
   });
 }
 
+export async function removeStrengthSetFromSession(sessionId: string, setId: string, force = false) {
+  return mutate((state) => {
+    const session = state.sessions.find((candidate) => candidate.id === sessionId);
+    if (!session || session.status !== "in_progress") throw new Error("Sessão em andamento não encontrada.");
+    const target = session.result.strengthSets.find((set) => set.id === setId);
+    if (!target) return state;
+    if (!force && target.status === "completed") throw new Error("Esta série já foi concluída. Confirme para remover seu registro desta sessão.");
+    const exercises = session.prescriptionSnapshot.strength?.exercises.map((exercise) => exercise.id !== target.exercisePlanId ? exercise : { ...exercise, sets: exercise.sets.filter((set) => set.id !== target.planSetId) });
+    return updateSession(state, {
+      ...session,
+      prescriptionSnapshot: exercises ? { ...session.prescriptionSnapshot, strength: { exercises } } : session.prescriptionSnapshot,
+      result: { ...session.result, strengthSets: session.result.strengthSets.filter((set) => set.id !== setId) },
+      updatedAt: new Date().toISOString(),
+    });
+  });
+}
+
 export async function updateMobilityMovement(sessionId: string, movementPlanId: string, completed: boolean) {
   return mutate((state) => {
     const session = state.sessions.find((candidate) => candidate.id === sessionId);
@@ -498,11 +516,15 @@ export async function completeTrainingSession(id: string, status: "completed" | 
   }, true);
 }
 
+export async function cancelTrainingSession(id: string) {
+  return mutate((state) => cancelSession(state, id));
+}
+
 export async function discardTrainingDraft(id: string) {
   return mutate((state) => ({ ...state, sessions: state.sessions.filter((session) => session.id !== id || session.status !== "in_progress") }));
 }
 
-export async function addStrengthExerciseToPrescription(
+export function addStrengthExerciseToPrescription(
   prescription: WorkoutPrescription,
   exercise: ExerciseDefinition,
 ) {
@@ -523,6 +545,53 @@ export async function addStrengthExerciseToPrescription(
       }],
     },
   };
+}
+
+export async function addStrengthExerciseToSession(sessionId: string, exerciseId: string) {
+  return mutate((state) => {
+    const session = state.sessions.find((candidate) => candidate.id === sessionId);
+    const exercise = state.exercises.find((candidate) => candidate.id === exerciseId && !candidate.archivedAt);
+    if (!session || session.status !== "in_progress") throw new Error("Sessão em andamento não encontrada.");
+    if (!exercise || exercise.activityType !== "strength") throw new Error("Exercício de musculação não encontrado.");
+    const prescriptionSnapshot = addStrengthExerciseToPrescription(session.prescriptionSnapshot, exercise);
+    const added = prescriptionSnapshot.strength!.exercises.at(-1)!;
+    const strengthSets = [...session.result.strengthSets, ...added.sets.map((set) => ({ id: uid("set-result"), planSetId: set.id, exercisePlanId: added.id, exerciseId: exercise.id, executedExerciseId: exercise.id, exerciseName: exercise.name, status: "pending" as const, loadUnit: set.loadUnit }))];
+    return updateSession(state, { ...session, prescriptionSnapshot, result: { ...session.result, strengthSets }, updatedAt: new Date().toISOString() });
+  });
+}
+
+export async function moveStrengthExerciseInSession(sessionId: string, exercisePlanId: string, direction: -1 | 1) {
+  return mutate((state) => {
+    const session = state.sessions.find((candidate) => candidate.id === sessionId);
+    if (!session || session.status !== "in_progress" || !session.prescriptionSnapshot.strength) return state;
+    const exercises = session.prescriptionSnapshot.strength.exercises.slice().sort((a, b) => a.order - b.order);
+    const index = exercises.findIndex((exercise) => exercise.id === exercisePlanId); const target = index + direction;
+    if (index < 0 || target < 0 || target >= exercises.length) return state;
+    [exercises[index], exercises[target]] = [exercises[target], exercises[index]];
+    return updateSession(state, { ...session, prescriptionSnapshot: { ...session.prescriptionSnapshot, strength: { exercises: exercises.map((exercise, order) => ({ ...exercise, order })) } }, updatedAt: new Date().toISOString() });
+  });
+}
+
+export async function removeStrengthExerciseFromSession(sessionId: string, exercisePlanId: string, force = false) {
+  return mutate((state) => {
+    const session = state.sessions.find((candidate) => candidate.id === sessionId);
+    if (!session || session.status !== "in_progress" || !session.prescriptionSnapshot.strength) throw new Error("Sessão em andamento não encontrada.");
+    const related = session.result.strengthSets.filter((set) => set.exercisePlanId === exercisePlanId);
+    if (!force && related.some((set) => set.status === "completed")) throw new Error("Este exercício possui séries concluídas. Confirme para remover os registros desta sessão.");
+    return updateSession(state, { ...session, prescriptionSnapshot: { ...session.prescriptionSnapshot, strength: { exercises: session.prescriptionSnapshot.strength.exercises.filter((exercise) => exercise.id !== exercisePlanId).map((exercise, order) => ({ ...exercise, order })) } }, result: { ...session.result, strengthSets: session.result.strengthSets.filter((set) => set.exercisePlanId !== exercisePlanId) }, updatedAt: new Date().toISOString() });
+  });
+}
+
+export async function substituteStrengthExerciseInSession(sessionId: string, exercisePlanId: string, exerciseId: string) {
+  return mutate((state) => {
+    const session = state.sessions.find((candidate) => candidate.id === sessionId);
+    const replacement = state.exercises.find((candidate) => candidate.id === exerciseId && !candidate.archivedAt);
+    if (!session || session.status !== "in_progress" || !session.prescriptionSnapshot.strength) throw new Error("Sessão em andamento não encontrada.");
+    if (!replacement || replacement.activityType !== "strength") throw new Error("Exercício substituto não encontrado.");
+    const exercises = session.prescriptionSnapshot.strength.exercises.map((exercise) => exercise.id !== exercisePlanId ? exercise : { ...exercise, exerciseId: replacement.id, exerciseSnapshot: { id: replacement.id, name: replacement.name, primaryMuscle: replacement.primaryMuscle, equipment: replacement.equipment, laterality: replacement.laterality, instructions: replacement.instructions } });
+    const strengthSets = session.result.strengthSets.map((set) => set.exercisePlanId !== exercisePlanId ? set : { ...set, exerciseId: replacement.id, executedExerciseId: replacement.id, exerciseName: replacement.name });
+    return updateSession(state, { ...session, prescriptionSnapshot: { ...session.prescriptionSnapshot, strength: { exercises } }, result: { ...session.result, strengthSets }, updatedAt: new Date().toISOString() });
+  });
 }
 
 export function defaultSessionDate() {
