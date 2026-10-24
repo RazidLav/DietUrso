@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useCloudDataRefresh } from "../src/cloud/useCloudDataRefresh";
-import { ResponsiveSheet } from "../src/components/DesignSystem";
+import { ContentContainer, IconButton, PageHeader, ResponsiveSheet } from "../src/components/DesignSystem";
 import { ACHIEVEMENTS, RARITY_COLORS } from "../src/gamification/achievements";
 import { evaluateGamification } from "../src/gamification/engine";
 import { CHAPTERS, getLevelDefinition, LEVEL_DEFINITIONS } from "../src/gamification/journey";
@@ -60,18 +60,9 @@ export default function TrophyCaveScreen() {
 
   return (
     <View style={styles.screen} testID="trophy-cave-screen">
-      <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
-        <Pressable accessibilityLabel="Voltar" style={styles.iconButton} onPress={() => router.back()}>
-          <MaterialDesignIcons name="chevron-left" size={28} color={colors.onSurface} />
-        </Pressable>
-        <View style={styles.headerCopy}>
-          <Text style={styles.eyebrow}>JORNADA URSOFIT</Text>
-          <Text style={styles.headerTitle}>Caverna de Troféus</Text>
-        </View>
-        <Pressable accessibilityLabel="Abrir Meu Urso" style={styles.iconButton} onPress={() => router.push("/meu-urso" as never)}>
-          <MaterialDesignIcons name="teddy-bear" size={23} color={colors.brandPrimary} />
-        </Pressable>
-      </View>
+      <ContentContainer style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
+        <PageHeader eyebrow="JORNADA URSOFIT" title="Caverna de Troféus" onBack={() => router.back()} action={<IconButton icon="teddy-bear" label="Abrir Meu Urso" onPress={() => router.push("/meu-urso" as never)} />} />
+      </ContentContainer>
 
       {status === "loading" ? <LoadingState /> : null}
       {status === "error" ? <ErrorState onRetry={load} /> : null}
@@ -289,11 +280,7 @@ function PreparedRoom({ icon, title, text }: { icon: string; title: string; text
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.surface },
-  header: { flexDirection: "row", alignItems: "center", gap: spacing.sm, paddingHorizontal: spacing.lg, paddingBottom: spacing.md, backgroundColor: colors.surface },
-  iconButton: { width: 42, height: 42, borderRadius: radius.md, alignItems: "center", justifyContent: "center", backgroundColor: colors.surfaceSecondary },
-  headerCopy: { flex: 1 },
-  eyebrow: { color: colors.brandPrimary, fontSize: 9, fontWeight: "900", letterSpacing: 1.6 },
-  headerTitle: { color: colors.onSurface, fontSize: 21, fontWeight: "900" },
+  header: { paddingBottom: spacing.md, backgroundColor: colors.surface },
   content: { width: "100%", maxWidth: 1180, alignSelf: "center", padding: spacing.lg, gap: spacing.lg },
   centerState: { flex: 1, minHeight: 360, alignItems: "center", justifyContent: "center", padding: spacing.xl, gap: spacing.sm },
   stateTitle: { color: colors.onSurface, fontSize: 18, fontWeight: "900", textAlign: "center" },
