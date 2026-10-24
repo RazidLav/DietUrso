@@ -5,13 +5,17 @@ import { applyIdempotentReward } from "../src/gamification/rewards";
 import {
   archiveTrainingPlanState,
   beginSession,
+  cancelSession,
   clonePrescription,
   createDefaultPrescription,
   createInitialTrainingState,
   duplicateTrainingPlanState,
   finishSession,
+  exercisePerformanceSeries,
+  historySummary,
   materializePlans,
   newPersonalRecords,
+  performanceComparison,
   sanitizeTrainingState,
   scopeTrainingStateToOwner,
   strengthVolume,
@@ -157,6 +161,23 @@ test("rascunho em andamento é recuperado pela sanitização", () => {
   assert.equal(recovered.sessions[0].plannedSessionId, "run");
 });
 
+test("sessão iniciada usa a data real da execução e não a data antiga do plano", () => {
+  const executionTime = new Date("2026-10-24T12:00:00.000Z");
+  const started = beginSession(withPlanned(planned("old", "strength", "2026-08-01")), "old", executionTime);
+  assert.equal(started.session.date, "2026-10-24");
+  assert.equal(started.session.plannedSessionId, "old");
+});
+
+test("cancelamento preserva a sessão e a exclui das estatísticas", () => {
+  const started = beginSession(withPlanned(planned("strength", "strength")), "strength", now);
+  const cancelled = cancelSession(started.state, started.session.id, new Date("2026-09-07T12:15:00.000Z"));
+  assert.equal(cancelled.sessions[0].status, "cancelled");
+  assert.ok(cancelled.sessions[0].cancelledAt);
+  assert.equal(historySummary(cancelled).completed, 0);
+  assert.equal(historySummary(cancelled).totalDurationMinutes, 0);
+  assert.deepEqual(newPersonalRecords(cancelled, cancelled.sessions[0]), []);
+});
+
 test("alterar plano não modifica snapshot já planejado", () => {
   const base = plan();
   base.days[1].items.push({ id: "item", name: "Original", activityType: "strength", prescription: createDefaultPrescription("strength"), order: 0 });
@@ -180,6 +201,29 @@ test("recordes pessoais não são duplicados por reprocessamento", () => {
   const first = newPersonalRecords(state, session); state = { ...state, personalRecords: first };
   assert.ok(first.length >= 1);
   assert.equal(newPersonalRecords(state, session).length, 0);
+});
+
+test("histórico do exercício usa apenas sessões concluídas e calcula volume e 1RM", () => {
+  const done = completedSession("done", "strength", { strengthSets: [{ id: "1", planSetId: "1", exercisePlanId: "e", exerciseId: "squat", exerciseName: "Agachamento", status: "completed", performedLoad: 100, performedReps: 5, loadUnit: "kg" }, { id: "2", planSetId: "2", exercisePlanId: "e", exerciseId: "squat", exerciseName: "Agachamento", status: "completed", performedLoad: 80, performedReps: 10, loadUnit: "kg" }] });
+  const partial = { ...completedSession("partial", "strength", { strengthSets: [{ id: "3", planSetId: "3", exercisePlanId: "e", exerciseId: "squat", exerciseName: "Agachamento", status: "completed", performedLoad: 200, performedReps: 1 }] }), status: "partial" as const };
+  const series = exercisePerformanceSeries({ ...createInitialTrainingState(), sessions: [done, partial] }, "squat");
+  assert.equal(series.length, 1);
+  assert.equal(series[0].volume, 1300);
+  assert.ok(series[0].estimatedOneRepMax > 100);
+});
+
+test("comparação de desempenho informa mais repetições com a mesma carga", () => {
+  const base = { id: "1", planSetId: "1", exercisePlanId: "e", exerciseId: "squat", exerciseName: "Agachamento", status: "completed" as const, performedLoad: 60, performedReps: 10 };
+  assert.match(performanceComparison([base], [{ ...base, id: "2", performedReps: 12 }]) ?? "", /2 repetição/);
+});
+
+test("recordes incluem volume por exercício e 1RM estimado sem duplicidade", () => {
+  const session = completedSession("records", "strength", { strengthSets: [{ id: "1", planSetId: "1", exercisePlanId: "e", exerciseId: "bench", exerciseName: "Supino", status: "completed", performedLoad: 80, performedReps: 8, loadUnit: "kg" }, { id: "2", planSetId: "2", exercisePlanId: "e", exerciseId: "bench", exerciseName: "Supino", status: "completed", performedLoad: 80, performedReps: 8, loadUnit: "kg" }] });
+  const records = newPersonalRecords(createInitialTrainingState(), session);
+  assert.ok(records.some((record) => record.metric === "exercise_session_volume" && record.value === 1280));
+  assert.ok(records.some((record) => record.metric === "estimated_1rm" && record.value > 80));
+  const state = { ...createInitialTrainingState(), personalRecords: records };
+  assert.deepEqual(newPersonalRecords(state, session), []);
 });
 
 test("conquistas e XP de treino são idempotentes", () => {
