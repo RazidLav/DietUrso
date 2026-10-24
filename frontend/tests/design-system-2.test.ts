@@ -18,7 +18,7 @@ test("o layout responsivo distingue telefone, tablet e desktop por largura", () 
 
 test("a fundação visual compartilha os componentes essenciais", () => {
   const source = read("../src/components/DesignSystem.tsx");
-  for (const component of ["ContentContainer", "PageHeader", "SectionHeader", "ResponsiveGrid", "CompactCard", "SummaryCard", "StatusBadge", "SegmentedControl", "FilterChip", "IconButton", "PrimaryButton", "ResponsiveSheet"]) {
+  for (const component of ["ContentContainer", "PageHeader", "SectionHeader", "ResponsiveGrid", "CompactCard", "SurfaceCard", "SummaryCard", "StatusBadge", "SegmentedControl", "FilterChip", "IconButton", "PrimaryButton", "ResponsiveSheet"]) {
     assert.match(source, new RegExp(`export function ${component}`));
   }
   assert.match(source, /onLayout=/);
@@ -113,7 +113,7 @@ test("o banco de exercícios preserva filtros e ações existentes", () => {
 
 test("o perfil reúne edição e logout em um menu compacto", () => {
   const profile = read("../app/perfil.tsx");
-  assert.match(profile, /accessibilityLabel="Abrir menu do perfil"/);
+  assert.match(profile, /label="Abrir menu do perfil"/);
   assert.match(profile, /testID="profile-menu-edit"/);
   assert.match(profile, /testID="profile-menu-logout"/);
   assert.match(profile, /await signOutFromCloud\(\)/);
@@ -140,8 +140,20 @@ test("as áreas principais têm retorno consistente e a marca pública usa Hidra
   assert.match(diet, /onBack=\{\(\) => router\.back\(\)\}/);
   assert.match(training, /onBack=\{\(\) => router\.back\(\)\}/);
   assert.match(hydration, /onBack=\{\(\) => router\.back\(\)\}/);
-  assert.match(profile, /accessibilityLabel="Voltar"/);
+  assert.match(profile, /<PageHeader[^>]+onBack=/);
   for (const path of ["../app/hidratacao.tsx", "../app/hidratacao-config.tsx", "../app/hidratacao-historico.tsx", "../app/hidratacao-recipientes.tsx", "../src/components/WaterCard.tsx", "../src/gamification/achievements.ts"]) {
     assert.doesNotMatch(read(path), /HidratUrso|HIDRATURSO/, path);
   }
+});
+
+test("as telas da toca compartilham cabeçalho, largura e grade de cartões", () => {
+  for (const path of ["../app/perfil.tsx", "../app/meu-urso.tsx", "../app/conquistas.tsx", "../app/evolucao.tsx", "../app/estatisticas.tsx", "../app/comunidade.tsx", "../app/rugidos.tsx", "../app/desafios.tsx"]) {
+    assert.match(read(path), /PageHeader/, path);
+  }
+  const closet = read("../app/meu-urso.tsx");
+  assert.match(closet, /ResponsiveGrid minItemWidth=\{160\} maxColumns=\{4\}/);
+  assert.doesNotMatch(closet, /100 \/ columns/);
+  const designSystem = read("../src/components/DesignSystem.tsx");
+  assert.match(designSystem, /pageHeader: \{ minHeight: 44/);
+  assert.match(designSystem, /surfaceCard: \{ padding: spacing\.lg, borderRadius: radius\.md/);
 });

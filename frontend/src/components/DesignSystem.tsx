@@ -21,15 +21,19 @@ export function ContentContainer({ children, style, maxWidth = layout.contentMax
 
 export function PageHeader({ eyebrow, title, description, onBack, action }: { eyebrow?: string; title: string; description?: string; onBack?: () => void; action?: React.ReactNode }) {
   const { isPhone } = useResponsiveLayout();
-  return <View style={[styles.pageHeader, isPhone && styles.pageHeaderPhone, isPhone && Boolean(action) && styles.pageHeaderPhoneWithAction]}>
+  return <View style={[styles.pageHeader, isPhone && styles.pageHeaderPhone]}>
     {onBack ? <IconButton icon="arrow-left" label="Voltar" onPress={onBack} /> : null}
     <View style={styles.headerCopy}>
       {eyebrow ? <Text style={styles.eyebrow}>{eyebrow}</Text> : null}
       <Text accessibilityRole="header" style={styles.pageTitle}>{title}</Text>
       {description ? <Text style={styles.pageDescription}>{description}</Text> : null}
     </View>
-    {action ? <View style={[styles.headerAction, isPhone && styles.headerActionPhone]}>{action}</View> : null}
+    {action ? <View style={styles.headerAction}>{action}</View> : null}
   </View>;
+}
+
+export function SurfaceCard({ children, density = "standard", bordered = false, style }: { children: React.ReactNode; density?: "compact" | "standard" | "spacious"; bordered?: boolean; style?: StyleProp<ViewStyle> }) {
+  return <View style={[styles.surfaceCard, density === "compact" && styles.surfaceCardCompact, density === "spacious" && styles.surfaceCardSpacious, bordered && styles.surfaceCardBordered, style]}>{children}</View>;
 }
 
 export function SectionHeader({ title, description, action }: { title: string; description?: string; action?: React.ReactNode }) {
@@ -110,12 +114,10 @@ export function ResponsiveSheet({ visible, title, description, onClose, children
 
 const styles = StyleSheet.create({
   content: { width: "100%", alignSelf: "center", paddingHorizontal: spacing.lg },
-  pageHeader: { flexDirection: "row", alignItems: "center", gap: spacing.md },
-  pageHeaderPhone: { alignItems: "flex-start", flexWrap: "wrap" },
-  pageHeaderPhoneWithAction: { flexDirection: "column", alignItems: "stretch" },
+  pageHeader: { minHeight: 44, flexDirection: "row", alignItems: "flex-start", gap: spacing.md },
+  pageHeaderPhone: { gap: spacing.sm },
   headerCopy: { flex: 1, minWidth: 0 },
   headerAction: { flexShrink: 0 },
-  headerActionPhone: { alignSelf: "flex-end" },
   eyebrow: { color: colors.brandPrimary, fontSize: typeScale.caption.fontSize, lineHeight: typeScale.caption.lineHeight, fontWeight: "850" as never, letterSpacing: 0.9 },
   pageTitle: { color: colors.onSurface, fontSize: typeScale.pageTitle.fontSize, lineHeight: typeScale.pageTitle.lineHeight, fontWeight: "900" },
   pageDescription: { color: colors.onSurfaceTertiary, fontSize: typeScale.body.fontSize, lineHeight: typeScale.body.lineHeight, marginTop: spacing.xs, maxWidth: layout.readingMax },
@@ -125,6 +127,10 @@ const styles = StyleSheet.create({
   grid: { flexDirection: "row", flexWrap: "wrap", alignItems: "stretch" },
   compactCard: { minHeight: 64, padding: spacing.md, borderRadius: radius.md, backgroundColor: colors.surfaceSecondary },
   compactCardSelected: { backgroundColor: withAlpha(colors.brandPrimary, 0.09), borderWidth: 1, borderColor: withAlpha(colors.brandPrimary, 0.42) },
+  surfaceCard: { padding: spacing.lg, borderRadius: radius.md, backgroundColor: colors.surfaceSecondary },
+  surfaceCardCompact: { padding: spacing.md },
+  surfaceCardSpacious: { padding: spacing.xl, borderRadius: radius.lg },
+  surfaceCardBordered: { borderWidth: 1, borderColor: colors.border },
   summaryCard: { minHeight: 74, padding: spacing.md, borderRadius: radius.md, backgroundColor: colors.surfaceSecondary },
   summaryCardCompact: { minHeight: 66, padding: spacing.sm },
   summaryTop: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
