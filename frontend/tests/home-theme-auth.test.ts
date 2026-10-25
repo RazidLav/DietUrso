@@ -78,6 +78,17 @@ test("Home possui seletor semanal e falhas independentes por domínio", () => {
   assert.match(home, /GamificationSummaryCard/);
 });
 
+test("Home organiza o dia em destaques, progresso e linha do tempo acionável", () => {
+  const home = source("app/(tabs)/index.tsx");
+  assert.match(home, /PLANO DO DIA/);
+  assert.match(home, /MOVIMENTO DO DIA/);
+  assert.match(home, /Atividade de hoje/);
+  assert.match(home, /type TimelineItem/);
+  assert.match(home, /TimelineRow/);
+  assert.match(home, /dailyProgressCard/);
+  assert.match(home, /item\.onToggle \?\? item\.onPress/);
+});
+
 test("Aparência oferece seleção acessível dos dois temas", () => {
   const settings = source("app/(tabs)/ajustes.tsx");
   assert.match(settings, /appearance-settings/);
