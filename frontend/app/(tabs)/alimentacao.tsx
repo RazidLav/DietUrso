@@ -2,8 +2,8 @@ import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { ContentContainer, PageHeader, ResponsiveGrid, SummaryCard } from "../../src/components/DesignSystem";
-import { FeatureCard, FloatingActionMenu, FolderCard } from "../../src/components/ProgressiveUI";
+import { AreaDashboardHeader, DashboardTile } from "../../src/components/AreaDashboard";
+import { ContentContainer, ResponsiveGrid } from "../../src/components/DesignSystem";
 import { useCloudDataRefresh } from "../../src/cloud/useCloudDataRefresh";
 import { listConsumption } from "../../src/store/planStore";
 import { listFoodCatalog, listRecipes } from "../../src/store/nutritionStore";
@@ -39,64 +39,72 @@ export default function AlimentacaoScreen() {
     <View style={styles.screen} testID="alimentacao-screen">
       <ScrollView contentContainerStyle={{ paddingTop: insets.top + spacing.lg, paddingBottom: FLOATING_TAB_HEIGHT + Math.max(insets.bottom, FLOATING_TAB_MARGIN) + spacing.xl }}>
         <ContentContainer style={styles.content}>
-        <PageHeader eyebrow="ALIMENTAÇÃO" title="Sua despensa e seu diário" description="Plano, registros e preparações organizados sem misturar o que foi planejado com o que você realmente consumiu." accent={areaColors.food} onBack={() => router.back()} />
+        <AreaDashboardHeader
+          title="Dieta"
+          subtitle="Seu plano, seus registros e sua despensa."
+          accent={areaColors.food}
+          onBack={() => router.back()}
+          onSettings={() => router.push("/ajustes")}
+          settingsLabel="Abrir configurações da dieta"
+          actions={[
+            { id: "off-plan", label: "Registrar refeição", hint: "Inclua uma refeição sem alterar o plano", icon: "silverware-variant", onPress: () => router.push("/fora-do-plano") },
+            { id: "food", label: "Novo alimento", hint: "Cadastre no seu banco pessoal", icon: "food-apple", onPress: () => router.push("/alimentos") },
+            { id: "recipe", label: "Nova receita", hint: "Monte uma preparação por porções", icon: "chef-hat", onPress: () => router.push("/receitas") },
+          ]}
+        />
 
-        <ResponsiveGrid minItemWidth={96} maxColumns={3} gap={spacing.sm} singleColumnOnPhone={false}>
-          <SummaryCard compact icon="food-apple-outline" label="Alimentos" value={String(counts.foods)} accent={areaColors.food} />
-          <SummaryCard compact icon="chef-hat" label="Receitas" value={String(counts.recipes)} accent={areaColors.food} />
-          <SummaryCard compact icon="check-circle-outline" label="Registros hoje" value={String(counts.today)} accent={areaColors.food} />
-        </ResponsiveGrid>
-
-        <ResponsiveGrid minItemWidth={150} maxColumns={2} gap={spacing.sm} singleColumnOnPhone={false}>
-          <FolderCard icon="calendar-check" title="Hoje e meu plano" description="Refeições planejadas e registro do dia" onPress={() => router.push("/plano")} />
-          <FolderCard icon="cart-outline" title="Lista de compras" description="Itens organizados para sua rotina" onPress={() => router.push("/compras")} />
-        </ResponsiveGrid>
-
-        <ResponsiveGrid minItemWidth={150} maxColumns={2} gap={spacing.sm} singleColumnOnPhone={false}>
-        <FeatureCard
-          compact
+        <ResponsiveGrid minItemWidth={145} maxColumns={4} gap={spacing.sm} singleColumnOnPhone={false}>
+        <DashboardTile
+          icon="calendar-check"
+          label="Hoje e meu plano"
+          value={`${counts.today} registros`}
+          hint="Refeições planejadas e consumo do dia"
+          accent={areaColors.food}
+          onPress={() => router.push("/plano")}
+        />
+        <DashboardTile
           icon="food-apple"
-          title="Banco de alimentos"
+          label="Banco de alimentos"
           value={`${counts.foods} disponíveis`}
-          description="Pesquise o catálogo ou cadastre alimentos com valores por porção de referência."
+          hint="Pesquise ou cadastre alimentos"
           accent={areaColors.food}
           onPress={() => router.push("/alimentos")}
         />
-        <FeatureCard
-          compact
+        <DashboardTile
           icon="chef-hat"
-          title="Receitas e preparações"
+          label="Receitas"
           value={`${counts.recipes} salvas`}
-          description="Monte receitas, calcule a receita inteira e veja automaticamente os valores por porção."
+          hint="Preparações e valores por porção"
           accent={areaColors.food}
           onPress={() => router.push("/receitas")}
         />
-        <FeatureCard
-          compact
+        <DashboardTile
+          icon="calendar-search"
+          label="Histórico alimentar"
+          value="Dia e semana"
+          hint="Planejado, consumido e adesão"
+          accent={colors.brandSecondary}
+          onPress={() => router.push("/historico-alimentar")}
+        />
+        <DashboardTile
           icon="silverware-variant"
-          title="Registrar fora do plano"
+          label="Fora do plano"
           value={`${counts.offPlan} no histórico`}
-          description="Registre a vida real sem mudar a dieta das próximas refeições. Sem culpa, só informação."
+          hint="Registre sem alterar a rotina"
           accent={colors.brandTertiary}
           onPress={() => router.push("/fora-do-plano")}
         />
-        <FeatureCard
-          compact
-          icon="calendar-search"
-          title="Histórico alimentar"
-          value="Visão diária e semanal"
-          description="Compare planejado e consumido, navegue por data e acompanhe a adesão aproximada."
-          accent={colors.brandSecondary}
-          onPress={() => router.push("/historico-alimentar")}
+        <DashboardTile
+          icon="cart-outline"
+          label="Lista de compras"
+          value="Sua rotina"
+          hint="Itens organizados por plano"
+          accent={areaColors.food}
+          onPress={() => router.push("/compras")}
         />
         </ResponsiveGrid>
         </ContentContainer>
       </ScrollView>
-      <FloatingActionMenu label="Registrar" actions={[
-        { id: "off-plan", label: "Refeição fora do plano", hint: "Registre sem alterar as próximas refeições", icon: "silverware-variant", onPress: () => router.push("/fora-do-plano") },
-        { id: "food", label: "Novo alimento", hint: "Abra seu banco de alimentos", icon: "food-apple", onPress: () => router.push("/alimentos") },
-        { id: "recipe", label: "Nova receita", hint: "Monte uma preparação por porções", icon: "chef-hat", onPress: () => router.push("/receitas") },
-      ]} />
     </View>
   );
 }

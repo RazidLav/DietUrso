@@ -3,8 +3,8 @@ import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { ContentContainer, PageHeader } from "../src/components/DesignSystem";
-import { FolderCard } from "../src/components/ProgressiveUI";
+import { AreaDashboardHeader, DashboardTile } from "../src/components/AreaDashboard";
+import { ContentContainer, ResponsiveGrid } from "../src/components/DesignSystem";
 import { useCloudDataRefresh } from "../src/cloud/useCloudDataRefresh";
 import { formatHydrationVolume, hydrationClock, hydrationSummary, selectHydrationAlert, snapshotFromConfig } from "../src/hydration/calculations";
 import type { HydrationAlert, HydrationRecord, HydrationState } from "../src/hydration/types";
@@ -138,7 +138,19 @@ export default function HydrationScreen() {
     <View style={styles.screen} testID="hydration-screen">
       <ScrollView contentContainerStyle={{ paddingTop: insets.top + spacing.lg, paddingBottom: 120 }}>
         <ContentContainer style={styles.content} maxWidth={1380}>
-        <PageHeader eyebrow="HIDRATAÇÃO INTELIGENTE" title="Hidratação" description="Registre água em poucos toques e acompanhe o ritmo do seu dia." accent={areaColors.hydration} onBack={() => router.back()} />
+        <AreaDashboardHeader
+          title="Hidratação"
+          subtitle="Seu ritmo de água, sem complicação."
+          accent={areaColors.hydration}
+          onBack={() => router.back()}
+          onSettings={() => router.push("/hidratacao-config")}
+          settingsLabel="Abrir configurações de hidratação"
+          actions={[
+            { id: "water-250", label: "Adicionar 250 ml", hint: "Um copo de água", icon: "cup-water", onPress: () => void optimisticAdd(250, "quick") },
+            { id: "water-500", label: "Adicionar 500 ml", hint: "Uma garrafa pequena", icon: "bottle-soda-classic-outline", onPress: () => void optimisticAdd(500, "quick") },
+            { id: "water-custom", label: "Outra quantidade", hint: "Abra os controles de registro", icon: "water-plus-outline", onPress: () => setShowMoreAmounts(true) },
+          ]}
+        />
         {error ? <Pressable style={styles.error} onPress={() => setError(null)}><MaterialDesignIcons name="alert-circle-outline" size={18} color={colors.error} /><Text style={styles.errorText}>{error}</Text><MaterialDesignIcons name="close" size={16} color={colors.onSurfaceTertiary} /></Pressable> : null}
         {activeAlert ? <View style={styles.alert}><View style={styles.alertIcon}><MaterialDesignIcons name="water-alert-outline" size={24} color={colors.brandSecondary} /></View><View style={{ flex: 1 }}><Text style={styles.alertTitle}>{activeAlert.title}</Text><Text style={styles.alertText}>{activeAlert.message}</Text><View style={styles.alertActions}><Pressable onPress={() => void handleAlert("snooze")}><Text style={styles.alertAction}>Lembrar depois</Text></Pressable><Pressable onPress={() => void handleAlert("dismiss")}><Text style={styles.alertAction}>Dispensar</Text></Pressable></View></View></View> : null}
 
@@ -150,11 +162,11 @@ export default function HydrationScreen() {
           <View style={styles.metrics}><Metric label="Esperado agora" value={formatHydrationVolume(summary.expectedMl)} /><Metric label={summary.remainingMl ? "Falta para a meta" : "Acima da meta"} value={formatHydrationVolume(summary.remainingMl || Math.max(0, summary.consumedMl - summary.goalMl))} /><Metric label="Janela ativa" value={`${Math.round(summary.activeProgress * 100)}%`} /></View>
         </View>
 
-        <View style={styles.navigationStack}>
-          <FolderCard icon="bottle-soda-classic-outline" title="Recipientes" description="Copos e garrafas personalizados" onPress={() => router.push("/hidratacao-recipientes")} />
-          <FolderCard icon="chart-timeline-variant" title="Histórico" description="Consumo por dia e evolução" onPress={() => router.push("/hidratacao-historico")} />
-          <FolderCard icon="target" title="Meta e configurações" description="Horários, ritmo e cálculo diário" onPress={() => router.push("/hidratacao-config")} />
-        </View>
+        <ResponsiveGrid minItemWidth={145} maxColumns={3} gap={spacing.sm} singleColumnOnPhone={false}>
+          <DashboardTile icon="bottle-soda-classic-outline" label="Recipientes" value={`${favorites.length} favoritos`} hint="Copos e garrafas personalizados" accent={areaColors.hydration} onPress={() => router.push("/hidratacao-recipientes")} />
+          <DashboardTile icon="chart-timeline-variant" label="Histórico" value={`${todayRecords.length} hoje`} hint="Consumo por dia e evolução" accent={areaColors.hydration} onPress={() => router.push("/hidratacao-historico")} />
+          <DashboardTile icon="target" label="Meta e horários" value={formatHydrationVolume(summary.goalMl)} hint="Ritmo e cálculo diário" accent={areaColors.hydration} onPress={() => router.push("/hidratacao-config")} />
+        </ResponsiveGrid>
         </View>
 
         <View style={styles.activityColumn}>

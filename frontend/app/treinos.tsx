@@ -4,8 +4,9 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import TrainingSessionCard from "../src/components/TrainingSessionCard";
-import { ContentContainer, PageHeader, ResponsiveGrid, SegmentedControl } from "../src/components/DesignSystem";
-import { EmptyState, ErrorState, FeatureCard, FloatingActionMenu, FolderCard, LoadingSkeleton } from "../src/components/ProgressiveUI";
+import { AreaDashboardHeader, DashboardTile } from "../src/components/AreaDashboard";
+import { ContentContainer, ResponsiveGrid, SegmentedControl } from "../src/components/DesignSystem";
+import { EmptyState, ErrorState, LoadingSkeleton } from "../src/components/ProgressiveUI";
 import { getCloudStatus, subscribeCloudStatus } from "../src/cloud/cloudSync";
 import { useCloudDataRefresh } from "../src/cloud/useCloudDataRefresh";
 import { addDays, dayEntries, localDate, startOfWeek } from "../src/training/calculations";
@@ -89,18 +90,27 @@ export default function TreinosScreen() {
     <View style={styles.screen}>
       <ScrollView refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={colors.brandPrimary} />} contentContainerStyle={{ paddingTop: insets.top + spacing.lg, paddingBottom: 148 }}>
         <ContentContainer style={styles.content}>
-        <PageHeader eyebrow="TREINO" title="Sua semana, sem burocracia" description="Veja o que vem agora. Planos, exercícios e histórico ficam organizados em áreas próprias." accent={areaColors.training} onBack={() => router.back()} />
+        <AreaDashboardHeader
+          title="Treino"
+          subtitle="Sessões, planos e evolução no mesmo ritmo."
+          accent={areaColors.training}
+          onBack={() => router.back()}
+          onSettings={() => router.push("/treinos-planos")}
+          settingsLabel="Abrir planos e configurações de treino"
+          actions={[
+            { id: "session", label: "Nova sessão", hint: "Escolha a modalidade na próxima etapa", icon: "calendar-plus", onPress: () => router.push(`/treino-novo?date=${selectedDate}`) },
+            { id: "plan", label: "Novo plano", hint: "Crie e organize sua semana", icon: "calendar-edit", onPress: () => router.push("/treinos-planos?new=1") },
+            { id: "exercise", label: "Novo exercício", hint: "Adicione ao seu banco pessoal", icon: "plus-circle-outline", onPress: () => router.push("/treinos-exercicios?new=1") },
+          ]}
+        />
 
-        <ResponsiveGrid minItemWidth={300} maxColumns={2} gap={spacing.sm}>
-          <FeatureCard icon={nextEntry?.status === "in_progress" ? "play-circle-outline" : "calendar-clock"} title={nextEntry?.status === "in_progress" ? "EM ANDAMENTO" : "PRÓXIMA AÇÃO"} value={nextEntry?.planned.name ?? "Dia livre"} description={nextEntry ? `${nextEntry.planned.scheduledTime ?? "Sem horário"} · ${ACTIVITY_LABELS[nextEntry.planned.activityType]}` : "Você pode adicionar uma sessão quando quiser."} onPress={() => openEntry(nextEntry)} />
-          <FeatureCard icon="check-circle-outline" title={selectedDate === localDate() ? "HOJE" : "DIA SELECIONADO"} value={`${completedOnSelectedDay}/${entries.length}`} description="sessões concluídas de forma independente" accent={colors.success} />
-        </ResponsiveGrid>
-
-        <ResponsiveGrid minItemWidth={220} maxColumns={4} gap={spacing.sm}>
-          <FolderCard icon="calendar-edit" title="Meus planos" description="Monte e organize sua semana" onPress={() => router.push("/treinos-planos")} />
-          <FolderCard icon="dumbbell" title="Banco de exercícios" description="Pesquise, filtre e favorite" onPress={() => router.push("/treinos-exercicios")} />
-          <FolderCard icon="history" title="Histórico" description="Sessões, volume e recordes" onPress={() => router.push("/treinos-historico")} />
-          <FolderCard icon="chart-line" title="Evolução" description="Acompanhe seu progresso" onPress={() => router.push("/evolucao")} />
+        <ResponsiveGrid minItemWidth={145} maxColumns={4} gap={spacing.sm} singleColumnOnPhone={false}>
+          <DashboardTile icon={nextEntry?.status === "in_progress" ? "play-circle-outline" : "calendar-clock"} label={nextEntry?.status === "in_progress" ? "Em andamento" : "Próxima sessão"} value={nextEntry?.planned.name ?? "Dia livre"} hint={nextEntry ? `${nextEntry.planned.scheduledTime ?? "Sem horário"} · ${ACTIVITY_LABELS[nextEntry.planned.activityType]}` : "Adicione quando quiser"} accent={areaColors.training} onPress={() => openEntry(nextEntry)} />
+          <DashboardTile icon="check-circle-outline" label={selectedDate === localDate() ? "Concluídos hoje" : "Concluídos no dia"} value={`${completedOnSelectedDay}/${entries.length}`} hint="Sessões independentes" accent={colors.success} />
+          <DashboardTile icon="calendar-edit" label="Meus planos" value="Sua semana" hint="Monte, edite e organize" accent={areaColors.training} onPress={() => router.push("/treinos-planos")} />
+          <DashboardTile icon="dumbbell" label="Exercícios" value="Seu banco" hint="Pesquise, filtre e favorite" accent={areaColors.training} onPress={() => router.push("/treinos-exercicios")} />
+          <DashboardTile icon="history" label="Histórico" value="Sessões e recordes" hint="Volume, duração e resultados" accent={areaColors.training} onPress={() => router.push("/treinos-historico")} />
+          <DashboardTile icon="chart-line" label="Evolução" value="Seu progresso" hint="Tendências ao longo do tempo" accent={areaColors.training} onPress={() => router.push("/evolucao")} />
         </ResponsiveGrid>
 
         <SegmentedControl value={mode} label="Período do calendário" options={[{ value: "day", label: "Dia" }, { value: "week", label: "Semana" }, { value: "month", label: "Mês" }]} onChange={setMode} />
@@ -121,11 +131,6 @@ export default function TreinosScreen() {
         {mode === "month" ? <View style={styles.monthGrid}>{monthDates.map((date, index) => date ? <Pressable key={date} style={[styles.monthDay, date === selectedDate && styles.selected]} onPress={() => { setSelectedDate(date); setMode("day"); }}><Text style={styles.monthNumber}>{Number(date.slice(-2))}</Text><View style={styles.monthDots}>{dayEntries(state, date).slice(0, 4).map((entry) => <View key={entry.planned.id} style={[styles.monthDot, { backgroundColor: ACTIVITY_COLORS[entry.planned.activityType] }]} />)}</View></Pressable> : <View key={`empty-${index}`} style={styles.monthDay} />)}</View> : null}
         </ContentContainer>
       </ScrollView>
-      <FloatingActionMenu label="Adicionar" actions={[
-        { id: "session", label: "Nova sessão", hint: "Escolha a modalidade na próxima etapa", icon: "calendar-plus", onPress: () => router.push(`/treino-novo?date=${selectedDate}`) },
-        { id: "plan", label: "Novo plano", hint: "Crie primeiro o plano e depois organize a semana", icon: "calendar-edit", onPress: () => router.push("/treinos-planos?new=1") },
-        { id: "exercise", label: "Exercício personalizado", hint: "Adicione ao seu banco pessoal", icon: "plus-circle-outline", onPress: () => router.push("/treinos-exercicios?new=1") },
-      ]} />
     </View>
   );
 }
