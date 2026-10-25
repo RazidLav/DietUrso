@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: dieturso
+    name: ursofit
     runtime: static
     rootDir: frontend
     buildCommand: pnpm install --frozen-lockfile && pnpm run build:web

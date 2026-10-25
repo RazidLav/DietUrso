@@ -26,9 +26,9 @@ test("login normaliza e-mail e aceita uma sessão válida sem depender do banco 
 
 test("cadastro pendente não anuncia sessão criada", async () => {
   const auth = { signUp: async () => ({ data: { user: { id: "user-2" }, session: null }, error: null }) };
-  const result = await registerWithPassword(auth as never, "  TESTE@SITE.COM ", "senha123", authRedirectUrl("https://dieturso.onrender.com"));
+  const result = await registerWithPassword(auth as never, "  TESTE@SITE.COM ", "senha123", authRedirectUrl("https://ursofit.onrender.com"));
   assert.equal(result.needsEmailConfirmation, true);
-  assert.equal(authRedirectUrl("https://dieturso.onrender.com/"), "https://dieturso.onrender.com/conta?auth_callback=1");
+  assert.equal(authRedirectUrl("https://ursofit.onrender.com/"), "https://ursofit.onrender.com/conta?auth_callback=1");
 });
 
 test("credenciais inválidas e e-mail não confirmado recebem mensagens distintas", () => {
@@ -39,11 +39,11 @@ test("credenciais inválidas e e-mail não confirmado recebem mensagens distinta
 
 test("reenvio e recuperação usam e-mail normalizado e redirecionamento seguro", async () => {
   let resetEmail = ""; let resendEmail = "";
-  await requestPasswordReset({ resetPasswordForEmail: async (email: string) => { resetEmail = email; return { data: {}, error: null }; } } as never, " EU@SITE.COM ", authRedirectUrl("https://dieturso.onrender.com", true));
+  await requestPasswordReset({ resetPasswordForEmail: async (email: string) => { resetEmail = email; return { data: {}, error: null }; } } as never, " EU@SITE.COM ", authRedirectUrl("https://ursofit.onrender.com", true));
   await resendEmailConfirmation({ resend: async ({ email }: { email: string }) => { resendEmail = email; return { data: {}, error: null }; } } as never, " EU@SITE.COM ");
   assert.equal(resetEmail, "eu@site.com");
   assert.equal(resendEmail, "eu@site.com");
-  assert.equal(authRedirectUrl("https://dieturso.onrender.com", true), "https://dieturso.onrender.com/conta?recovery=1");
+  assert.equal(authRedirectUrl("https://ursofit.onrender.com", true), "https://ursofit.onrender.com/conta?recovery=1");
 });
 
 test("plano não aparece como vazio durante sessão ou consulta pendente", () => {

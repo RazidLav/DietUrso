@@ -87,7 +87,7 @@ test("a segunda revisão de densidade reduz escolhas simultâneas e fixa o FAB a
   const progressive = read("../src/components/ProgressiveUI.tsx");
 
   assert.match(home, /home-overview-columns/);
-  assert.match(home, /weekWrapWide: \{ width: "100%", maxWidth: 680/);
+  assert.doesNotMatch(home, /home-week-selector/);
   assert.match(hydration, /PRIMARY_QUICK_AMOUNTS = \[250, 500, 1000\]/);
   assert.match(hydration, /showMoreAmounts/);
   assert.match(hydration, /hydration-more-amounts/);
@@ -107,7 +107,7 @@ test("a auditoria de cards elimina flex móvel, cria prateleiras e limita o cat�
   assert.match(home, /focusColumnDesktop: \{ flex: 0\.9 \}/);
   assert.doesNotMatch(home, /focusColumn: \{ flex:/);
   assert.match(diet, /singleColumnOnPhone=\{false\}/);
-  assert.match(diet, /<SummaryCard compact/);
+  assert.match(diet, /<DashboardTile/);
   assert.match(profile, /profile-area-shelf/);
   assert.match(profile, /profile-more-areas/);
   assert.match(journey, /horizontal showsHorizontalScrollIndicator=\{false\} contentContainerStyle=\{styles\.chapterRail\}/);

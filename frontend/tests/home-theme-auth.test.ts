@@ -68,14 +68,30 @@ test("sessão autenticada é resolvida antes da tela de boas-vindas", () => {
   assert.match(index, /subscribeCloudStatus/);
 });
 
-test("Home possui seletor semanal e falhas independentes por domínio", () => {
+test("Home prioriza o dia atual sem calendário redundante e mantém falhas independentes por domínio", () => {
   const home = source("app/(tabs)/index.tsx");
-  assert.match(home, /home-week-selector/);
+  assert.doesNotMatch(home, /home-week-selector/);
+  assert.match(home, /<AreaDashboardHeader/);
+  assert.match(home, /title="UrsoFit"/);
   assert.match(home, /Promise\.allSettled/);
   assert.match(home, /SectionKey = "diet" \| "water" \| "training" \| "game"/);
   assert.match(home, /TrainingSummaryCard/);
   assert.match(home, /WaterCard/);
   assert.match(home, /GamificationSummaryCard/);
+});
+
+test("Dieta, Hidratação e Treino compartilham cabeçalho, ações superiores e histórico próprio", () => {
+  const areaDashboard = source("src/components/AreaDashboard.tsx");
+  assert.match(areaDashboard, /export function AreaDashboardHeader/);
+  assert.match(areaDashboard, /export function DashboardTile/);
+  assert.match(areaDashboard, /name="tune-variant"/);
+  assert.match(areaDashboard, /testID="area-dashboard-add"/);
+  for (const path of ["app/(tabs)/alimentacao.tsx", "app/hidratacao.tsx", "app/treinos.tsx"]) {
+    const screen = source(path);
+    assert.match(screen, /<AreaDashboardHeader/);
+    assert.match(screen, /<DashboardTile/);
+    assert.match(screen, /label="Histórico/);
+  }
 });
 
 test("Home organiza o dia em destaques, progresso e linha do tempo acionável", () => {

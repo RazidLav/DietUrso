@@ -1,6 +1,6 @@
 import MaterialDesignIcons from "@react-native-vector-icons/material-design-icons";
 import { useFocusEffect, useRouter } from "expo-router";
-import React, { useCallback, useMemo, useRef, useState } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import { Image, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AchievementUnlockModal from "../../src/components/AchievementUnlockModal";
@@ -9,6 +9,7 @@ import MacroSummary from "../../src/components/MacroSummary";
 import { iconForMeal } from "../../src/components/MealCard";
 import TrainingSummaryCard from "../../src/components/TrainingSummaryCard";
 import WaterCard from "../../src/components/WaterCard";
+import { AreaDashboardHeader } from "../../src/components/AreaDashboard";
 import { getCloudStatus, subscribeCloudStatus, syncCloudNow } from "../../src/cloud/cloudSync";
 import { useCloudDataRefresh } from "../../src/cloud/useCloudDataRefresh";
 import { dismissAchievement, evaluateGamification, getPendingAchievement } from "../../src/gamification/engine";
@@ -23,10 +24,10 @@ import { addConsumption, dayMacrosDefault, getActivePlan, getChosenOption, listC
 import { getTrainingState, prepareTrainingRange } from "../../src/store/trainingStore";
 import { dayEntries } from "../../src/training/calculations";
 import { ACTIVITY_COLORS, ACTIVITY_ICONS, ACTIVITY_LABELS } from "../../src/training/catalog";
-import type { TrainingDayEntry, TrainingState } from "../../src/training/types";
-import { colors, layout, radius, spacing, withAlpha } from "../../src/theme";
+import type { TrainingDayEntry } from "../../src/training/types";
+import { areaColors, colors, layout, radius, spacing, withAlpha } from "../../src/theme";
 import type { ConsumptionEntry, Plan } from "../../src/types/plan";
-import { todayISO, WEEKDAYS_LONG, WEEKDAYS_SHORT } from "../../src/utils/date";
+import { todayISO } from "../../src/utils/date";
 import { FLOATING_TAB_HEIGHT, FLOATING_TAB_MARGIN } from "./_layout";
 import { useResponsiveLayout } from "../../src/responsive";
 
@@ -56,14 +57,13 @@ export default function HomeScreen() {
   const { width, isDesktop: desktop, isPhone } = useResponsiveLayout();
   const stackHero = width < 340;
   const router = useRouter();
-  const [selectedDate, setSelectedDate] = useState(todayISO());
+  const selectedDate = todayISO();
   const [plan, setPlan] = useState<Plan | null>(null);
   const [consumption, setConsumption] = useState<ConsumptionEntry[]>([]);
   const [chosen, setChosen] = useState<Record<string, string>>({});
   const [gamification, setGamification] = useState<GamificationSummary | null>(null);
   const [water, setWater] = useState<HydrationSummary | null>(null);
   const [trainingEntries, setTrainingEntries] = useState<TrainingDayEntry[]>([]);
-  const [activityDates, setActivityDates] = useState<Set<string>>(new Set());
   const [pendingAchievement, setPendingAchievement] = useState<AchievementDefinition | null>(null);
   const [loadState, setLoadState] = useState<DataLoadState>("idle");
   const [sectionErrors, setSectionErrors] = useState(EMPTY_ERRORS);
@@ -80,21 +80,18 @@ export default function HomeScreen() {
     return () => clearInterval(timer);
   }, []);
 
-  const weekDays = useMemo(() => weekFor(selectedDate), [selectedDate]);
-
   const load = useCallback(async () => {
     if (!getCloudStatus().readyForData) return;
     const request = ++loadId.current;
     setLoadState((current) => current === "success" ? current : "loading");
     const selectedAt = localDate(selectedDate);
-    const week = weekFor(selectedDate);
     const nextErrors = { ...EMPTY_ERRORS };
 
     const [dietResult, waterResult, trainingResult, gameResult] = await Promise.allSettled([
       Promise.all([getActivePlan(), listConsumption()]),
       getHydrationSummary(selectedAt),
       (async () => {
-        await prepareTrainingRange(week[0].iso, week[6].iso);
+        await prepareTrainingRange(selectedDate, selectedDate);
         return getTrainingState();
       })(),
       Promise.all([evaluateGamification(), selectedDate === todayISO() ? getPendingAchievement() : Promise.resolve(null)]),
@@ -102,13 +99,9 @@ export default function HomeScreen() {
     if (request !== loadId.current) return;
 
     let fulfilled = 0;
-    let nextConsumption: ConsumptionEntry[] = [];
-    let nextTraining: TrainingState | null = null;
-
     if (dietResult.status === "fulfilled") {
       fulfilled += 1;
       const [currentPlan, entries] = dietResult.value;
-      nextConsumption = entries;
       setPlan(currentPlan); setConsumption(entries);
       const map: Record<string, string> = {};
       if (currentPlan) {
@@ -123,7 +116,7 @@ export default function HomeScreen() {
     else nextErrors.water = "A hidratação não respondeu agora.";
 
     if (trainingResult.status === "fulfilled") {
-      fulfilled += 1; nextTraining = trainingResult.value;
+      fulfilled += 1;
       setTrainingEntries(dayEntries(trainingResult.value, selectedDate));
     } else nextErrors.training = "Não foi possível carregar os treinos.";
 
@@ -131,10 +124,6 @@ export default function HomeScreen() {
       fulfilled += 1; setGamification(gameResult.value[0]); setPendingAchievement(gameResult.value[1]);
     } else nextErrors.game = "As conquistas estão temporariamente indisponíveis.";
 
-    const marked = new Set(nextConsumption.filter((entry) => entry.date >= week[0].iso && entry.date <= week[6].iso).map((entry) => entry.date));
-    nextTraining?.plannedSessions.forEach((entry) => { if (entry.date >= week[0].iso && entry.date <= week[6].iso) marked.add(entry.date); });
-    nextTraining?.sessions.forEach((entry) => { if (entry.date >= week[0].iso && entry.date <= week[6].iso) marked.add(entry.date); });
-    setActivityDates(marked);
     setSectionErrors(nextErrors);
     setLoadState(fulfilled ? "success" : "error");
   }, [selectedDate]);
@@ -235,14 +224,18 @@ export default function HomeScreen() {
   return (
     <>
       <ScrollView style={styles.screen} contentContainerStyle={[styles.content, { paddingTop: insets.top + spacing.lg, paddingBottom: FLOATING_TAB_HEIGHT + Math.max(insets.bottom, FLOATING_TAB_MARGIN) + spacing.xl }]} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.brandPrimary} />} testID="home-screen">
-        <View style={[styles.topbar, desktop && styles.topbarDesktop]}>
-          <View style={[styles.header, desktop && styles.headerDesktop]}>
-            <View style={styles.avatar}><Image source={require("../../assets/images/mascot-whey.jpg")} style={styles.avatarImage} accessibilityLabel="Mascote UrsoFit" /></View>
-            <View style={{ flex: 1 }}><Text style={styles.greeting}>{dayGreeting()}, {firstName}</Text><Text style={styles.greetingMessage}>Vamos cuidar do urso hoje?</Text><Text style={styles.headerDate}>{formatLongDate(selected)}</Text></View>
-            <Pressable accessibilityRole="button" style={styles.iconButton} accessibilityLabel="Abrir conquistas" onPress={() => router.push("/conquistas")}><MaterialDesignIcons name="bell-outline" size={21} color={colors.onSurface} />{pendingAchievement ? <View style={styles.notificationDot} /> : null}</Pressable>
-          </View>
-          <WeekSelector wide={!isPhone} desktop={desktop} days={weekDays} selectedDate={selectedDate} activityDates={activityDates} onSelect={setSelectedDate} onShift={(amount) => setSelectedDate(toISO(addDays(selected, amount * 7)))} />
-        </View>
+        <AreaDashboardHeader
+          title="UrsoFit"
+          subtitle={`${dayGreeting()}, ${firstName} · ${formatLongDate(selected)}`}
+          accent={areaColors.home}
+          onSettings={() => router.push("/ajustes")}
+          settingsLabel="Abrir configurações do UrsoFit"
+          actions={[
+            { id: "meal", label: "Registrar refeição", hint: "Abra a dieta e registre o que comeu", icon: "silverware-fork-knife", onPress: () => router.push("/alimentacao") },
+            { id: "water", label: "Adicionar água", hint: "Registre sua hidratação", icon: "water-plus-outline", onPress: () => router.push("/hidratacao") },
+            { id: "training", label: "Iniciar treino", hint: "Escolha ou crie uma sessão", icon: "dumbbell", onPress: () => router.push(`/treino-novo?date=${selectedDate}` as never) },
+          ]}
+        />
 
         <View style={[styles.overview, desktop && styles.overviewDesktop]} testID="home-overview-columns">
           <View style={[styles.focusColumn, desktop && styles.focusColumnDesktop]}>
@@ -305,10 +298,6 @@ export default function HomeScreen() {
   );
 }
 
-function WeekSelector({ wide, desktop, days, selectedDate, activityDates, onSelect, onShift }: { wide: boolean; desktop: boolean; days: ReturnType<typeof weekFor>; selectedDate: string; activityDates: Set<string>; onSelect: (date: string) => void; onShift: (amount: number) => void }) {
-  return <View style={[styles.weekWrap, wide && !desktop && styles.weekWrapWide, desktop && styles.weekWrapDesktop]} testID="home-week-selector"><Pressable accessibilityRole="button" style={styles.weekArrow} onPress={() => onShift(-1)} accessibilityLabel="Semana anterior"><MaterialDesignIcons name="chevron-left" size={21} color={colors.onSurfaceSecondary} /></Pressable><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.weekDays}>{days.map((day) => { const active = day.iso === selectedDate; const current = day.iso === todayISO(); return <Pressable key={day.iso} style={[styles.day, active && styles.dayActive]} onPress={() => onSelect(day.iso)} accessibilityRole="button" accessibilityState={{ selected: active }} accessibilityLabel={`${WEEKDAYS_LONG[day.date.getDay()]}, dia ${day.date.getDate()}${current ? ", hoje" : ""}`} testID={`week-day-${day.iso}`}><Text style={[styles.dayName, active && styles.dayNameActive]}>{WEEKDAYS_SHORT[day.date.getDay()]}</Text><Text style={[styles.dayNumber, active && styles.dayNumberActive]}>{day.date.getDate()}</Text><View style={[styles.dayDot, activityDates.has(day.iso) && styles.dayDotOn, active && activityDates.has(day.iso) && styles.dayDotActive]} /></Pressable>; })}</ScrollView><Pressable accessibilityRole="button" style={styles.weekArrow} onPress={() => onShift(1)} accessibilityLabel="Próxima semana"><MaterialDesignIcons name="chevron-right" size={21} color={colors.onSurfaceSecondary} /></Pressable></View>;
-}
-
 function TimelineRow({ item, current, last }: { item: TimelineItem; current: boolean; last: boolean }) {
   return <View style={styles.timelineRow}>
     <View style={styles.timelineRail}><View style={[styles.timelineDot, { borderColor: item.accent }, item.completed && { backgroundColor: item.accent }]}>{item.completed ? <MaterialDesignIcons name="check" size={12} color={colors.surface} /> : null}</View>{last ? null : <View style={styles.timelineLine} />}</View>
@@ -334,9 +323,6 @@ function ErrorCard({ message, onRetry }: { message: string; onRetry: () => void 
 function EmptyCard({ icon, title, text, action, onPress }: { icon: string; title: string; text: string; action: string; onPress: () => void }) { return <View style={styles.stateCard}><MaterialDesignIcons name={icon as never} size={28} color={colors.brandPrimary} /><Text style={styles.stateTitle}>{title}</Text><Text style={styles.stateText}>{text}</Text><Pressable style={styles.retry} onPress={onPress}><Text style={styles.retryText}>{action}</Text></Pressable></View>; }
 
 function localDate(iso: string) { const [year, month, day] = iso.split("-").map(Number); return new Date(year, month - 1, day, 12, 0, 0); }
-function addDays(date: Date, days: number) { const next = new Date(date); next.setDate(next.getDate() + days); return next; }
-function toISO(date: Date) { return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`; }
-function weekFor(iso: string) { const selected = localDate(iso); const mondayOffset = (selected.getDay() + 6) % 7; const monday = addDays(selected, -mondayOffset); return Array.from({ length: 7 }, (_, index) => { const date = addDays(monday, index); return { date, iso: toISO(date) }; }); }
 function dayGreeting() { const hour = new Date().getHours(); return hour < 12 ? "Bom dia" : hour < 18 ? "Boa tarde" : "Boa noite"; }
 function cloudName(email: string | null) { const raw = email?.split("@")[0]?.split(/[._-]/)[0] || "amigo"; return raw.charAt(0).toUpperCase() + raw.slice(1); }
 function formatLongDate(date: Date) { return new Intl.DateTimeFormat("pt-BR", { weekday: "long", day: "2-digit", month: "long" }).format(date); }
