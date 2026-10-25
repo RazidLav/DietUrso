@@ -36,7 +36,7 @@ export default function TrainingSessionCard({ entry, onPress, onMove }: { entry:
 }
 
 const styles = StyleSheet.create({
-  card: { backgroundColor: colors.surfaceSecondary, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, overflow: "hidden" },
+  card: { backgroundColor: colors.surfaceSecondary, borderRadius: radius.lg, overflow: "hidden" },
   body: { minHeight: 86, flexDirection: "row", alignItems: "center", gap: spacing.md, padding: spacing.md },
   icon: { width: 48, height: 48, borderRadius: radius.md, alignItems: "center", justifyContent: "center" },
   content: { flex: 1, minWidth: 0 },

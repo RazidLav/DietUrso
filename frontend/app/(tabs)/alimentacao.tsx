@@ -7,7 +7,7 @@ import { FeatureCard, FloatingActionMenu, FolderCard } from "../../src/component
 import { useCloudDataRefresh } from "../../src/cloud/useCloudDataRefresh";
 import { listConsumption } from "../../src/store/planStore";
 import { listFoodCatalog, listRecipes } from "../../src/store/nutritionStore";
-import { colors, spacing } from "../../src/theme";
+import { areaColors, colors, spacing } from "../../src/theme";
 import { todayISO } from "../../src/utils/date";
 import { FLOATING_TAB_HEIGHT, FLOATING_TAB_MARGIN } from "./_layout";
 
@@ -39,12 +39,12 @@ export default function AlimentacaoScreen() {
     <View style={styles.screen} testID="alimentacao-screen">
       <ScrollView contentContainerStyle={{ paddingTop: insets.top + spacing.lg, paddingBottom: FLOATING_TAB_HEIGHT + Math.max(insets.bottom, FLOATING_TAB_MARGIN) + spacing.xl }}>
         <ContentContainer style={styles.content}>
-        <PageHeader eyebrow="ALIMENTAÇÃO" title="Sua despensa e seu diário" description="Plano, registros e preparações organizados sem misturar o que foi planejado com o que você realmente consumiu." onBack={() => router.back()} />
+        <PageHeader eyebrow="ALIMENTAÇÃO" title="Sua despensa e seu diário" description="Plano, registros e preparações organizados sem misturar o que foi planejado com o que você realmente consumiu." accent={areaColors.food} onBack={() => router.back()} />
 
         <ResponsiveGrid minItemWidth={96} maxColumns={3} gap={spacing.sm} singleColumnOnPhone={false}>
-          <SummaryCard compact icon="food-apple-outline" label="Alimentos" value={String(counts.foods)} />
-          <SummaryCard compact icon="chef-hat" label="Receitas" value={String(counts.recipes)} />
-          <SummaryCard compact icon="check-circle-outline" label="Registros hoje" value={String(counts.today)} />
+          <SummaryCard compact icon="food-apple-outline" label="Alimentos" value={String(counts.foods)} accent={areaColors.food} />
+          <SummaryCard compact icon="chef-hat" label="Receitas" value={String(counts.recipes)} accent={areaColors.food} />
+          <SummaryCard compact icon="check-circle-outline" label="Registros hoje" value={String(counts.today)} accent={areaColors.food} />
         </ResponsiveGrid>
 
         <ResponsiveGrid minItemWidth={150} maxColumns={2} gap={spacing.sm} singleColumnOnPhone={false}>
@@ -59,6 +59,7 @@ export default function AlimentacaoScreen() {
           title="Banco de alimentos"
           value={`${counts.foods} disponíveis`}
           description="Pesquise o catálogo ou cadastre alimentos com valores por porção de referência."
+          accent={areaColors.food}
           onPress={() => router.push("/alimentos")}
         />
         <FeatureCard
@@ -67,6 +68,7 @@ export default function AlimentacaoScreen() {
           title="Receitas e preparações"
           value={`${counts.recipes} salvas`}
           description="Monte receitas, calcule a receita inteira e veja automaticamente os valores por porção."
+          accent={areaColors.food}
           onPress={() => router.push("/receitas")}
         />
         <FeatureCard

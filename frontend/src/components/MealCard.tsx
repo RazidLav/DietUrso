@@ -1,6 +1,6 @@
 import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { colors, withAlpha, radius, spacing } from "../theme";
+import { areaColors, colors, withAlpha, radius, spacing } from "../theme";
 import MaterialDesignIcons from "@react-native-vector-icons/material-design-icons";
 
 interface Props {
@@ -94,24 +94,23 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceSecondary,
     borderRadius: radius.lg,
     padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
+    overflow: "hidden",
   },
   cardPressed: { opacity: 0.85 },
   cardCompact: { minHeight: 64, padding: 10, borderRadius: radius.md, borderWidth: 0 },
-  cardDone: { borderColor: withAlpha(colors.brandPrimary, "55") },
+  cardDone: { backgroundColor: withAlpha(colors.brandPrimary, 0.08) },
   left: { flexDirection: "row", alignItems: "center", gap: spacing.md, flex: 1 },
   iconWrap: {
     width: 44,
     height: 44,
     borderRadius: radius.md,
-    backgroundColor: colors.surfaceTertiary,
+    backgroundColor: withAlpha(areaColors.food, 0.14),
     alignItems: "center",
     justifyContent: "center",
   },
   iconWrapCompact: { width: 36, height: 36, borderRadius: radius.sm },
   textCol: { flex: 1 },
-  title: { color: colors.onSurface, fontSize: 16, fontWeight: "700" },
+  title: { color: colors.onSurface, fontSize: 16, fontWeight: "800" },
   titleCompact: { fontSize: 14 },
   titleDone: { color: colors.onSurfaceSecondary },
   subtitle: { color: colors.onSurfaceTertiary, fontSize: 12, marginTop: 2 },

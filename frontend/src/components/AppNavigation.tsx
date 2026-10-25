@@ -16,7 +16,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { NAVIGATION, getActiveChild, getActiveSection, normalizePathname, shouldHideNavigation, type NavigationItem } from "../navigation/config";
 import { useReducedMotion, useResponsiveLayout } from "../responsive";
-import { breakpoints, colors, withAlpha, layout, radius, spacing, zIndex } from "../theme";
+import { areaColors, breakpoints, colors, withAlpha, layout, radius, spacing, zIndex } from "../theme";
 import WorkoutMiniPlayer from "./WorkoutMiniPlayer";
 
 export const DESKTOP_BREAKPOINT = breakpoints.desktop;
@@ -97,6 +97,7 @@ function DesktopSidebar({ pathname, topInset, bottomInset, mode, onModeChange }:
             <View key={section.id} style={styles.desktopGroup}>
               <NavPressable
                 item={section}
+                accent={areaColors[section.id]}
                 active={sectionActive && normalizePathname(pathname) === normalizePathname(section.href)}
                 sectionActive={sectionActive}
                 onPress={() => navigate(router, section.href)}
@@ -104,7 +105,7 @@ function DesktopSidebar({ pathname, topInset, bottomInset, mode, onModeChange }:
                 compact={compact}
               />
               {!compact && sectionActive ? section.children.map((child) => (
-                <NavPressable key={child.id} item={child} active={Boolean(getActiveChild(section, pathname)?.id === child.id)} onPress={() => navigate(router, child.href)} style="child" compact={false} />
+                <NavPressable key={child.id} item={child} accent={areaColors[section.id]} active={Boolean(getActiveChild(section, pathname)?.id === child.id)} onPress={() => navigate(router, child.href)} style="child" compact={false} />
               )) : null}
             </View>
           );
@@ -118,7 +119,7 @@ function DesktopSidebar({ pathname, topInset, bottomInset, mode, onModeChange }:
   );
 }
 
-function NavPressable({ item, active, sectionActive = false, onPress, style, compact }: { item: NavigationItem; active: boolean; sectionActive?: boolean; onPress: () => void; style: "section" | "child"; compact: boolean }) {
+function NavPressable({ item, active, sectionActive = false, onPress, style, compact, accent }: { item: NavigationItem; active: boolean; sectionActive?: boolean; onPress: () => void; style: "section" | "child"; compact: boolean; accent: string }) {
   const aria = { "aria-current": active ? "page" : undefined } as Record<string, unknown>;
   return (
     <Pressable
@@ -133,13 +134,14 @@ function NavPressable({ item, active, sectionActive = false, onPress, style, com
         compact && styles.sidebarSectionCompact,
         sectionActive && style === "section" && styles.sidebarSectionContext,
         active && (style === "section" ? styles.sidebarSectionActive : styles.sidebarChildActive),
+        active && { backgroundColor: withAlpha(accent, style === "section" ? 0.18 : 0.12) },
         pressed && styles.pressed,
       ]}
       testID={`nav-${item.id}`}
     >
-      <MaterialDesignIcons name={item.icon as never} size={style === "section" ? 20 : 17} color={active ? colors.brandPrimary : sectionActive ? colors.onSurface : colors.onSurfaceTertiary} />
+      <MaterialDesignIcons name={item.icon as never} size={style === "section" ? 20 : 17} color={active ? accent : sectionActive ? colors.onSurface : colors.onSurfaceTertiary} />
       {!compact ? <Text style={[style === "section" ? styles.sidebarSectionText : styles.sidebarChildText, (active || (sectionActive && style === "section")) && styles.navTextActive]} numberOfLines={1}>{item.label}</Text> : null}
-      {active ? <View style={styles.activeDot} /> : null}
+      {active ? <View style={[styles.activeDot, { backgroundColor: accent }]} /> : null}
     </Pressable>
   );
 }
@@ -153,14 +155,14 @@ function MobileNavigation({ pathname, bottomInset }: { pathname: string; bottomI
       <View style={styles.dock} accessibilityRole="tablist" testID="mobile-dock">
         {NAVIGATION.map((section) => {
           const active = activeSection.id === section.id;
-          return <MobileDockItem key={section.id} section={section} active={active} reducedMotion={reducedMotion} onPress={() => navigate(router, section.href)} />;
+          return <MobileDockItem key={section.id} section={section} active={active} accent={areaColors[section.id]} reducedMotion={reducedMotion} onPress={() => navigate(router, section.href)} />;
         })}
       </View>
     </View>
   );
 }
 
-function MobileDockItem({ section, active, reducedMotion, onPress }: { section: NavigationItem; active: boolean; reducedMotion: boolean; onPress: () => void }) {
+function MobileDockItem({ section, active, accent, reducedMotion, onPress }: { section: NavigationItem; active: boolean; accent: string; reducedMotion: boolean; onPress: () => void }) {
   const aria = { "aria-current": active ? "page" : undefined } as Record<string, unknown>;
   const itemTransition = Platform.OS === "web" && !reducedMotion
     ? ({ transitionProperty: "flex-basis, flex-grow, background-color, transform", transitionDuration: "240ms", transitionTimingFunction: "cubic-bezier(0.22, 1, 0.36, 1)" } as never)
@@ -168,7 +170,7 @@ function MobileDockItem({ section, active, reducedMotion, onPress }: { section: 
   const labelTransition = Platform.OS === "web" && !reducedMotion
     ? ({ transitionProperty: "max-width, opacity, margin-left", transitionDuration: "200ms", transitionTimingFunction: "ease-out" } as never)
     : null;
-  return <View style={[styles.dockItem, active && styles.dockItemActive, itemTransition]}>
+  return <View style={[styles.dockItem, active && styles.dockItemActive, active && { backgroundColor: withAlpha(accent, 0.18) }, itemTransition]}>
     <Pressable
       {...aria}
       accessibilityRole="tab"
@@ -178,7 +180,7 @@ function MobileDockItem({ section, active, reducedMotion, onPress }: { section: 
       style={({ pressed }) => [styles.dockPressable, pressed && styles.pressed]}
       testID={`dock-${section.id}`}
     >
-      <View style={[styles.dockIcon, active && styles.dockIconActive]}><MaterialDesignIcons name={section.icon as never} size={22} color={active ? colors.brandPrimary : colors.onSurfaceTertiary} /></View>
+      <View style={[styles.dockIcon, active && styles.dockIconActive, active && { backgroundColor: withAlpha(accent, 0.14) }]}><MaterialDesignIcons name={section.icon as never} size={22} color={active ? accent : colors.onSurfaceTertiary} /></View>
       <Text numberOfLines={1} style={[styles.dockLabel, active && styles.dockLabelActive, labelTransition]}>{section.label}</Text>
     </Pressable>
   </View>;
@@ -202,11 +204,9 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
     borderRadius: radius.lg,
     backgroundColor: colors.surfaceSecondary,
-    borderWidth: 1,
-    borderColor: colors.borderStrong,
     ...(Platform.OS === "web"
-      ? ({ boxShadow: "0 12px 32px rgba(0,0,0,.46), 0 1px 0 rgba(255,255,255,.035) inset" } as never)
-      : { shadowColor: "#000000", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.38, shadowRadius: 16, elevation: 12 }),
+      ? ({ boxShadow: "0 10px 30px rgba(0,0,0,.28)" } as never)
+      : { shadowColor: "#000000", shadowOffset: { width: 0, height: 7 }, shadowOpacity: 0.28, shadowRadius: 14, elevation: 10 }),
   },
   dockItem: { flexBasis: 44, flexGrow: 0, flexShrink: 1, minWidth: 42, maxWidth: 132, minHeight: 54, overflow: "hidden", borderRadius: radius.pill, backgroundColor: "rgba(0,0,0,0)", transform: [{ scale: 0.98 }] },
   dockItemActive: { flexBasis: 100, flexGrow: 1, backgroundColor: colors.surfaceTertiary, transform: [{ scale: 1 }] },
@@ -216,9 +216,9 @@ const styles = StyleSheet.create({
   dockLabel: { maxWidth: 0, opacity: 0, marginLeft: 0, overflow: "hidden", color: colors.onSurface, fontSize: 11, fontWeight: "900" },
   dockLabelActive: { maxWidth: 76, opacity: 1, marginLeft: spacing.xs },
   desktopShell: { flex: 1, flexDirection: "row", backgroundColor: colors.surface },
-  sidebarFrame: { width: layout.sidebarExpanded, marginLeft: spacing.lg, borderRadius: radius.lg, backgroundColor: colors.surfaceSecondary, borderWidth: 1, borderColor: colors.borderSubtle, overflow: "hidden", ...(Platform.OS === "web" ? ({ boxShadow: "0 16px 48px rgba(0,0,0,.24)" } as never) : {}) },
+  sidebarFrame: { width: layout.sidebarExpanded, marginLeft: spacing.lg, borderRadius: radius.lg, backgroundColor: colors.surfaceSecondary, overflow: "hidden", ...(Platform.OS === "web" ? ({ boxShadow: "0 16px 48px rgba(0,0,0,.16)" } as never) : {}) },
   sidebarFrameCompact: { width: layout.sidebarCompact },
-  brandRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, padding: spacing.lg, borderBottomWidth: 1, borderBottomColor: colors.border },
+  brandRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, padding: spacing.lg, backgroundColor: withAlpha(areaColors.home, 0.06) },
   brandRowCompact: { justifyContent: "center", paddingHorizontal: spacing.sm },
   brandMark: { width: 38, height: 38, borderRadius: radius.md, overflow: "hidden", backgroundColor: colors.brandPrimary },
   brandLogo: { width: "100%", height: "100%" },
@@ -237,11 +237,11 @@ const styles = StyleSheet.create({
   sidebarChildText: { flex: 1, color: colors.onSurfaceTertiary, fontSize: 10.5, fontWeight: "650" as never },
   navTextActive: { color: colors.onSurface, fontWeight: "900" },
   activeDot: { width: 6, height: 6, borderRadius: radius.pill, backgroundColor: colors.brandPrimary },
-  sidebarControls: { gap: spacing.xs, padding: spacing.sm, borderTopWidth: 1, borderTopColor: colors.borderSubtle },
+  sidebarControls: { gap: spacing.xs, padding: spacing.sm, backgroundColor: colors.surfaceInteractive },
   sidebarControlsCompact: { alignItems: "center" },
   sidebarControl: { minHeight: 40, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: spacing.sm, paddingHorizontal: spacing.sm, borderRadius: radius.sm },
   sidebarControlText: { color: colors.onSurfaceTertiary, fontSize: 10, fontWeight: "700" },
-  reopenNavigation: { position: "absolute", left: spacing.md, zIndex: zIndex.navigation, width: 44, height: 44, borderRadius: radius.md, alignItems: "center", justifyContent: "center", backgroundColor: colors.surfaceElevated, borderWidth: 1, borderColor: colors.borderSubtle },
+  reopenNavigation: { position: "absolute", left: spacing.md, zIndex: zIndex.navigation, width: 44, height: 44, borderRadius: radius.md, alignItems: "center", justifyContent: "center", backgroundColor: colors.surfaceElevated },
   desktopMain: { position: "relative", flex: 1, minWidth: 0, minHeight: 0, padding: spacing.lg },
   desktopCanvas: { flex: 1, width: "100%", maxWidth: layout.editorMax, alignSelf: "center", overflow: "hidden", backgroundColor: colors.surface },
   pressed: { opacity: 0.72 },

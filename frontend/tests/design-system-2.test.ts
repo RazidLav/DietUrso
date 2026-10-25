@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { breakpoints, layout, typeScale } from "../src/theme";
+import { areaColors, breakpoints, flatColors, layout, typeScale } from "../src/theme";
 
 const read = (path: string) => readFileSync(new URL(path, import.meta.url), "utf8");
 
@@ -24,6 +24,22 @@ test("a fundação visual compartilha os componentes essenciais", () => {
   assert.match(source, /onLayout=/);
   assert.match(source, /containerWidth/);
   assert.doesNotMatch(source, /flexGrow: 1, minWidth: columns/);
+});
+
+test("a linguagem flat usa cores editoriais por área e reduz contornos decorativos", () => {
+  const designSystem = read("../src/components/DesignSystem.tsx");
+  const navigation = read("../src/components/AppNavigation.tsx");
+  const progressive = read("../src/components/ProgressiveUI.tsx");
+
+  assert.equal(areaColors.food, flatColors.orange);
+  assert.equal(areaColors.hydration, flatColors.lavender);
+  assert.equal(areaColors.training, flatColors.aqua);
+  assert.match(designSystem, /accent = colors\.brandPrimary/);
+  assert.match(designSystem, /eyebrowPill/);
+  assert.match(designSystem, /surfaceAccent/);
+  assert.match(navigation, /areaColors\[section\.id\]/);
+  assert.doesNotMatch(navigation, /dock: \{[\s\S]*?borderWidth: 1[\s\S]*?dockItem:/);
+  assert.match(progressive, /folderCard: \{[^}]*borderRadius: radius\.lg/);
 });
 
 test("a navegação adapta dock, rail e sidebar sem abrir todos os submenus", () => {

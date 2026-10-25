@@ -8,7 +8,7 @@ import { ResponsiveGrid } from "../src/components/DesignSystem";
 import { getSignedInUser } from "../src/cloud/cloudSync";
 import { normalizeNutrients } from "../src/nutrition/calculations";
 import { createPersonalFood, duplicateFood, listFoodCatalog, setFoodArchived, updatePersonalFood } from "../src/store/nutritionStore";
-import { colors, radius, spacing } from "../src/theme";
+import { areaColors, colors, radius, spacing, withAlpha } from "../src/theme";
 import type { FoodCatalogItem, Unit } from "../src/types/plan";
 import { matchesSearch } from "../src/utils/search";
 
@@ -212,20 +212,20 @@ const styles = StyleSheet.create({
   back: { width: 40, height: 40, borderRadius: radius.md, backgroundColor: colors.surfaceSecondary, alignItems: "center", justifyContent: "center" },
   primaryIcon: { width: 42, height: 42, borderRadius: radius.md, backgroundColor: colors.brandPrimary, alignItems: "center", justifyContent: "center" },
   eyebrow: { color: colors.brandPrimary, fontSize: 10, fontWeight: "800", letterSpacing: 1.5 }, title: { color: colors.onSurface, fontSize: 21, fontWeight: "800" },
-  searchWrap: { margin: spacing.lg, marginBottom: spacing.sm, flexDirection: "row", alignItems: "center", gap: spacing.sm, backgroundColor: colors.surfaceSecondary, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingHorizontal: spacing.md },
+  searchWrap: { margin: spacing.lg, marginBottom: spacing.sm, flexDirection: "row", alignItems: "center", gap: spacing.sm, backgroundColor: withAlpha(areaColors.food, 0.09), borderRadius: radius.lg, paddingHorizontal: spacing.md },
   search: { flex: 1, color: colors.onSurface, paddingVertical: spacing.md, outlineStyle: "none" } as any,
   filters: { paddingHorizontal: spacing.lg, gap: spacing.sm, alignItems: "center" },
   catalogScroll: { padding: spacing.lg, paddingBottom: 120 },
   catalog: { width: "100%", maxWidth: 1240, alignSelf: "center", gap: spacing.md },
-  chip: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radius.pill, backgroundColor: colors.surfaceTertiary, borderWidth: 1, borderColor: colors.border }, chipOn: { backgroundColor: colors.brandPrimary, borderColor: colors.brandPrimary },
+  chip: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radius.pill, backgroundColor: colors.surfaceTertiary }, chipOn: { backgroundColor: areaColors.food },
   chipText: { color: colors.onSurfaceSecondary, fontSize: 12, fontWeight: "700" }, chipTextOn: { color: colors.onBrandPrimary },
-  card: { minHeight: 144, backgroundColor: colors.surfaceSecondary, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, padding: spacing.sm, gap: spacing.sm },
+  card: { minHeight: 144, backgroundColor: colors.surfaceSecondary, borderRadius: radius.lg, padding: spacing.sm, gap: spacing.sm, overflow: "hidden" },
   foodHeading: { flexDirection: "row", gap: spacing.sm },
   foodIcon: { width: 32, height: 32, borderRadius: radius.sm, alignItems: "center", justifyContent: "center" }, cardTitle: { color: colors.onSurface, fontSize: 13, fontWeight: "800" }, cardMeta: { color: colors.onSurfaceTertiary, fontSize: 9, lineHeight: 13, marginTop: 2 }, macros: { color: colors.onSurfaceSecondary, fontSize: 9, lineHeight: 14, marginTop: spacing.xs },
   actions: { flexDirection: "row", gap: spacing.xs, marginTop: "auto" }, action: { width: 32, height: 32, alignItems: "center", justifyContent: "center", borderRadius: radius.pill, backgroundColor: colors.surfaceTertiary },
   empty: { alignItems: "center", padding: spacing.xxxl, gap: spacing.sm }, emptyTitle: { color: colors.onSurface, fontSize: 17, fontWeight: "800" }, emptyText: { color: colors.onSurfaceTertiary, fontSize: 12, textAlign: "center" },
   error: { color: colors.error, fontSize: 12, marginHorizontal: spacing.lg, marginTop: spacing.sm },
-  overlay: { flex: 1, backgroundColor: "#000A", justifyContent: "flex-end" }, modal: { maxHeight: "92%", minHeight: 0, width: "100%", maxWidth: 720, alignSelf: "center", backgroundColor: colors.surfaceSecondary, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg, padding: spacing.lg, borderWidth: 1, borderColor: colors.border }, modalScroll: { minHeight: 0 },
+  overlay: { flex: 1, backgroundColor: "#000A", justifyContent: "flex-end" }, modal: { maxHeight: "92%", minHeight: 0, width: "100%", maxWidth: 720, alignSelf: "center", backgroundColor: colors.surfaceSecondary, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl, padding: spacing.lg }, modalScroll: { minHeight: 0 },
   modalHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: spacing.lg }, modalTitle: { color: colors.onSurface, fontSize: 20, fontWeight: "800" }, label: { color: colors.onSurfaceSecondary, fontSize: 11, fontWeight: "700", marginBottom: 6 },
   input: { color: colors.onSurface, backgroundColor: colors.surfaceTertiary, borderWidth: 1, borderColor: colors.borderStrong, borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.md },
   row: { flexDirection: "row", gap: spacing.sm }, wrap: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm }, grid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm }, smallField: { flexBasis: "47%", flexGrow: 1 }, sectionLabel: { color: colors.brandPrimary, fontSize: 10, fontWeight: "800", letterSpacing: 1.2 },

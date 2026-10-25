@@ -61,10 +61,8 @@ function Metric({ icon, value, label, color }: { icon: string; value: string; la
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.surfaceSecondary,
     borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: withAlpha(colors.brandPrimary, "66"),
+    backgroundColor: withAlpha(colors.brandPrimary, 0.08),
     padding: spacing.lg,
     gap: spacing.md,
   },

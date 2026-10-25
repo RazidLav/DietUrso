@@ -15,7 +15,7 @@ import { removeProfilePhoto, resolveProfilePhotoUrl, uploadProfilePhoto } from "
 import { getProfileState, saveProfileState, safeFeaturedItems, setFeaturedItems, unlockEligibleCosmetics, validateUsername } from "../src/profile/store";
 import type { ProfileContentArea, ProfileState, SocialVisibility } from "../src/profile/types";
 import { useResponsiveLayout } from "../src/responsive";
-import { colors, layout, radius, spacing, withAlpha } from "../src/theme";
+import { areaColors, colors, layout, radius, spacing, withAlpha } from "../src/theme";
 
 type LoadState = "loading" | "success" | "error";
 const VISIBILITY: { id: SocialVisibility; label: string }[] = [{ id: "private", label: "Privado" }, { id: "friends", label: "Amigos" }, { id: "public", label: "Público" }];
@@ -139,7 +139,7 @@ export default function ProfileScreen() {
 
   const equippedTitle = findCosmetic(state.equipped.title)?.name;
   return <ScrollView style={styles.screen} contentContainerStyle={[styles.content, { paddingTop: insets.top + spacing.lg, paddingBottom: insets.bottom + spacing.xxxl }]} testID="profile-screen">
-    <PageHeader eyebrow="MINHA TOCA" title="Perfil UrsoFit" onBack={() => router.back()} action={<View testID="profile-menu-button"><IconButton icon="menu" label="Abrir menu do perfil" onPress={() => setProfileMenuOpen(true)} /></View>} />
+    <PageHeader eyebrow="MINHA TOCA" title="Perfil UrsoFit" accent={areaColors.profile} onBack={() => router.back()} action={<View testID="profile-menu-button"><IconButton icon="menu" label="Abrir menu do perfil" onPress={() => setProfileMenuOpen(true)} /></View>} />
 
     <Modal visible={profileMenuOpen} transparent animationType="fade" onRequestClose={() => !signingOut && setProfileMenuOpen(false)}>
       <View style={styles.menuLayer} testID="profile-menu">

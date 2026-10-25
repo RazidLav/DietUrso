@@ -23,7 +23,7 @@ export const themePalettes: Record<ThemePreference, SemanticColors> = {
     brandSecondary: "#79AFFF", onBrandSecondary: "#101A2D", brandTertiary: "#FFAD5B", onBrandTertiary: "#2A1707",
     success: "#65D982", onSuccess: "#0B2512", warning: "#FFAD5B", onWarning: "#2A1707",
     error: "#FF6F6A", onError: "#2B0908", info: "#79AFFF", onInfo: "#101A2D",
-    border: "#30343B", borderStrong: "#454B55", divider: "#30343B", muted: "#8C938A",
+    border: "#25282D", borderStrong: "#454B55", divider: "#2A2D33", muted: "#8C938A",
     overlay: "rgba(4, 5, 7, 0.76)", focusRing: "#B7FF2A",
     protein: "#65D982", carbs: "#79AFFF", fats: "#FFAD5B",
   },
@@ -36,7 +36,7 @@ export const themePalettes: Record<ThemePreference, SemanticColors> = {
     brandSecondary: "#6376C8", onBrandSecondary: "#FFFFFF", brandTertiary: "#C97937", onBrandTertiary: "#FFFFFF",
     success: "#39884E", onSuccess: "#FFFFFF", warning: "#B86D27", onWarning: "#FFFFFF",
     error: "#C64C49", onError: "#FFFFFF", info: "#536BC1", onInfo: "#FFFFFF",
-    border: "#DED7C9", borderStrong: "#C7BEAE", divider: "#DED7C9", muted: "#777B72",
+    border: "#ECE7DC", borderStrong: "#C7BEAE", divider: "#E4DED2", muted: "#777B72",
     overlay: "rgba(34, 37, 31, 0.46)", focusRing: "#579B2E",
     protein: "#39884E", carbs: "#536BC1", fats: "#C97937",
   },
@@ -48,6 +48,33 @@ const semanticColor = (key: keyof SemanticColors) => typeof document !== "undefi
 export const colors = Object.fromEntries(
   (Object.keys(themePalettes.emo) as (keyof SemanticColors)[]).map((key) => [key, semanticColor(key)])
 ) as SemanticColors;
+
+/**
+ * Cores editoriais do UrsoFit. Elas complementam as cores semânticas do tema:
+ * `colors` continua responsável por contraste e estados; esta paleta cria
+ * reconhecimento imediato entre as áreas do produto.
+ */
+export const flatColors = {
+  orange: "#E95722",
+  orangeSoft: "#FF7A45",
+  lavender: "#AFC2FF",
+  lavenderDeep: "#718BDA",
+  lime: "#B7FF2A",
+  aqua: "#6DD9D1",
+  rose: "#FF7A8A",
+  amber: "#FFC95E",
+} as const;
+
+export type AppArea = "home" | "food" | "hydration" | "training" | "profile" | "game";
+
+export const areaColors: Record<AppArea, string> = {
+  home: flatColors.lime,
+  food: flatColors.orange,
+  hydration: flatColors.lavender,
+  training: flatColors.aqua,
+  profile: flatColors.amber,
+  game: flatColors.lime,
+};
 
 export function themeCssVariables(theme: ThemePreference) {
   const palette = themePalettes[theme];
@@ -62,7 +89,14 @@ export function withAlpha(color: string, opacity: number | string) {
 }
 
 export const spacing = { xxs: 2, xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32, xxxl: 48, huge: 64 };
-export const radius = { xs: 6, sm: 8, md: 14, lg: 20, xl: 28, pill: 999 };
+export const radius = { xs: 6, sm: 10, md: 16, lg: 22, xl: 30, pill: 999 };
+export const flatLanguage = {
+  cardRadius: radius.md,
+  featureRadius: radius.xl,
+  iconRadius: radius.md,
+  selectedFillOpacity: 0.16,
+  quietFillOpacity: 0.1,
+} as const;
 export const breakpoints = { compact: 320, mobile: 390, tablet: 768, navigationRail: 840, desktop: 1024, wide: 1440 };
 export const layout = {
   contentMax: 1280,
