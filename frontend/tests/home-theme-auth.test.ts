@@ -87,6 +87,9 @@ test("Home organiza o dia em destaques, progresso e linha do tempo acionável", 
   assert.match(home, /TimelineRow/);
   assert.match(home, /dailyProgressCard/);
   assert.match(home, /item\.onToggle \?\? item\.onPress/);
+  assert.match(home, /resolveCurrentTimelineId\(timelineItems, today, clockNow\)/);
+  assert.match(home, /setInterval\(\(\) => setClockNow\(new Date\(\)\), 30_000\)/);
+  assert.doesNotMatch(home, /Refeições do dia/);
 });
 
 test("Aparência oferece seleção acessível dos dois temas", () => {
