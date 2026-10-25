@@ -7,7 +7,6 @@ import AchievementUnlockModal from "../../src/components/AchievementUnlockModal"
 import GamificationSummaryCard from "../../src/components/GamificationSummaryCard";
 import MacroSummary from "../../src/components/MacroSummary";
 import MealCard, { iconForMeal } from "../../src/components/MealCard";
-import NextMealCard from "../../src/components/NextMealCard";
 import TrainingSummaryCard from "../../src/components/TrainingSummaryCard";
 import WaterCard from "../../src/components/WaterCard";
 import { getCloudStatus, subscribeCloudStatus, syncCloudNow } from "../../src/cloud/cloudSync";
@@ -22,6 +21,7 @@ import { listFoodCatalog } from "../../src/store/nutritionStore";
 import { addConsumption, dayMacrosDefault, getActivePlan, getChosenOption, listConsumption, optionMacros, removeConsumptionForDayMeal } from "../../src/store/planStore";
 import { getTrainingState, prepareTrainingRange } from "../../src/store/trainingStore";
 import { dayEntries } from "../../src/training/calculations";
+import { ACTIVITY_COLORS, ACTIVITY_ICONS, ACTIVITY_LABELS } from "../../src/training/catalog";
 import type { TrainingDayEntry, TrainingState } from "../../src/training/types";
 import { colors, layout, radius, spacing, withAlpha } from "../../src/theme";
 import type { ConsumptionEntry, Plan } from "../../src/types/plan";
@@ -32,12 +32,27 @@ import { useResponsiveLayout } from "../../src/responsive";
 type SectionKey = "diet" | "water" | "training" | "game";
 type DataLoadState = "idle" | "loading" | "success" | "error";
 
+type TimelineItem = {
+  id: string;
+  kind: "meal" | "training";
+  title: string;
+  subtitle: string;
+  time: string;
+  sortTime: string;
+  icon: string;
+  accent: string;
+  completed: boolean;
+  active?: boolean;
+  onPress: () => void;
+  onToggle?: () => void;
+};
+
 const EMPTY_ERRORS: Record<SectionKey, string | null> = { diet: null, water: null, training: null, game: null };
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { width, isDesktop: desktop, isPhone, isWide } = useResponsiveLayout();
-  const stackHero = width < 520;
+  const stackHero = width < 340;
   const router = useRouter();
   const [selectedDate, setSelectedDate] = useState(todayISO());
   const [plan, setPlan] = useState<Plan | null>(null);
@@ -163,6 +178,49 @@ export default function HomeScreen() {
   const nextMeal = resolveMealScheduleFocus(scheduledMeals);
   const firstName = cloudName(getCloudStatus().email);
   const loading = loadState === "idle" || loadState === "loading" || !cloudReady;
+  const completedTraining = trainingEntries.filter((entry) => entry.status === "completed").length;
+  const totalActivities = dayMeals.length + trainingEntries.length;
+  const completedActivities = doneCount + completedTraining;
+  const dailyProgress = totalActivities ? Math.round((completedActivities / totalActivities) * 100) : 0;
+  const focusTraining = trainingEntries.find((entry) => entry.status === "in_progress") ?? trainingEntries.find((entry) => entry.status !== "completed") ?? trainingEntries[0];
+  const openTraining = (entry: TrainingDayEntry) => {
+    if (entry.execution?.id && entry.status === "in_progress") router.push(`/treino/${entry.execution.id}` as never);
+    else router.push(`/treino-planejado/${entry.planned.id}` as never);
+  };
+  const timelineItems: TimelineItem[] = [
+    ...dayMeals.map((meal) => {
+      const option = meal.options.find((candidate) => candidate.id === chosen[meal.id]) ?? meal.options[0];
+      const plannedTime = mealTimeForWeekday(meal, selected.getDay());
+      const entry = consumption.find((candidate) => candidate.date === selectedDate && candidate.mealId === meal.id);
+      return {
+        id: `meal-${meal.id}`,
+        kind: "meal" as const,
+        title: meal.name,
+        subtitle: option?.name ?? "Escolha uma opção",
+        time: plannedTime || "Livre",
+        sortTime: plannedTime || "99:99",
+        icon: iconForMeal(meal.type),
+        accent: colors.brandTertiary,
+        completed: Boolean(entry && entry.status !== "skipped"),
+        onPress: () => plan && router.push(`/meal/${plan.id}/${meal.id}?date=${selectedDate}`),
+        onToggle: () => void toggleQuickDone(meal.id, option?.id),
+      };
+    }),
+    ...trainingEntries.map((entry) => ({
+      id: `training-${entry.planned.id}`,
+      kind: "training" as const,
+      title: entry.planned.name,
+      subtitle: `${ACTIVITY_LABELS[entry.planned.activityType]}${entry.planned.estimatedDurationMinutes ? ` · ${entry.planned.estimatedDurationMinutes} min` : ""}`,
+      time: entry.planned.scheduledTime || "Livre",
+      sortTime: entry.planned.scheduledTime || "99:98",
+      icon: ACTIVITY_ICONS[entry.planned.activityType],
+      accent: ACTIVITY_COLORS[entry.planned.activityType],
+      completed: entry.status === "completed",
+      active: entry.status === "in_progress",
+      onPress: () => openTraining(entry),
+    })),
+  ].sort((a, b) => a.sortTime.localeCompare(b.sortTime));
+  const currentTimelineId = timelineItems.find((item) => item.active)?.id ?? timelineItems.find((item) => !item.completed)?.id;
   const mealsSection = plan && dayMeals.length ? <View style={styles.mealsSection}>
     <SectionTitle title="Refeições do dia" action="Diário" onPress={() => router.push("/historico-alimentar")} />
     <View style={[styles.mealGrid, desktop && styles.mealGridDesktop]}>{dayMeals.map((meal) => {
@@ -189,50 +247,58 @@ export default function HomeScreen() {
 
         <View style={[styles.overview, desktop && styles.overviewDesktop]} testID="home-overview-columns">
           <View style={[styles.focusColumn, desktop && styles.focusColumnDesktop]}>
-            <Pressable style={[styles.hero, stackHero && styles.heroStacked, desktop && styles.heroDesktop]} onPress={() => router.push(trainingEntries.length ? "/treinos" : "/conquistas")} accessibilityRole="button" testID="home-main-highlight">
-              <View style={[styles.heroCopy, stackHero && styles.heroCopyStacked]} testID="home-highlight-copy">
-                <Text style={styles.heroEyebrow}>{trainingEntries.length ? "SEU MOVIMENTO DE HOJE" : "PROGRESSO DA SEMANA"}</Text>
-                <Text style={styles.heroTitle}>{trainingEntries.length ? `${trainingEntries.length} ${trainingEntries.length === 1 ? "sessão planejada" : "sessões planejadas"}` : "Um passo por vez já conta."}</Text>
-                <Text style={styles.heroText}>{trainingEntries.length ? "Cada modalidade tem seu próprio ritmo e status." : "Registre o que fizer e acompanhe a constância sem cobrança."}</Text>
-                <View style={styles.heroCta}><Text style={styles.heroCtaText}>{trainingEntries.length ? "Ver treinos" : "Ver progresso"}</Text><MaterialDesignIcons name="arrow-right" size={16} color={colors.onBrandPrimary} /></View>
-              </View>
-              <View style={[styles.heroArtwork, stackHero && styles.heroArtworkStacked]} testID="home-highlight-artwork">
+            <View style={[styles.hero, stackHero && styles.heroStacked, desktop && styles.heroDesktop]} testID="home-main-highlight">
+              <Pressable style={styles.heroCopy} onPress={() => router.push("/treinos")} accessibilityRole="button" testID="home-highlight-copy">
+                <View style={styles.featureTop}><Text style={styles.heroEyebrow}>PLANO DO DIA</Text><MaterialDesignIcons name="link-variant" size={17} color="#FFF8EE" /></View>
+                <Text style={styles.heroTitle}>{timelineItems.length ? `${timelineItems.length} atividades hoje` : "Monte sua rotina"}</Text>
+                <View style={styles.featureSchedule}>
+                  {timelineItems.slice(0, 2).map((item) => <View key={item.id} style={styles.featureScheduleRow}><View style={[styles.featureScheduleIcon, { backgroundColor: withAlpha("#FFFFFF", 0.18) }]}><MaterialDesignIcons name={item.icon as never} size={15} color="#FFF8EE" /></View><View style={{ flex: 1 }}><Text style={styles.featureScheduleTitle} numberOfLines={1}>{item.title}</Text><Text style={styles.featureScheduleTime}>{item.time}</Text></View><View style={[styles.featureStatusDot, item.completed && styles.featureStatusDone]} /></View>)}
+                  {!timelineItems.length ? <><View style={styles.featureEmptyLine} /><View style={[styles.featureEmptyLine, { width: "68%" }]} /></> : null}
+                </View>
+              </Pressable>
+
+              <Pressable style={styles.heroArtwork} onPress={() => focusTraining ? openTraining(focusTraining) : router.push(`/treino-novo?date=${selectedDate}` as never)} accessibilityRole="button" testID="home-highlight-artwork">
                 <Image source={require("../../assets/images/home-progress-v2.png")} style={styles.heroMascot} resizeMode="contain" accessibilityLabel="Mascote UrsoFit celebrando o progresso" />
-              </View>
+                <Text style={styles.moveDate}>{formatShortDate(selected)}</Text>
+                <Text style={styles.moveEyebrow}>{focusTraining?.status === "in_progress" ? "CONTINUE AGORA" : "MOVIMENTO DO DIA"}</Text>
+                <Text style={styles.moveTitle} numberOfLines={3}>{focusTraining?.planned.name ?? "Comece uma atividade"}</Text>
+                <View style={styles.moveAction}><Text style={styles.moveActionText}>{focusTraining ? (focusTraining.status === "in_progress" ? "Continuar" : "Iniciar") : "Adicionar"}</Text><View style={styles.movePlay}><MaterialDesignIcons name={focusTraining ? "play" : "plus"} size={18} color="#EAF0FF" /></View></View>
+              </Pressable>
+            </View>
+
+            <Pressable style={styles.dailyProgressCard} onPress={() => router.push("/alimentacao")} accessibilityRole="button" accessibilityLabel="Abrir plano alimentar">
+              <View style={styles.dailyProgressIcon}><MaterialDesignIcons name="food-apple-outline" size={24} color={colors.onBrandPrimary} /></View>
+              <View style={styles.dailyProgressCopy}><Text style={styles.dailyProgressTitle}>Seu dia</Text><Text style={styles.dailyProgressText}>{totalActivities ? `${completedActivities} de ${totalActivities} atividades concluídas` : "Adicione refeições ou treinos ao seu dia"}</Text><View style={styles.dailyProgressTrack}><View style={[styles.dailyProgressFill, { width: `${dailyProgress}%` }]} /></View></View>
+              <View style={styles.progressRing}><Text style={styles.progressRingValue}>{dailyProgress}%</Text></View>
             </Pressable>
 
-            <View style={styles.quickRow}>
-              <QuickAction icon="silverware-fork-knife" label="Registrar refeição" onPress={() => router.push("/alimentacao")} />
-              <QuickAction icon="water-plus-outline" label="Adicionar água" onPress={() => void handleWater()} disabled={savingWater} />
-              <QuickAction icon="dumbbell" label="Iniciar treino" onPress={() => router.push("/treinos")} />
+            <View style={styles.timelineSection}>
+              <SectionTitle title="Atividade de hoje" action="Ver agenda" onPress={() => router.push("/treinos")} />
+              {loading && !timelineItems.length ? <SkeletonCard height={220} /> : timelineItems.length ? <View style={styles.timelineList}>{timelineItems.map((item, index) => <TimelineRow key={item.id} item={item} current={item.id === currentTimelineId} last={index === timelineItems.length - 1} />)}</View> : <View style={styles.timelineEmpty}><MaterialDesignIcons name="calendar-blank-outline" size={25} color={colors.brandPrimary} /><View style={{ flex: 1 }}><Text style={styles.timelineEmptyTitle}>Seu dia está livre</Text><Text style={styles.timelineEmptyText}>Adicione uma refeição ou sessão quando quiser.</Text></View><Pressable style={styles.compactAdd} onPress={() => router.push(`/treino-novo?date=${selectedDate}` as never)}><MaterialDesignIcons name="plus" size={18} color={colors.onBrandPrimary} /></Pressable></View>}
             </View>
             {desktop ? mealsSection : null}
           </View>
 
           <View style={[styles.dashboard, !isPhone && styles.dashboardWide, desktop && styles.dashboardDesktop]}>
-          <View style={[styles.column, !isPhone && styles.columnWide, desktop && styles.columnDesktop]}>
-            <SectionTitle title="Alimentação" action="Abrir dieta" onPress={() => router.push("/alimentacao")} />
-            {loading && !plan ? <SkeletonCard height={230} /> : sectionErrors.diet ? <ErrorCard message={sectionErrors.diet} onRetry={load} /> : plan && totals ? <>
-              <NextMealCard item={nextMeal} onOpen={() => nextMeal ? router.push(`/meal/${plan.id}/${nextMeal.meal.id}?date=${selectedDate}`) : router.push("/plano")} onRegister={nextMeal && nextMeal.state !== "completed" && nextMeal.option ? () => void toggleQuickDone(nextMeal.meal.id, nextMeal.option?.id) : undefined} />
-              <MacroSummary compact title={today ? "CONSUMIDO HOJE" : "CONSUMIDO NO DIA"} kcal={consumedTotals.kcal} protein={consumedTotals.protein} carbs={consumedTotals.carbs} fats={consumedTotals.fats} fiber={consumedTotals.fiber} subtitle={`Meta: ${Math.round(totals.kcal)} kcal · ${doneCount}/${dayMeals.length} refeições registradas`} />
-              <View style={styles.progressTrack}><View style={[styles.progressFill, { width: `${dayMeals.length ? Math.min(100, (doneCount / dayMeals.length) * 100) : 0}%` }]} /></View>
-            </> : <EmptyCard icon="food-apple-outline" title="Nenhum plano alimentar ativo" text="Crie ou ative um plano para acompanhar o dia." action="Ir para planos" onPress={() => router.push("/ajustes")} />}
-          </View>
+            <View style={[styles.column, !isPhone && styles.columnWide, desktop && styles.columnDesktop]}>
+              <SectionTitle title="Alimentação" action="Abrir dieta" onPress={() => router.push("/alimentacao")} />
+              {loading && !plan ? <SkeletonCard height={210} /> : sectionErrors.diet ? <ErrorCard message={sectionErrors.diet} onRetry={load} /> : plan && totals ? <><MacroSummary compact title={today ? "CONSUMIDO HOJE" : "CONSUMIDO NO DIA"} kcal={consumedTotals.kcal} protein={consumedTotals.protein} carbs={consumedTotals.carbs} fats={consumedTotals.fats} fiber={consumedTotals.fiber} subtitle={nextMeal ? `Próxima: ${nextMeal.meal.name} · meta ${Math.round(totals.kcal)} kcal` : `Meta: ${Math.round(totals.kcal)} kcal · ${doneCount}/${dayMeals.length} refeições`} /><View style={styles.progressTrack}><View style={[styles.progressFill, { width: `${dayMeals.length ? Math.min(100, (doneCount / dayMeals.length) * 100) : 0}%` }]} /></View></> : <EmptyCard icon="food-apple-outline" title="Nenhum plano alimentar ativo" text="Crie ou ative um plano para acompanhar o dia." action="Ir para planos" onPress={() => router.push("/ajustes")} />}
+            </View>
 
-          <View style={[styles.column, !isPhone && styles.columnWide, desktop && styles.columnDesktop]}>
-            <SectionTitle title="Hidratação" action="Abrir hidratação" onPress={() => router.push("/hidratacao")} />
-            {loading && !water ? <SkeletonCard height={230} /> : sectionErrors.water ? <ErrorCard message={sectionErrors.water} onRetry={load} /> : water ? <WaterCard summary={water} onQuickAdd={handleWater} onPress={() => router.push("/hidratacao")} saving={savingWater} /> : null}
-          </View>
+            <View style={[styles.column, !isPhone && styles.columnWide, desktop && styles.columnDesktop]}>
+              <SectionTitle title="Hidratação" action="Abrir" onPress={() => router.push("/hidratacao")} />
+              {loading && !water ? <SkeletonCard height={210} /> : sectionErrors.water ? <ErrorCard message={sectionErrors.water} onRetry={load} /> : water ? <WaterCard summary={water} onQuickAdd={handleWater} onPress={() => router.push("/hidratacao")} saving={savingWater} /> : null}
+            </View>
 
-          <View style={[styles.column, !isPhone && styles.columnWide, desktop && styles.columnDesktop]}>
-            <SectionTitle title="Conquistas" action="Ver todas" onPress={() => router.push("/conquistas")} />
-            {loading && !gamification ? <SkeletonCard height={250} /> : sectionErrors.game ? <ErrorCard message={sectionErrors.game} onRetry={load} /> : gamification ? <GamificationSummaryCard summary={gamification} onPress={() => router.push("/conquistas")} /> : null}
-          </View>
+            <View style={[styles.column, !isPhone && styles.columnWide, desktop && styles.columnDesktop]}>
+              <SectionTitle title="Treinos" action="Abrir" onPress={() => router.push("/treinos")} />
+              {loading && !trainingEntries.length ? <SkeletonCard height={180} /> : sectionErrors.training ? <ErrorCard message={sectionErrors.training} onRetry={load} /> : <TrainingSummaryCard entries={trainingEntries} onPress={() => router.push("/treinos")} />}
+            </View>
 
-          <View style={[styles.column, !isPhone && styles.columnWide, desktop && styles.columnDesktop]}>
-            <SectionTitle title="Treinos" action="Abrir agenda" onPress={() => router.push("/treinos")} />
-            {loading && !trainingEntries.length ? <SkeletonCard height={190} /> : sectionErrors.training ? <ErrorCard message={sectionErrors.training} onRetry={load} /> : <TrainingSummaryCard entries={trainingEntries} onPress={() => router.push("/treinos")} />}
-          </View>
+            <View style={[styles.column, !isPhone && styles.columnWide, desktop && styles.columnDesktop]}>
+              <SectionTitle title="Conquistas" action="Ver todas" onPress={() => router.push("/conquistas")} />
+              {loading && !gamification ? <SkeletonCard height={220} /> : sectionErrors.game ? <ErrorCard message={sectionErrors.game} onRetry={load} /> : gamification ? <GamificationSummaryCard summary={gamification} onPress={() => router.push("/conquistas")} /> : null}
+            </View>
           </View>
         </View>
 
@@ -247,8 +313,18 @@ function WeekSelector({ wide, desktop, days, selectedDate, activityDates, onSele
   return <View style={[styles.weekWrap, wide && !desktop && styles.weekWrapWide, desktop && styles.weekWrapDesktop]} testID="home-week-selector"><Pressable accessibilityRole="button" style={styles.weekArrow} onPress={() => onShift(-1)} accessibilityLabel="Semana anterior"><MaterialDesignIcons name="chevron-left" size={21} color={colors.onSurfaceSecondary} /></Pressable><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.weekDays}>{days.map((day) => { const active = day.iso === selectedDate; const current = day.iso === todayISO(); return <Pressable key={day.iso} style={[styles.day, active && styles.dayActive]} onPress={() => onSelect(day.iso)} accessibilityRole="button" accessibilityState={{ selected: active }} accessibilityLabel={`${WEEKDAYS_LONG[day.date.getDay()]}, dia ${day.date.getDate()}${current ? ", hoje" : ""}`} testID={`week-day-${day.iso}`}><Text style={[styles.dayName, active && styles.dayNameActive]}>{WEEKDAYS_SHORT[day.date.getDay()]}</Text><Text style={[styles.dayNumber, active && styles.dayNumberActive]}>{day.date.getDate()}</Text><View style={[styles.dayDot, activityDates.has(day.iso) && styles.dayDotOn, active && activityDates.has(day.iso) && styles.dayDotActive]} /></Pressable>; })}</ScrollView><Pressable accessibilityRole="button" style={styles.weekArrow} onPress={() => onShift(1)} accessibilityLabel="Próxima semana"><MaterialDesignIcons name="chevron-right" size={21} color={colors.onSurfaceSecondary} /></Pressable></View>;
 }
 
-function QuickAction({ icon, label, onPress, disabled }: { icon: string; label: string; onPress: () => void; disabled?: boolean }) {
-  return <Pressable accessibilityRole="button" disabled={disabled} style={({ pressed }) => [styles.quickAction, pressed && styles.pressed, disabled && styles.disabled]} onPress={onPress} accessibilityLabel={label}><View style={styles.quickIcon}><MaterialDesignIcons name={icon as never} size={18} color={colors.brandPrimary} /></View><Text style={styles.quickText} numberOfLines={2}>{label}</Text></Pressable>;
+function TimelineRow({ item, current, last }: { item: TimelineItem; current: boolean; last: boolean }) {
+  return <View style={styles.timelineRow}>
+    <View style={styles.timelineRail}><View style={[styles.timelineDot, { borderColor: item.accent }, item.completed && { backgroundColor: item.accent }]}>{item.completed ? <MaterialDesignIcons name="check" size={12} color={colors.surface} /> : null}</View>{last ? null : <View style={styles.timelineLine} />}</View>
+    <Pressable style={styles.timelineBody} onPress={item.onPress} accessibilityRole="button" accessibilityLabel={`Abrir ${item.title}`}>
+      <View style={[styles.timelineIcon, { backgroundColor: withAlpha(item.accent, 0.14) }]}><MaterialDesignIcons name={item.icon as never} size={18} color={item.accent} /></View>
+      <View style={styles.timelineCopy}><Text style={[styles.timelineTitle, item.completed && styles.timelineTitleDone]} numberOfLines={1}>{item.title}</Text><Text style={styles.timelineSubtitle} numberOfLines={1}>{item.subtitle}</Text></View>
+      <Text style={styles.timelineTime}>{item.time}</Text>
+    </Pressable>
+    <Pressable style={[styles.timelineAction, current && styles.timelineActionCurrent, item.completed && styles.timelineActionDone]} onPress={item.onToggle ?? item.onPress} accessibilityRole="button" accessibilityLabel={item.completed ? `${item.title} concluída` : `${item.kind === "meal" ? "Registrar" : "Abrir"} ${item.title}`}>
+      {item.completed ? <MaterialDesignIcons name="check" size={17} color={colors.onSuccess} /> : current ? <Text style={styles.timelineActionCurrentText}>AGORA</Text> : <MaterialDesignIcons name={item.kind === "meal" ? "check" : "chevron-right"} size={17} color={colors.onSurfaceSecondary} />}
+    </Pressable>
+  </View>;
 }
 
 function SectionTitle({ title, action, onPress }: { title: string; action: string; onPress: () => void }) {
@@ -268,6 +344,7 @@ function weekFor(iso: string) { const selected = localDate(iso); const mondayOff
 function dayGreeting() { const hour = new Date().getHours(); return hour < 12 ? "Bom dia" : hour < 18 ? "Boa tarde" : "Boa noite"; }
 function cloudName(email: string | null) { const raw = email?.split("@")[0]?.split(/[._-]/)[0] || "amigo"; return raw.charAt(0).toUpperCase() + raw.slice(1); }
 function formatLongDate(date: Date) { return new Intl.DateTimeFormat("pt-BR", { weekday: "long", day: "2-digit", month: "long" }).format(date); }
+function formatShortDate(date: Date) { return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short" }).format(date).replace(".", ""); }
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.surface },
@@ -297,23 +374,38 @@ const styles = StyleSheet.create({
   dayDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: "transparent" },
   dayDotOn: { backgroundColor: colors.brandSecondary },
   dayDotActive: { backgroundColor: colors.onBrandPrimary },
-  hero: { minHeight: 164, flexDirection: "row", alignItems: "stretch", overflow: "hidden", borderRadius: radius.xl, backgroundColor: withAlpha(colors.brandSecondary, 0.16) },
-  heroStacked: { flexDirection: "column", minHeight: 278 },
-  heroDesktop: { minHeight: 176 },
-  heroCopy: { flex: 1.15, minWidth: 0, justifyContent: "center", alignItems: "flex-start", padding: spacing.xl },
-  heroCopyStacked: { flexGrow: 0, flexBasis: "auto", width: "100%", padding: spacing.lg, paddingBottom: spacing.md },
-  heroEyebrow: { color: colors.brandSecondary, fontSize: 9, fontWeight: "900", letterSpacing: 1.3 },
-  heroTitle: { maxWidth: "100%", flexShrink: 1, color: colors.onSurface, fontSize: 25, lineHeight: 30, fontWeight: "900", letterSpacing: -0.7, marginTop: spacing.sm },
-  heroText: { color: colors.onSurfaceSecondary, fontSize: 11, lineHeight: 17, marginTop: spacing.sm, maxWidth: 470 },
-  heroCta: { minHeight: 38, flexDirection: "row", alignItems: "center", gap: spacing.sm, marginTop: spacing.lg, paddingHorizontal: spacing.md, borderRadius: radius.pill, backgroundColor: colors.brandPrimary },
-  heroCtaText: { color: colors.onBrandPrimary, fontSize: 10, fontWeight: "900" },
-  heroArtwork: { flex: 0.85, minWidth: 150, alignItems: "stretch", justifyContent: "center", overflow: "hidden", padding: spacing.sm },
-  heroArtworkStacked: { flexGrow: 1, width: "100%", minHeight: 120, paddingTop: 0 },
-  heroMascot: { width: "100%", height: "100%" },
-  quickRow: { flexDirection: "row", gap: spacing.sm },
-  quickAction: { flex: 1, minHeight: 58, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: spacing.sm, paddingHorizontal: spacing.sm, borderRadius: radius.md, backgroundColor: colors.surfaceSecondary },
-  quickIcon: { width: 34, height: 34, borderRadius: radius.sm, alignItems: "center", justifyContent: "center", backgroundColor: withAlpha(colors.brandPrimary, 0.12) },
-  quickText: { flexShrink: 1, color: colors.onSurfaceSecondary, fontSize: 10, lineHeight: 14, fontWeight: "800" },
+  hero: { minHeight: 228, flexDirection: "row", alignItems: "stretch", gap: spacing.sm },
+  heroStacked: { flexDirection: "column", minHeight: 390 },
+  heroDesktop: { minHeight: 236 },
+  heroCopy: { flex: 1.05, minWidth: 0, overflow: "hidden", borderRadius: radius.xl, backgroundColor: "#E95722", padding: spacing.lg },
+  featureTop: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.sm },
+  heroEyebrow: { color: "#FFF8EE", fontSize: 10, fontWeight: "900", letterSpacing: 0.7 },
+  heroTitle: { maxWidth: "100%", color: "#FFFFFF", fontSize: 22, lineHeight: 25, fontWeight: "900", letterSpacing: -0.6, marginTop: spacing.sm },
+  featureSchedule: { gap: spacing.sm, marginTop: spacing.lg },
+  featureScheduleRow: { minHeight: 46, flexDirection: "row", alignItems: "center", gap: spacing.sm, paddingHorizontal: spacing.sm, borderRadius: radius.md, backgroundColor: "rgba(255,255,255,0.14)" },
+  featureScheduleIcon: { width: 30, height: 30, alignItems: "center", justifyContent: "center", borderRadius: radius.pill },
+  featureScheduleTitle: { color: "#FFFFFF", fontSize: 11, fontWeight: "800" },
+  featureScheduleTime: { color: "rgba(255,255,255,0.72)", fontSize: 9, fontWeight: "600", marginTop: 1 },
+  featureStatusDot: { width: 12, height: 12, borderRadius: radius.pill, borderWidth: 2, borderColor: "rgba(255,255,255,0.78)" },
+  featureStatusDone: { backgroundColor: "#FFFFFF" },
+  featureEmptyLine: { width: "88%", height: 12, borderRadius: radius.pill, backgroundColor: "rgba(255,255,255,0.18)" },
+  heroArtwork: { flex: 0.95, minWidth: 0, overflow: "hidden", borderRadius: radius.xl, backgroundColor: "#AFC2FF", padding: spacing.lg },
+  heroMascot: { width: 66, height: 58, alignSelf: "flex-end", marginTop: -10, marginRight: -8, marginBottom: -16 },
+  moveDate: { color: "rgba(15,20,39,0.62)", fontSize: 9, fontWeight: "700" },
+  moveEyebrow: { color: "#17203B", fontSize: 9, fontWeight: "900", letterSpacing: 0.5, marginTop: spacing.sm },
+  moveTitle: { flex: 1, color: "#11182D", fontSize: 21, lineHeight: 23, fontWeight: "900", letterSpacing: -0.6, marginTop: spacing.xs },
+  moveAction: { minHeight: 38, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.sm, paddingLeft: spacing.md, paddingRight: spacing.xs, borderRadius: radius.pill, backgroundColor: "rgba(255,255,255,0.72)" },
+  moveActionText: { color: "#11182D", fontSize: 11, fontWeight: "900" },
+  movePlay: { width: 31, height: 31, borderRadius: radius.pill, alignItems: "center", justifyContent: "center", backgroundColor: "#11182D" },
+  dailyProgressCard: { minHeight: 92, flexDirection: "row", alignItems: "center", gap: spacing.md, padding: spacing.md, borderRadius: radius.xl, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surfaceElevated },
+  dailyProgressIcon: { width: 48, height: 48, borderRadius: radius.pill, alignItems: "center", justifyContent: "center", backgroundColor: colors.brandPrimary },
+  dailyProgressCopy: { flex: 1, minWidth: 0 },
+  dailyProgressTitle: { color: colors.onSurface, fontSize: 16, fontWeight: "900" },
+  dailyProgressText: { color: colors.onSurfaceTertiary, fontSize: 10, lineHeight: 14, marginTop: 2 },
+  dailyProgressTrack: { height: 4, overflow: "hidden", borderRadius: radius.pill, backgroundColor: colors.surfaceTertiary, marginTop: spacing.sm },
+  dailyProgressFill: { height: "100%", borderRadius: radius.pill, backgroundColor: colors.brandTertiary },
+  progressRing: { width: 52, height: 52, borderRadius: radius.pill, alignItems: "center", justifyContent: "center", borderWidth: 5, borderColor: colors.brandTertiary, backgroundColor: colors.surfaceSecondary },
+  progressRingValue: { color: colors.onSurface, fontSize: 11, fontWeight: "900" },
   overview: { gap: spacing.lg },
   overviewDesktop: { flexDirection: "row", alignItems: "stretch" },
   focusColumn: { minWidth: 0, gap: spacing.md },
@@ -327,6 +419,27 @@ const styles = StyleSheet.create({
   sectionHeading: { minHeight: 28, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.md },
   sectionTitle: { color: colors.onSurface, fontSize: 17, fontWeight: "900" },
   sectionAction: { color: colors.brandPrimary, fontSize: 10, fontWeight: "800" },
+  timelineSection: { gap: spacing.sm },
+  timelineList: { paddingVertical: spacing.xs },
+  timelineRow: { minHeight: 68, flexDirection: "row", alignItems: "stretch" },
+  timelineRail: { width: 25, alignItems: "center" },
+  timelineDot: { zIndex: 1, width: 19, height: 19, borderRadius: radius.pill, alignItems: "center", justifyContent: "center", borderWidth: 2, backgroundColor: colors.surface },
+  timelineLine: { width: 1, flex: 1, backgroundColor: colors.borderStrong },
+  timelineBody: { flex: 1, minWidth: 0, flexDirection: "row", alignItems: "center", gap: spacing.sm, paddingBottom: spacing.md },
+  timelineIcon: { width: 38, height: 38, borderRadius: radius.md, alignItems: "center", justifyContent: "center" },
+  timelineCopy: { flex: 1, minWidth: 0 },
+  timelineTitle: { color: colors.onSurface, fontSize: 13, fontWeight: "800" },
+  timelineTitleDone: { color: colors.onSurfaceTertiary },
+  timelineSubtitle: { color: colors.onSurfaceTertiary, fontSize: 10, lineHeight: 14, marginTop: 2 },
+  timelineTime: { color: colors.onSurfaceTertiary, fontSize: 9, fontWeight: "700" },
+  timelineAction: { width: 44, height: 34, alignSelf: "center", marginLeft: spacing.sm, marginBottom: spacing.md, borderRadius: radius.pill, alignItems: "center", justifyContent: "center", backgroundColor: colors.surfaceSecondary },
+  timelineActionCurrent: { width: 58, backgroundColor: colors.brandPrimary },
+  timelineActionCurrentText: { color: colors.onBrandPrimary, fontSize: 8, fontWeight: "900" },
+  timelineActionDone: { backgroundColor: colors.success },
+  timelineEmpty: { minHeight: 84, flexDirection: "row", alignItems: "center", gap: spacing.md, padding: spacing.md, borderRadius: radius.lg, backgroundColor: colors.surfaceSecondary },
+  timelineEmptyTitle: { color: colors.onSurface, fontSize: 13, fontWeight: "900" },
+  timelineEmptyText: { color: colors.onSurfaceTertiary, fontSize: 10, marginTop: 2 },
+  compactAdd: { width: 40, height: 40, borderRadius: radius.pill, alignItems: "center", justifyContent: "center", backgroundColor: colors.brandPrimary },
   progressTrack: { height: 6, marginTop: -18, marginHorizontal: spacing.lg, marginBottom: spacing.lg, overflow: "hidden", borderRadius: radius.pill, backgroundColor: colors.surfaceTertiary },
   progressFill: { height: "100%", borderRadius: radius.pill, backgroundColor: colors.brandPrimary },
   mealsSection: { gap: spacing.sm },
