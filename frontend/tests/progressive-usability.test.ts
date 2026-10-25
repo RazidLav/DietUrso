@@ -90,10 +90,11 @@ test("o treino minimizado permanece flutuante no desktop e reage à persistênci
   assert.match(execution, /router\.replace\("\/treinos"\); void saveTrainingDraft/);
 });
 
-test("a Home desktop ocupa a coluna principal sem deixar o diário isolado abaixo", () => {
+test("a Home usa uma única cronologia integrada em qualquer largura", () => {
   const home = read("../app/(tabs)/index.tsx");
   assert.match(home, /topbarDesktop: \{ flexDirection: "row"/);
-  assert.match(home, /\{desktop \? mealsSection : null\}/);
-  assert.match(home, /\{desktop \? null : mealsSection\}/);
+  assert.match(home, /Atividade de hoje/);
+  assert.doesNotMatch(home, /Refeições do dia/);
+  assert.doesNotMatch(home, /mealsSection/);
   assert.match(home, /maxWidth: layout\.editorMax/);
 });

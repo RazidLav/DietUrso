@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AchievementUnlockModal from "../../src/components/AchievementUnlockModal";
 import GamificationSummaryCard from "../../src/components/GamificationSummaryCard";
 import MacroSummary from "../../src/components/MacroSummary";
-import MealCard, { iconForMeal } from "../../src/components/MealCard";
+import { iconForMeal } from "../../src/components/MealCard";
 import TrainingSummaryCard from "../../src/components/TrainingSummaryCard";
 import WaterCard from "../../src/components/WaterCard";
 import { getCloudStatus, subscribeCloudStatus, syncCloudNow } from "../../src/cloud/cloudSync";
@@ -14,11 +14,12 @@ import { useCloudDataRefresh } from "../../src/cloud/useCloudDataRefresh";
 import { dismissAchievement, evaluateGamification, getPendingAchievement } from "../../src/gamification/engine";
 import type { AchievementDefinition, GamificationSummary } from "../../src/gamification/types";
 import type { HydrationSummary } from "../../src/hydration/types";
-import { createPlanConsumption, dayConsumedNutrients, entryNutrients } from "../../src/nutrition/records";
+import { createPlanConsumption, dayConsumedNutrients } from "../../src/nutrition/records";
 import { mealTimeForWeekday, resolveMealScheduleFocus, scheduledMealsForDate } from "../../src/nutrition/mealSchedule";
+import { inferredMealFocusTime, resolveCurrentTimelineId } from "../../src/home/timeline";
 import { addHydrationRecord, getHydrationSummary } from "../../src/store/hydrationStore";
 import { listFoodCatalog } from "../../src/store/nutritionStore";
-import { addConsumption, dayMacrosDefault, getActivePlan, getChosenOption, listConsumption, optionMacros, removeConsumptionForDayMeal } from "../../src/store/planStore";
+import { addConsumption, dayMacrosDefault, getActivePlan, getChosenOption, listConsumption, removeConsumptionForDayMeal } from "../../src/store/planStore";
 import { getTrainingState, prepareTrainingRange } from "../../src/store/trainingStore";
 import { dayEntries } from "../../src/training/calculations";
 import { ACTIVITY_COLORS, ACTIVITY_ICONS, ACTIVITY_LABELS } from "../../src/training/catalog";
@@ -39,6 +40,7 @@ type TimelineItem = {
   subtitle: string;
   time: string;
   sortTime: string;
+  focusTime?: string;
   icon: string;
   accent: string;
   completed: boolean;
@@ -51,7 +53,7 @@ const EMPTY_ERRORS: Record<SectionKey, string | null> = { diet: null, water: nul
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
-  const { width, isDesktop: desktop, isPhone, isWide } = useResponsiveLayout();
+  const { width, isDesktop: desktop, isPhone } = useResponsiveLayout();
   const stackHero = width < 340;
   const router = useRouter();
   const [selectedDate, setSelectedDate] = useState(todayISO());
@@ -68,10 +70,15 @@ export default function HomeScreen() {
   const [cloudReady, setCloudReady] = useState(getCloudStatus().readyForData);
   const [refreshing, setRefreshing] = useState(false);
   const [savingWater, setSavingWater] = useState(false);
+  const [clockNow, setClockNow] = useState(() => new Date());
   const loadId = useRef(0);
   const waterLock = useRef(false);
 
   React.useEffect(() => subscribeCloudStatus((status) => setCloudReady(status.readyForData)), []);
+  React.useEffect(() => {
+    const timer = setInterval(() => setClockNow(new Date()), 30_000);
+    return () => clearInterval(timer);
+  }, []);
 
   const weekDays = useMemo(() => weekFor(selectedDate), [selectedDate]);
 
@@ -191,6 +198,7 @@ export default function HomeScreen() {
     ...dayMeals.map((meal) => {
       const option = meal.options.find((candidate) => candidate.id === chosen[meal.id]) ?? meal.options[0];
       const plannedTime = mealTimeForWeekday(meal, selected.getDay());
+      const focusTime = plannedTime ?? inferredMealFocusTime(meal.type);
       const entry = consumption.find((candidate) => candidate.date === selectedDate && candidate.mealId === meal.id);
       return {
         id: `meal-${meal.id}`,
@@ -198,7 +206,8 @@ export default function HomeScreen() {
         title: meal.name,
         subtitle: option?.name ?? "Escolha uma opção",
         time: plannedTime || "Livre",
-        sortTime: plannedTime || "99:99",
+        sortTime: focusTime || "99:99",
+        focusTime,
         icon: iconForMeal(meal.type),
         accent: colors.brandTertiary,
         completed: Boolean(entry && entry.status !== "skipped"),
@@ -213,6 +222,7 @@ export default function HomeScreen() {
       subtitle: `${ACTIVITY_LABELS[entry.planned.activityType]}${entry.planned.estimatedDurationMinutes ? ` · ${entry.planned.estimatedDurationMinutes} min` : ""}`,
       time: entry.planned.scheduledTime || "Livre",
       sortTime: entry.planned.scheduledTime || "99:98",
+      focusTime: entry.planned.scheduledTime,
       icon: ACTIVITY_ICONS[entry.planned.activityType],
       accent: ACTIVITY_COLORS[entry.planned.activityType],
       completed: entry.status === "completed",
@@ -220,18 +230,7 @@ export default function HomeScreen() {
       onPress: () => openTraining(entry),
     })),
   ].sort((a, b) => a.sortTime.localeCompare(b.sortTime));
-  const currentTimelineId = timelineItems.find((item) => item.active)?.id ?? timelineItems.find((item) => !item.completed)?.id;
-  const mealsSection = plan && dayMeals.length ? <View style={styles.mealsSection}>
-    <SectionTitle title="Refeições do dia" action="Diário" onPress={() => router.push("/historico-alimentar")} />
-    <View style={[styles.mealGrid, desktop && styles.mealGridDesktop]}>{dayMeals.map((meal) => {
-      const option = meal.options.find((candidate) => candidate.id === chosen[meal.id]) ?? meal.options[0];
-      const macros = option ? optionMacros(option) : { kcal: 0, protein: 0, carbs: 0, fats: 0, fiber: 0, sodium: 0 };
-      const entry = consumption.find((candidate) => candidate.date === selectedDate && candidate.mealId === meal.id);
-      const status = entry ? (entry.status === "off_plan" ? "modified" : entry.status) : "planned";
-      const plannedTime = mealTimeForWeekday(meal, selected.getDay());
-      return <View key={meal.id} style={desktop ? [styles.mealCell, isWide && styles.mealCellWide] : undefined}><MealCard compact title={meal.name} subtitle={entry ? `${entry.status === "as_planned" ? "Conforme o plano" : entry.status === "skipped" ? "Não realizada" : "Com alterações"} · ${option?.name ?? ""}` : `${plannedTime ? `${plannedTime} · ` : ""}${option?.name ?? "Sem opções"}`} icon={iconForMeal(meal.type)} kcal={entry ? entryNutrients(entry).kcal : macros.kcal} status={status} onPress={() => router.push(`/meal/${plan.id}/${meal.id}?date=${selectedDate}`)} onToggleDone={() => void toggleQuickDone(meal.id, option?.id)} /></View>;
-    })}</View>
-  </View> : null;
+  const currentTimelineId = resolveCurrentTimelineId(timelineItems, today, clockNow);
 
   return (
     <>
@@ -276,7 +275,6 @@ export default function HomeScreen() {
               <SectionTitle title="Atividade de hoje" action="Ver agenda" onPress={() => router.push("/treinos")} />
               {loading && !timelineItems.length ? <SkeletonCard height={220} /> : timelineItems.length ? <View style={styles.timelineList}>{timelineItems.map((item, index) => <TimelineRow key={item.id} item={item} current={item.id === currentTimelineId} last={index === timelineItems.length - 1} />)}</View> : <View style={styles.timelineEmpty}><MaterialDesignIcons name="calendar-blank-outline" size={25} color={colors.brandPrimary} /><View style={{ flex: 1 }}><Text style={styles.timelineEmptyTitle}>Seu dia está livre</Text><Text style={styles.timelineEmptyText}>Adicione uma refeição ou sessão quando quiser.</Text></View><Pressable style={styles.compactAdd} onPress={() => router.push(`/treino-novo?date=${selectedDate}` as never)}><MaterialDesignIcons name="plus" size={18} color={colors.onBrandPrimary} /></Pressable></View>}
             </View>
-            {desktop ? mealsSection : null}
           </View>
 
           <View style={[styles.dashboard, !isPhone && styles.dashboardWide, desktop && styles.dashboardDesktop]}>
@@ -301,8 +299,6 @@ export default function HomeScreen() {
             </View>
           </View>
         </View>
-
-        {desktop ? null : mealsSection}
       </ScrollView>
       <AchievementUnlockModal achievement={pendingAchievement} onDismiss={handleDismissAchievement} />
     </>
@@ -442,11 +438,6 @@ const styles = StyleSheet.create({
   compactAdd: { width: 40, height: 40, borderRadius: radius.pill, alignItems: "center", justifyContent: "center", backgroundColor: colors.brandPrimary },
   progressTrack: { height: 6, marginTop: -18, marginHorizontal: spacing.lg, marginBottom: spacing.lg, overflow: "hidden", borderRadius: radius.pill, backgroundColor: colors.surfaceTertiary },
   progressFill: { height: "100%", borderRadius: radius.pill, backgroundColor: colors.brandPrimary },
-  mealsSection: { gap: spacing.sm },
-  mealGrid: { gap: spacing.sm },
-  mealGridDesktop: { flexDirection: "row", flexWrap: "wrap" },
-  mealCell: { width: "49.4%" },
-  mealCellWide: { width: "32.7%" },
   skeleton: { gap: spacing.md, padding: spacing.lg, borderRadius: radius.lg, backgroundColor: colors.surfaceSecondary },
   skeletonIcon: { width: 44, height: 44, borderRadius: radius.md, backgroundColor: colors.surfaceTertiary },
   skeletonLine: { height: 12, borderRadius: radius.pill, backgroundColor: colors.surfaceTertiary },
