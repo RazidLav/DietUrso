@@ -2,7 +2,7 @@ import MaterialDesignIcons from "@react-native-vector-icons/material-design-icon
 import { useRouter } from "expo-router";
 import { Image, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
 import { completeOnboarding } from "../src/store/onboardingStore";
-import { colors, radius, spacing, withAlpha } from "../src/theme";
+import { colors, flatColors, radius, spacing, withAlpha } from "../src/theme";
 import { useAppTheme } from "../src/components/ThemeProvider";
 import { useResponsiveLayout } from "../src/responsive";
 
@@ -92,7 +92,7 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.surface },
   viewport: { flexGrow: 1, width: "100%", maxWidth: 1240, alignSelf: "center" },
   viewportDesktop: { minHeight: 720, flexDirection: "row", alignItems: "stretch", padding: spacing.xl, gap: spacing.xl },
-  visualPanel: { minHeight: 370, padding: spacing.xl, overflow: "hidden", backgroundColor: withAlpha(colors.brandPrimary, 0.13), justifyContent: "center" },
+  visualPanel: { minHeight: 370, padding: spacing.xl, overflow: "hidden", backgroundColor: withAlpha(flatColors.lavender, 0.22), justifyContent: "center" },
   visualPanelDesktop: { flex: 1.08, borderRadius: 36, minHeight: 0 },
   brandRow: { position: "absolute", top: spacing.xl, left: spacing.xl, zIndex: 3, flexDirection: "row", alignItems: "center", gap: spacing.sm },
   brandMark: { width: 42, height: 42, borderRadius: radius.md, overflow: "hidden", backgroundColor: colors.brandPrimary },
@@ -101,12 +101,12 @@ const styles = StyleSheet.create({
   hero: { width: 276, height: 276, borderRadius: 138, alignSelf: "center", borderWidth: 8, borderColor: withAlpha(colors.surfaceElevated, 0.68) },
   heroDesktop: { width: 430, height: 430, borderRadius: 215 },
   orbitOne: { position: "absolute", width: 410, height: 410, borderRadius: 205, borderWidth: 1, borderColor: withAlpha(colors.brandPrimary, 0.32), alignSelf: "center" },
-  orbitTwo: { position: "absolute", width: 320, height: 320, borderRadius: 160, backgroundColor: withAlpha(colors.brandSecondary, 0.1), alignSelf: "center", transform: [{ translateX: 54 }] },
+  orbitTwo: { position: "absolute", width: 320, height: 320, borderRadius: 160, backgroundColor: withAlpha(flatColors.orange, 0.18), alignSelf: "center", transform: [{ translateX: 54 }] },
   visualBadge: { position: "absolute", right: spacing.xl, bottom: spacing.xl, flexDirection: "row", alignItems: "center", gap: spacing.sm, paddingHorizontal: spacing.md, minHeight: 40, borderRadius: radius.pill, backgroundColor: colors.brandPrimary },
   visualBadgeText: { color: colors.onBrandPrimary, fontSize: 9, fontWeight: "900", letterSpacing: 1.1 },
   contentPanel: { flex: 1, marginTop: -28, borderTopLeftRadius: 32, borderTopRightRadius: 32, backgroundColor: colors.surface, padding: spacing.xl, gap: spacing.xl },
-  contentPanelDesktop: { maxWidth: 510, marginTop: 0, borderRadius: 36, justifyContent: "center", paddingHorizontal: spacing.xxl, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surfaceSecondary },
-  themeToggle: { alignSelf: "flex-end", flexDirection: "row", padding: 4, borderRadius: radius.pill, backgroundColor: colors.surfaceTertiary, borderWidth: 1, borderColor: colors.border },
+  contentPanelDesktop: { maxWidth: 510, marginTop: 0, borderRadius: 36, justifyContent: "center", paddingHorizontal: spacing.xxl, backgroundColor: colors.surfaceSecondary },
+  themeToggle: { alignSelf: "flex-end", flexDirection: "row", padding: 4, borderRadius: radius.pill, backgroundColor: colors.surfaceTertiary },
   themeOption: { minHeight: 36, flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: spacing.md, borderRadius: radius.pill },
   themeOptionActive: { backgroundColor: colors.brandPrimary },
   themeText: { color: colors.onSurfaceTertiary, fontSize: 11, fontWeight: "800" },

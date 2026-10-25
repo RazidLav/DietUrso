@@ -19,7 +19,7 @@ import { CHAPTERS, getLevelDefinition, LEVEL_DEFINITIONS } from "../src/gamifica
 import type { LevelDefinition } from "../src/gamification/journey";
 import type { AchievementDefinition, GamificationSummary } from "../src/gamification/types";
 import { useResponsiveLayout } from "../src/responsive";
-import { colors, radius, spacing, withAlpha } from "../src/theme";
+import { areaColors, colors, radius, spacing, withAlpha } from "../src/theme";
 
 type CaveRoom = "Jornada" | "Salão" | "Segredos" | "Fogueira" | "Relíquias";
 type LoadState = "loading" | "ready" | "error";
@@ -61,7 +61,7 @@ export default function TrophyCaveScreen() {
   return (
     <View style={styles.screen} testID="trophy-cave-screen">
       <ContentContainer style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
-        <PageHeader eyebrow="JORNADA URSOFIT" title="Caverna de Troféus" onBack={() => router.back()} action={<IconButton icon="teddy-bear" label="Abrir Meu Urso" onPress={() => router.push("/meu-urso" as never)} />} />
+        <PageHeader eyebrow="JORNADA URSOFIT" title="Caverna de Troféus" accent={areaColors.game} onBack={() => router.back()} action={<IconButton icon="teddy-bear" label="Abrir Meu Urso" onPress={() => router.push("/meu-urso" as never)} />} />
       </ContentContainer>
 
       {status === "loading" ? <LoadingState /> : null}
@@ -285,14 +285,14 @@ const styles = StyleSheet.create({
   centerState: { flex: 1, minHeight: 360, alignItems: "center", justifyContent: "center", padding: spacing.xl, gap: spacing.sm },
   stateTitle: { color: colors.onSurface, fontSize: 18, fontWeight: "900", textAlign: "center" },
   stateText: { color: colors.onSurfaceTertiary, fontSize: 12, lineHeight: 18, maxWidth: 360, textAlign: "center" },
-  skeletonHero: { width: "100%", maxWidth: 760, height: 180, overflow: "hidden", padding: spacing.xl, gap: spacing.md, borderRadius: radius.lg, backgroundColor: colors.surfaceSecondary, borderWidth: 1, borderColor: colors.border },
-  skeletonCard: { width: "100%", maxWidth: 760, padding: spacing.xl, gap: spacing.md, borderRadius: radius.lg, backgroundColor: colors.surfaceSecondary, borderWidth: 1, borderColor: colors.border },
+  skeletonHero: { width: "100%", maxWidth: 760, height: 180, overflow: "hidden", padding: spacing.xl, gap: spacing.md, borderRadius: radius.xl, backgroundColor: withAlpha(areaColors.game, 0.08) },
+  skeletonCard: { width: "100%", maxWidth: 760, padding: spacing.xl, gap: spacing.md, borderRadius: radius.lg, backgroundColor: colors.surfaceSecondary },
   skeletonLine: { width: "42%", height: 11, borderRadius: radius.pill, backgroundColor: colors.surfaceTertiary },
   skeletonLineWide: { width: "68%", height: 18, borderRadius: radius.pill, backgroundColor: colors.surfaceTertiary },
   skeletonArt: { position: "absolute", right: spacing.xl, bottom: spacing.lg, width: 110, height: 110, borderRadius: 55, backgroundColor: colors.surfaceTertiary },
   primaryButton: { marginTop: spacing.sm, paddingHorizontal: spacing.xl, paddingVertical: spacing.md, backgroundColor: colors.brandPrimary, borderRadius: radius.pill },
   primaryButtonText: { color: colors.onBrandPrimary, fontSize: 12, fontWeight: "900" },
-  hero: { minHeight: 190, flexDirection: "row", overflow: "hidden", borderRadius: radius.lg, backgroundColor: colors.surfaceSecondary },
+  hero: { minHeight: 190, flexDirection: "row", overflow: "hidden", borderRadius: radius.xl, backgroundColor: withAlpha(areaColors.game, 0.08) },
   heroCompact: { flexDirection: "column", minHeight: 0 },
   heroCopy: { flex: 1.15, minWidth: 220, padding: spacing.lg, justifyContent: "center", zIndex: 1 },
   heroChapter: { color: colors.brandPrimary, fontSize: 10, fontWeight: "900", letterSpacing: 1.2 },
@@ -316,7 +316,7 @@ const styles = StyleSheet.create({
   mapTitle: { color: colors.onSurface, fontSize: 17, fontWeight: "900" },
   mapHint: { color: colors.onSurfaceTertiary, fontSize: 9 },
   chapterRail: { gap: spacing.sm, paddingVertical: spacing.xs, paddingRight: spacing.lg },
-  chapterCard: { width: 268, minHeight: 214, backgroundColor: colors.surfaceSecondary, borderRadius: radius.md, padding: spacing.md, borderWidth: 1, borderColor: colors.border },
+  chapterCard: { width: 268, minHeight: 214, backgroundColor: colors.surfaceSecondary, borderRadius: radius.lg, padding: spacing.md },
   chapterCardCurrent: { backgroundColor: withAlpha(colors.brandPrimary, 0.07) },
   chapterHeader: { minHeight: 82, flexDirection: "row", alignItems: "center", gap: spacing.sm, paddingBottom: spacing.sm, borderBottomWidth: 1, borderBottomColor: colors.divider },
   medallion: { width: 42, height: 42, borderRadius: 21, alignItems: "center", justifyContent: "center", backgroundColor: colors.surfaceTertiary, borderWidth: 1, borderColor: colors.borderStrong },
@@ -352,7 +352,7 @@ const styles = StyleSheet.create({
   levelTitle: { color: colors.onSurface, fontSize: 12, fontWeight: "900" },
   levelMeta: { color: colors.onSurfaceTertiary, fontSize: 9, marginTop: 2 },
   lockedText: { color: colors.onSurfaceTertiary },
-  detailCard: { width: "100%", maxWidth: 340, backgroundColor: colors.surfaceSecondary, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: spacing.xl, alignSelf: "flex-start" },
+  detailCard: { width: "100%", maxWidth: 340, backgroundColor: colors.surfaceSecondary, borderRadius: radius.xl, padding: spacing.xl, alignSelf: "flex-start" },
   detailBadge: { width: 56, height: 56, borderRadius: 28, alignItems: "center", justifyContent: "center", backgroundColor: withAlpha(colors.brandPrimary, 0.12), marginBottom: spacing.md },
   detailEyebrow: { color: colors.brandPrimary, fontSize: 9, fontWeight: "900", letterSpacing: 1.2 },
   detailTitle: { color: colors.onSurface, fontSize: 23, lineHeight: 27, fontWeight: "900", marginTop: spacing.xs },
@@ -368,7 +368,7 @@ const styles = StyleSheet.create({
   sectionTitle: { color: colors.onSurface, fontSize: 22, fontWeight: "900" },
   sectionMeta: { color: colors.onSurfaceTertiary, fontSize: 10 },
   trophyShelf: { flexDirection: "row", gap: spacing.sm, alignItems: "stretch" },
-  trophyPeek: { flex: 1, minWidth: 0, minHeight: 126, alignItems: "center", justifyContent: "center", gap: spacing.xs, padding: spacing.xs, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surfaceSecondary },
+  trophyPeek: { flex: 1, minWidth: 0, minHeight: 126, alignItems: "center", justifyContent: "center", gap: spacing.xs, padding: spacing.xs, borderRadius: radius.lg, backgroundColor: colors.surfaceSecondary },
   trophyPeekIcon: { width: 42, height: 42, borderRadius: radius.md, alignItems: "center", justifyContent: "center" },
   trophyPeekTitle: { color: colors.onSurface, fontSize: 9, lineHeight: 12, fontWeight: "900", textAlign: "center" },
   trophyPeekMeta: { maxWidth: "100%", fontSize: 8, fontWeight: "900", textAlign: "center" },
@@ -386,7 +386,7 @@ const styles = StyleSheet.create({
   trophyTitle: { color: colors.onSurface, fontSize: 12, fontWeight: "900" },
   trophyDescription: { color: colors.onSurfaceTertiary, fontSize: 9, lineHeight: 14, marginTop: 3 },
   trophyReward: { fontSize: 9, fontWeight: "900", marginTop: spacing.sm },
-  preparedRoom: { minHeight: 320, alignItems: "center", justifyContent: "center", padding: spacing.xl, borderRadius: radius.lg, backgroundColor: colors.surfaceSecondary, borderWidth: 1, borderColor: colors.border },
+  preparedRoom: { minHeight: 320, alignItems: "center", justifyContent: "center", padding: spacing.xl, borderRadius: radius.xl, backgroundColor: withAlpha(areaColors.game, 0.07) },
   preparedIcon: { width: 72, height: 72, borderRadius: 36, alignItems: "center", justifyContent: "center", backgroundColor: withAlpha(colors.brandPrimary, 0.1) },
   preparedTitle: { color: colors.onSurface, fontSize: 22, fontWeight: "900", marginTop: spacing.lg },
   preparedText: { color: colors.onSurfaceTertiary, fontSize: 12, lineHeight: 18, maxWidth: 430, textAlign: "center", marginTop: spacing.sm },

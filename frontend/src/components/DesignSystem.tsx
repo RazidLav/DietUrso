@@ -13,18 +13,18 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useReducedMotion, useResponsiveLayout } from "../responsive";
-import { colors, layout, radius, spacing, typeScale, withAlpha, zIndex } from "../theme";
+import { colors, flatColors, layout, radius, spacing, typeScale, withAlpha, zIndex } from "../theme";
 
 export function ContentContainer({ children, style, maxWidth = layout.contentMax }: { children: React.ReactNode; style?: StyleProp<ViewStyle>; maxWidth?: number }) {
   return <View style={[styles.content, { maxWidth }, style]}>{children}</View>;
 }
 
-export function PageHeader({ eyebrow, title, description, onBack, action }: { eyebrow?: string; title: string; description?: string; onBack?: () => void; action?: React.ReactNode }) {
+export function PageHeader({ eyebrow, title, description, onBack, action, accent = colors.brandPrimary }: { eyebrow?: string; title: string; description?: string; onBack?: () => void; action?: React.ReactNode; accent?: string }) {
   const { isPhone } = useResponsiveLayout();
   return <View style={[styles.pageHeader, isPhone && styles.pageHeaderPhone]}>
     {onBack ? <IconButton icon="arrow-left" label="Voltar" onPress={onBack} /> : null}
     <View style={styles.headerCopy}>
-      {eyebrow ? <Text style={styles.eyebrow}>{eyebrow}</Text> : null}
+      {eyebrow ? <View style={[styles.eyebrowPill, { backgroundColor: withAlpha(accent, 0.14) }]}><View style={[styles.eyebrowDot, { backgroundColor: accent }]} /><Text style={[styles.eyebrow, { color: accent }]}>{eyebrow}</Text></View> : null}
       <Text accessibilityRole="header" style={styles.pageTitle}>{title}</Text>
       {description ? <Text style={styles.pageDescription}>{description}</Text> : null}
     </View>
@@ -32,8 +32,8 @@ export function PageHeader({ eyebrow, title, description, onBack, action }: { ey
   </View>;
 }
 
-export function SurfaceCard({ children, density = "standard", bordered = false, style }: { children: React.ReactNode; density?: "compact" | "standard" | "spacious"; bordered?: boolean; style?: StyleProp<ViewStyle> }) {
-  return <View style={[styles.surfaceCard, density === "compact" && styles.surfaceCardCompact, density === "spacious" && styles.surfaceCardSpacious, bordered && styles.surfaceCardBordered, style]}>{children}</View>;
+export function SurfaceCard({ children, density = "standard", bordered = false, accent, style }: { children: React.ReactNode; density?: "compact" | "standard" | "spacious"; bordered?: boolean; accent?: string; style?: StyleProp<ViewStyle> }) {
+  return <View style={[styles.surfaceCard, accent ? { backgroundColor: withAlpha(accent, 0.1) } : null, density === "compact" && styles.surfaceCardCompact, density === "spacious" && styles.surfaceCardSpacious, bordered && styles.surfaceCardBordered, style]}>{accent ? <View style={[styles.surfaceAccent, { backgroundColor: accent }]} /> : null}{children}</View>;
 }
 
 export function SectionHeader({ title, description, action }: { title: string; description?: string; action?: React.ReactNode }) {
@@ -60,7 +60,7 @@ export function CompactCard({ children, onPress, selected, style, accessibilityL
 
 export function SummaryCard({ label, value, hint, icon, accent = colors.brandPrimary, style, compact = false }: { label: string; value: string; hint?: string; icon?: string; accent?: string; style?: StyleProp<ViewStyle>; compact?: boolean }) {
   return <View style={[styles.summaryCard, compact && styles.summaryCardCompact, style]}>
-    <View style={styles.summaryTop}>{icon ? <MaterialDesignIcons name={icon as never} size={compact ? 15 : 18} color={accent} /> : null}<Text numberOfLines={1} style={[styles.summaryLabel, compact && styles.summaryLabelCompact]}>{label}</Text></View>
+    <View style={styles.summaryTop}>{icon ? <View style={[styles.summaryIcon, compact && styles.summaryIconCompact, { backgroundColor: withAlpha(accent, 0.16) }]}><MaterialDesignIcons name={icon as never} size={compact ? 15 : 18} color={accent} /></View> : null}<Text numberOfLines={1} style={[styles.summaryLabel, compact && styles.summaryLabelCompact]}>{label}</Text></View>
     <Text style={[styles.summaryValue, compact && styles.summaryValueCompact]}>{value}</Text>
     {hint ? <Text style={styles.summaryHint}>{hint}</Text> : null}
   </View>;
@@ -118,22 +118,27 @@ const styles = StyleSheet.create({
   pageHeaderPhone: { gap: spacing.sm },
   headerCopy: { flex: 1, minWidth: 0 },
   headerAction: { flexShrink: 0 },
-  eyebrow: { color: colors.brandPrimary, fontSize: typeScale.caption.fontSize, lineHeight: typeScale.caption.lineHeight, fontWeight: "850" as never, letterSpacing: 0.9 },
+  eyebrowPill: { alignSelf: "flex-start", minHeight: 22, flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: spacing.sm, borderRadius: radius.pill, marginBottom: 3 },
+  eyebrowDot: { width: 6, height: 6, borderRadius: radius.pill },
+  eyebrow: { fontSize: typeScale.caption.fontSize, lineHeight: typeScale.caption.lineHeight, fontWeight: "850" as never, letterSpacing: 0.9 },
   pageTitle: { color: colors.onSurface, fontSize: typeScale.pageTitle.fontSize, lineHeight: typeScale.pageTitle.lineHeight, fontWeight: "900" },
   pageDescription: { color: colors.onSurfaceTertiary, fontSize: typeScale.body.fontSize, lineHeight: typeScale.body.lineHeight, marginTop: spacing.xs, maxWidth: layout.readingMax },
   sectionHeader: { minHeight: 32, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.md },
   sectionTitle: { color: colors.onSurface, fontSize: typeScale.sectionTitle.fontSize, lineHeight: typeScale.sectionTitle.lineHeight, fontWeight: "850" as never },
   sectionDescription: { color: colors.onSurfaceTertiary, fontSize: typeScale.secondary.fontSize, lineHeight: typeScale.secondary.lineHeight, marginTop: 2 },
   grid: { flexDirection: "row", flexWrap: "wrap", alignItems: "stretch" },
-  compactCard: { minHeight: 64, padding: spacing.md, borderRadius: radius.md, backgroundColor: colors.surfaceSecondary },
-  compactCardSelected: { backgroundColor: withAlpha(colors.brandPrimary, 0.09), borderWidth: 1, borderColor: withAlpha(colors.brandPrimary, 0.42) },
-  surfaceCard: { padding: spacing.lg, borderRadius: radius.md, backgroundColor: colors.surfaceSecondary },
+  compactCard: { minHeight: 64, padding: spacing.md, borderRadius: radius.md, backgroundColor: colors.surfaceSecondary, overflow: "hidden" },
+  compactCardSelected: { backgroundColor: withAlpha(colors.brandPrimary, 0.16), borderWidth: 2, borderColor: withAlpha(colors.brandPrimary, 0.7) },
+  surfaceCard: { padding: spacing.lg, borderRadius: radius.md, position: "relative", backgroundColor: colors.surfaceSecondary, overflow: "hidden" },
+  surfaceAccent: { position: "absolute", left: 0, top: spacing.md, bottom: spacing.md, width: 4, borderTopRightRadius: radius.pill, borderBottomRightRadius: radius.pill },
   surfaceCardCompact: { padding: spacing.md },
   surfaceCardSpacious: { padding: spacing.xl, borderRadius: radius.lg },
   surfaceCardBordered: { borderWidth: 1, borderColor: colors.border },
-  summaryCard: { minHeight: 74, padding: spacing.md, borderRadius: radius.md, backgroundColor: colors.surfaceSecondary },
+  summaryCard: { minHeight: 74, padding: spacing.md, borderRadius: radius.lg, backgroundColor: colors.surfaceSecondary },
   summaryCardCompact: { minHeight: 66, padding: spacing.sm },
   summaryTop: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
+  summaryIcon: { width: 30, height: 30, alignItems: "center", justifyContent: "center", borderRadius: radius.sm },
+  summaryIconCompact: { width: 26, height: 26 },
   summaryLabel: { color: colors.onSurfaceTertiary, fontSize: typeScale.caption.fontSize, fontWeight: "750" as never },
   summaryLabelCompact: { fontSize: 9 },
   summaryValue: { color: colors.onSurface, fontSize: typeScale.metric.fontSize, lineHeight: typeScale.metric.lineHeight, fontWeight: "900", marginTop: spacing.xs },
@@ -142,7 +147,7 @@ const styles = StyleSheet.create({
   statusBadge: { alignSelf: "flex-start", minHeight: 24, flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: spacing.sm, borderRadius: radius.pill },
   statusDot: { width: 6, height: 6, borderRadius: 3 },
   statusText: { fontSize: 9, fontWeight: "850" as never },
-  segmented: { flexDirection: "row", gap: spacing.xxs, padding: spacing.xs, borderRadius: radius.md, backgroundColor: colors.surfaceSecondary },
+  segmented: { flexDirection: "row", gap: spacing.xxs, padding: spacing.xs, borderRadius: radius.lg, backgroundColor: colors.surfaceSecondary },
   segment: { flex: 1, minHeight: layout.touchTarget, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: spacing.xs, paddingHorizontal: spacing.sm, borderRadius: radius.sm },
   segmentSelected: { backgroundColor: colors.brandPrimary },
   segmentText: { color: colors.onSurfaceTertiary, fontSize: 11, fontWeight: "750" as never },
@@ -158,7 +163,7 @@ const styles = StyleSheet.create({
   sheetOverlay: { flex: 1, backgroundColor: colors.overlay, zIndex: zIndex.modal },
   sheetOverlayPhone: { justifyContent: "flex-end" },
   sheetOverlayWide: { alignItems: "flex-end" },
-  sheet: { backgroundColor: colors.surfaceElevated, ...(Platform.OS === "web" ? ({ boxShadow: "0 24px 64px rgba(0,0,0,.35)" } as never) : { elevation: 18 }) },
+  sheet: { backgroundColor: colors.surfaceElevated, borderTopColor: withAlpha(flatColors.lavender, 0.45), borderTopWidth: 3, ...(Platform.OS === "web" ? ({ boxShadow: "0 24px 64px rgba(0,0,0,.28)" } as never) : { elevation: 18 }) },
   sheetPhone: { width: "100%", maxHeight: "88%", padding: spacing.lg, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl },
   sheetWide: { height: "100%", maxWidth: "92%", padding: spacing.xl },
   sheetHandle: { width: 42, height: 4, borderRadius: radius.pill, backgroundColor: colors.borderStrong, alignSelf: "center", marginBottom: spacing.md },

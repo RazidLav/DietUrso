@@ -9,7 +9,7 @@ import {
 } from "../src/cloud/cloudSync";
 import { authErrorMessage, normalizeEmail } from "../src/cloud/authFlow";
 import { completeOnboarding } from "../src/store/onboardingStore";
-import { colors, radius, spacing, withAlpha } from "../src/theme";
+import { colors, flatColors, radius, spacing, withAlpha } from "../src/theme";
 import { useAppTheme } from "../src/components/ThemeProvider";
 import { useResponsiveLayout } from "../src/responsive";
 
@@ -149,7 +149,7 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.surface },
   viewport: { flexGrow: 1, width: "100%", maxWidth: 1180, alignSelf: "center", padding: spacing.lg, gap: spacing.lg },
   viewportDesktop: { flexDirection: "row", alignItems: "stretch", padding: spacing.xl, gap: spacing.xl },
-  visual: { position: "relative", minHeight: 250, overflow: "hidden", borderRadius: radius.lg, backgroundColor: withAlpha(colors.brandPrimary, 0.13), alignItems: "center", justifyContent: "center", padding: spacing.xl },
+  visual: { position: "relative", minHeight: 250, overflow: "hidden", borderRadius: radius.xl, backgroundColor: withAlpha(flatColors.lavender, 0.2), alignItems: "center", justifyContent: "center", padding: spacing.xl },
   visualDesktop: { flex: 1.05, minHeight: 680 },
   backButton: { position: "absolute", zIndex: 3, left: spacing.lg, top: spacing.lg, width: 44, height: 44, borderRadius: radius.md, backgroundColor: withAlpha(colors.surface, 0.74), alignItems: "center", justifyContent: "center" },
   brandRow: { position: "absolute", left: spacing.xl, bottom: spacing.xl, zIndex: 3, flexDirection: "row", alignItems: "center", gap: spacing.sm },
@@ -171,18 +171,18 @@ const styles = StyleSheet.create({
   themeButton: { width: 36, height: 34, alignItems: "center", justifyContent: "center", borderRadius: radius.pill },
   themeButtonActive: { backgroundColor: colors.brandPrimary },
   form: { width: "100%", gap: spacing.md },
-  segmented: { flexDirection: "row", backgroundColor: colors.surfaceTertiary, borderRadius: radius.pill, padding: 4, borderWidth: 1, borderColor: colors.border },
+  segmented: { flexDirection: "row", backgroundColor: colors.surfaceTertiary, borderRadius: radius.pill, padding: 4 },
   segment: { flex: 1, minHeight: 42, alignItems: "center", justifyContent: "center", borderRadius: radius.pill },
-  segmentActive: { backgroundColor: colors.surfaceElevated, borderWidth: 1, borderColor: colors.borderStrong },
+  segmentActive: { backgroundColor: withAlpha(flatColors.lavender, 0.24) },
   segmentText: { color: colors.onSurfaceTertiary, fontWeight: "800", fontSize: 12 },
   segmentTextActive: { color: colors.onSurface },
-  field: { minHeight: 54, flexDirection: "row", alignItems: "center", gap: spacing.sm, borderWidth: 1, borderColor: colors.borderStrong, borderRadius: radius.md, backgroundColor: colors.surfaceSecondary, paddingLeft: spacing.md },
+  field: { minHeight: 54, flexDirection: "row", alignItems: "center", gap: spacing.sm, borderRadius: radius.lg, backgroundColor: colors.surfaceSecondary, paddingLeft: spacing.md },
   input: { flex: 1, minHeight: 52, paddingHorizontal: spacing.xs, color: colors.onSurface, fontSize: 15, outlineStyle: "none" } as never,
   eye: { width: 48, height: 48, alignItems: "center", justifyContent: "center" },
   primaryButton: { width: "100%", minHeight: 54, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: spacing.sm, backgroundColor: colors.brandPrimary, borderRadius: radius.pill, paddingHorizontal: spacing.lg },
   primaryText: { color: colors.onBrandPrimary, fontSize: 14, fontWeight: "900" },
   disabled: { opacity: 0.48 },
-  noticeBox: { width: "100%", flexDirection: "row", alignItems: "flex-start", gap: spacing.sm, backgroundColor: withAlpha(colors.brandTertiary, 0.1), borderWidth: 1, borderColor: withAlpha(colors.brandTertiary, 0.34), borderRadius: radius.md, padding: spacing.md },
+  noticeBox: { width: "100%", flexDirection: "row", alignItems: "flex-start", gap: spacing.sm, backgroundColor: withAlpha(colors.brandTertiary, 0.12), borderRadius: radius.lg, padding: spacing.md },
   notice: { flex: 1, color: colors.onSurfaceSecondary, fontSize: 12, lineHeight: 18 },
   privacyRow: { flexDirection: "row", alignItems: "flex-start", gap: spacing.sm, paddingHorizontal: spacing.sm },
   privacy: { flex: 1, color: colors.onSurfaceTertiary, fontSize: 10, lineHeight: 15 },
@@ -191,7 +191,7 @@ const styles = StyleSheet.create({
   linkText: { color: colors.brandPrimary, fontSize: 11, fontWeight: "800" },
   offlineButton: { minHeight: 44, alignItems: "center", justifyContent: "center" },
   offlineText: { color: colors.onSurfaceTertiary, fontSize: 11, fontWeight: "700" },
-  signedCard: { width: "100%", alignItems: "center", gap: spacing.md, backgroundColor: colors.surfaceSecondary, borderWidth: 1, borderColor: withAlpha(colors.brandPrimary, 0.42), borderRadius: radius.lg, padding: spacing.xl },
+  signedCard: { width: "100%", alignItems: "center", gap: spacing.md, backgroundColor: withAlpha(colors.brandPrimary, 0.09), borderRadius: radius.xl, padding: spacing.xl },
   connectedIcon: { width: 62, height: 62, borderRadius: radius.pill, backgroundColor: withAlpha(colors.brandPrimary, 0.13), alignItems: "center", justifyContent: "center" },
   connectedTitle: { color: colors.onSurface, fontSize: 20, fontWeight: "900" },
   connectedText: { color: colors.onSurfaceTertiary, fontSize: 12, lineHeight: 18, textAlign: "center" },

@@ -1,6 +1,6 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
-import { colors, radius, spacing } from "../theme";
+import { areaColors, colors, radius, spacing, withAlpha } from "../theme";
 
 interface Props {
   title?: string;
@@ -66,8 +66,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceSecondary,
     borderRadius: radius.lg,
     padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
+    borderLeftWidth: 5,
+    borderLeftColor: areaColors.food,
   },
   wrapCompact: {
     padding: 10,
@@ -78,7 +78,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
   },
   compactCalories: { minWidth: 96, flexShrink: 0 },
-  title: { color: colors.brandPrimary, fontSize: 10, fontWeight: "800", letterSpacing: 1.2, marginBottom: spacing.sm },
+  title: { color: areaColors.food, fontSize: 10, fontWeight: "800", letterSpacing: 1.2, marginBottom: spacing.sm },
   fiber: { color: colors.onSurfaceSecondary, fontSize: 11, fontWeight: "600", marginTop: spacing.md },
   subtitle: { color: colors.onSurfaceTertiary, fontSize: 11, marginTop: spacing.sm },
   kcalRow: {
@@ -110,7 +110,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.sm,
-    backgroundColor: colors.surfaceTertiary,
+    backgroundColor: withAlpha(areaColors.food, 0.08),
     borderRadius: radius.md,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,

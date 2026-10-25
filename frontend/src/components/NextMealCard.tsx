@@ -2,7 +2,7 @@ import MaterialDesignIcons from "@react-native-vector-icons/material-design-icon
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import type { ScheduledMealView } from "../nutrition/mealSchedule";
 import { formatMealCountdown } from "../nutrition/mealSchedule";
-import { colors, radius, spacing, withAlpha } from "../theme";
+import { areaColors, colors, radius, spacing, withAlpha } from "../theme";
 
 export default function NextMealCard({ item, onOpen, onRegister }: { item?: ScheduledMealView; onOpen: () => void; onRegister?: () => void }) {
   if (!item) return <View style={styles.card} testID="next-meal-empty"><View style={styles.icon}><MaterialDesignIcons name="clock-outline" size={21} color={colors.onSurfaceTertiary} /></View><View style={styles.copy}><Text style={styles.eyebrow}>PRÓXIMA REFEIÇÃO</Text><Text style={styles.title}>Tudo registrado por hoje</Text><Text style={styles.meta}>A programação de amanhã aparecerá no próximo dia.</Text></View></View>;
@@ -11,6 +11,6 @@ export default function NextMealCard({ item, onOpen, onRegister }: { item?: Sche
 }
 
 const styles = StyleSheet.create({
-  card: { minHeight: 82, flexDirection: "row", alignItems: "center", gap: spacing.sm, padding: spacing.md, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surfaceSecondary },
-  icon: { width: 42, height: 42, flexShrink: 0, alignItems: "center", justifyContent: "center", borderRadius: radius.md, backgroundColor: colors.surfaceTertiary }, copy: { flex: 1, minWidth: 0 }, eyebrow: { color: colors.brandPrimary, fontSize: 8, fontWeight: "900", letterSpacing: 1 }, title: { color: colors.onSurface, fontSize: 14, fontWeight: "900", marginTop: 2 }, meta: { color: colors.onSurfaceTertiary, fontSize: 9, marginTop: 3 }, nutrition: { alignItems: "flex-end" }, kcal: { color: colors.onSurface, fontSize: 16, fontWeight: "900" }, unit: { color: colors.onSurfaceTertiary, fontSize: 8 }, actions: { flexDirection: "row", gap: 5 }, open: { width: 36, height: 36, alignItems: "center", justifyContent: "center", borderRadius: radius.pill, backgroundColor: colors.surfaceTertiary }, register: { width: 36, height: 36, alignItems: "center", justifyContent: "center", borderRadius: radius.pill, backgroundColor: colors.brandPrimary },
+  card: { minHeight: 82, flexDirection: "row", alignItems: "center", gap: spacing.sm, padding: spacing.md, borderRadius: radius.lg, backgroundColor: withAlpha(areaColors.food, 0.09), overflow: "hidden" },
+  icon: { width: 42, height: 42, flexShrink: 0, alignItems: "center", justifyContent: "center", borderRadius: radius.md, backgroundColor: withAlpha(areaColors.food, 0.16) }, copy: { flex: 1, minWidth: 0 }, eyebrow: { color: areaColors.food, fontSize: 8, fontWeight: "900", letterSpacing: 1 }, title: { color: colors.onSurface, fontSize: 14, fontWeight: "900", marginTop: 2 }, meta: { color: colors.onSurfaceTertiary, fontSize: 9, marginTop: 3 }, nutrition: { alignItems: "flex-end" }, kcal: { color: colors.onSurface, fontSize: 16, fontWeight: "900" }, unit: { color: colors.onSurfaceTertiary, fontSize: 8 }, actions: { flexDirection: "row", gap: 5 }, open: { width: 36, height: 36, alignItems: "center", justifyContent: "center", borderRadius: radius.pill, backgroundColor: colors.surfaceTertiary }, register: { width: 36, height: 36, alignItems: "center", justifyContent: "center", borderRadius: radius.pill, backgroundColor: colors.brandPrimary },
 });
