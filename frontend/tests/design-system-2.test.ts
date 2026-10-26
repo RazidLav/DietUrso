@@ -69,9 +69,10 @@ test("as três telas-piloto usam a nova hierarquia responsiva", () => {
 });
 
 test("os hubs principais usam grades proporcionais em vez de cards de largura total", () => {
-  for (const path of ["../app/(tabs)/alimentacao.tsx", "../app/treinos.tsx", "../app/perfil.tsx"]) {
+  for (const path of ["../app/(tabs)/alimentacao.tsx", "../app/treinos.tsx"]) {
     assert.match(read(path), /ResponsiveGrid/, path);
   }
+  assert.match(read("../app/perfil.tsx"), /desktopAreasGrid/);
   const hydration = read("../app/hidratacao.tsx");
   assert.match(hydration, /hydration-workspace-columns/);
   assert.match(hydration, /workspaceWide/);
@@ -135,6 +136,20 @@ test("o perfil reúne edição e logout em um menu compacto", () => {
   assert.match(profile, /await signOutFromCloud\(\)/);
   assert.match(profile, /router\.replace\("\/conta\?mode=signin"/);
   assert.doesNotMatch(profile, /accessibilityLabel="Editar perfil"><MaterialDesignIcons/);
+});
+
+test("o perfil web usa painel compacto com dados reais sem remover a experiência mobile", () => {
+  const profile = read("../app/perfil.tsx");
+  assert.match(profile, /testID="profile-desktop-dashboard"/);
+  assert.match(profile, /computeIntegratedStats\(consumption, training, hydration, "month"\)/);
+  assert.match(profile, /stats\?\.workouts/);
+  assert.match(profile, /stats\?\.averageWaterMl/);
+  assert.match(profile, /desktopCalendarGrid/);
+  assert.match(profile, /desktopAreasGrid/);
+  assert.match(profile, /testID="profile-area-shelf"/);
+  for (const route of ["conquistas", "meu-urso", "evolucao", "estatisticas", "anamnese", "comunidade", "rugidos", "desafios"]) {
+    assert.match(profile, new RegExp(`/${route}`));
+  }
 });
 
 test("a dock mobile usa transições CSS seguras no Safari e revela o nome somente na área ativa", () => {
