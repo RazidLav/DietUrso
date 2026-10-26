@@ -3,7 +3,8 @@ import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import { ActivityIndicator, Image, Modal, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { IconButton, PageHeader, ResponsiveGrid, ResponsiveSheet } from "../src/components/DesignSystem";
+import { AreaDashboardHeader } from "../src/components/AreaDashboard";
+import { ResponsiveGrid, ResponsiveSheet } from "../src/components/DesignSystem";
 import { FolderCard } from "../src/components/ProgressiveUI";
 import { signOutFromCloud } from "../src/cloud/cloudSync";
 import { ACHIEVEMENTS } from "../src/gamification/achievements";
@@ -139,7 +140,17 @@ export default function ProfileScreen() {
 
   const equippedTitle = findCosmetic(state.equipped.title)?.name;
   return <ScrollView style={styles.screen} contentContainerStyle={[styles.content, { paddingTop: insets.top + spacing.lg, paddingBottom: insets.bottom + spacing.xxxl }]} testID="profile-screen">
-    <PageHeader eyebrow="MINHA TOCA" title="Perfil UrsoFit" accent={areaColors.profile} onBack={() => router.back()} action={<View testID="profile-menu-button"><IconButton icon="menu" label="Abrir menu do perfil" onPress={() => setProfileMenuOpen(true)} /></View>} />
+    <AreaDashboardHeader
+      title="Perfil UrsoFit"
+      subtitle="Sua toca, seu progresso e suas preferências."
+      accent={areaColors.profile}
+      onBack={() => router.back()}
+      onSettings={() => setProfileMenuOpen(true)}
+      settingsLabel="Abrir menu do perfil"
+      settingsIcon="menu"
+      settingsTestID="profile-menu-button"
+      actions={[]}
+    />
 
     <Modal visible={profileMenuOpen} transparent animationType="fade" onRequestClose={() => !signingOut && setProfileMenuOpen(false)}>
       <View style={styles.menuLayer} testID="profile-menu">

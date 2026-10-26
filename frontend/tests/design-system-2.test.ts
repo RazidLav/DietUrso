@@ -129,7 +129,7 @@ test("o banco de exercícios preserva filtros e ações existentes", () => {
 
 test("o perfil reúne edição e logout em um menu compacto", () => {
   const profile = read("../app/perfil.tsx");
-  assert.match(profile, /label="Abrir menu do perfil"/);
+  assert.match(profile, /settingsLabel="Abrir menu do perfil"/);
   assert.match(profile, /testID="profile-menu-edit"/);
   assert.match(profile, /testID="profile-menu-logout"/);
   assert.match(profile, /await signOutFromCloud\(\)/);
@@ -156,16 +156,19 @@ test("as áreas principais têm retorno consistente e a marca pública usa Hidra
   assert.match(diet, /onBack=\{\(\) => router\.back\(\)\}/);
   assert.match(training, /onBack=\{\(\) => router\.back\(\)\}/);
   assert.match(hydration, /onBack=\{\(\) => router\.back\(\)\}/);
-  assert.match(profile, /<PageHeader[^>]+onBack=/);
+  assert.match(profile, /<AreaDashboardHeader/);
+  assert.match(profile, /onBack=\{\(\) => router\.back\(\)\}/);
+  assert.match(profile, /settingsIcon="menu"/);
   for (const path of ["../app/hidratacao.tsx", "../app/hidratacao-config.tsx", "../app/hidratacao-historico.tsx", "../app/hidratacao-recipientes.tsx", "../src/components/WaterCard.tsx", "../src/gamification/achievements.ts"]) {
     assert.doesNotMatch(read(path), /HidratUrso|HIDRATURSO/, path);
   }
 });
 
 test("as telas da toca compartilham cabeçalho, largura e grade de cartões", () => {
-  for (const path of ["../app/perfil.tsx", "../app/meu-urso.tsx", "../app/conquistas.tsx", "../app/evolucao.tsx", "../app/estatisticas.tsx", "../app/comunidade.tsx", "../app/rugidos.tsx", "../app/desafios.tsx"]) {
+  for (const path of ["../app/meu-urso.tsx", "../app/conquistas.tsx", "../app/evolucao.tsx", "../app/estatisticas.tsx", "../app/comunidade.tsx", "../app/rugidos.tsx", "../app/desafios.tsx"]) {
     assert.match(read(path), /PageHeader/, path);
   }
+  assert.match(read("../app/perfil.tsx"), /AreaDashboardHeader/);
   const closet = read("../app/meu-urso.tsx");
   assert.match(closet, /ResponsiveGrid minItemWidth=\{160\} maxColumns=\{4\}/);
   assert.doesNotMatch(closet, /100 \/ columns/);

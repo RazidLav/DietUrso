@@ -84,7 +84,7 @@ test("Dieta, Hidratação e Treino compartilham cabeçalho, ações superiores e
   const areaDashboard = source("src/components/AreaDashboard.tsx");
   assert.match(areaDashboard, /export function AreaDashboardHeader/);
   assert.match(areaDashboard, /export function DashboardTile/);
-  assert.match(areaDashboard, /name="tune-variant"/);
+  assert.match(areaDashboard, /settingsIcon = "tune-variant"/);
   assert.match(areaDashboard, /testID="area-dashboard-add"/);
   for (const path of ["app/(tabs)/alimentacao.tsx", "app/hidratacao.tsx", "app/treinos.tsx"]) {
     const screen = source(path);
