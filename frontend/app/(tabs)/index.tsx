@@ -17,7 +17,7 @@ import type { AchievementDefinition, GamificationSummary } from "../../src/gamif
 import type { HydrationSummary } from "../../src/hydration/types";
 import { createPlanConsumption, dayConsumedNutrients } from "../../src/nutrition/records";
 import { mealTimeForWeekday, resolveMealScheduleFocus, scheduledMealsForDate } from "../../src/nutrition/mealSchedule";
-import { inferredMealFocusTime, resolveCurrentTimelineId } from "../../src/home/timeline";
+import { inferredMealFocusTime, prioritizeCurrentTimelineItem, resolveCurrentTimelineId } from "../../src/home/timeline";
 import { addHydrationRecord, getHydrationSummary } from "../../src/store/hydrationStore";
 import { listFoodCatalog } from "../../src/store/nutritionStore";
 import { addConsumption, dayMacrosDefault, getActivePlan, getChosenOption, listConsumption, removeConsumptionForDayMeal } from "../../src/store/planStore";
@@ -36,7 +36,7 @@ type DataLoadState = "idle" | "loading" | "success" | "error";
 
 type TimelineItem = {
   id: string;
-  kind: "meal" | "training";
+  kind: "meal" | "training" | "exercise";
   title: string;
   subtitle: string;
   time: string;
@@ -204,22 +204,46 @@ export default function HomeScreen() {
         onToggle: () => void toggleQuickDone(meal.id, option?.id),
       };
     }),
-    ...trainingEntries.map((entry) => ({
-      id: `training-${entry.planned.id}`,
-      kind: "training" as const,
-      title: entry.planned.name,
-      subtitle: `${ACTIVITY_LABELS[entry.planned.activityType]}${entry.planned.estimatedDurationMinutes ? ` · ${entry.planned.estimatedDurationMinutes} min` : ""}`,
-      time: entry.planned.scheduledTime || "Livre",
-      sortTime: entry.planned.scheduledTime || "99:98",
-      focusTime: entry.planned.scheduledTime,
-      icon: ACTIVITY_ICONS[entry.planned.activityType],
-      accent: ACTIVITY_COLORS[entry.planned.activityType],
-      completed: entry.status === "completed",
-      active: entry.status === "in_progress",
-      onPress: () => openTraining(entry),
-    })),
+    ...trainingEntries.flatMap((entry) => {
+      const baseTime = entry.planned.scheduledTime || "99:98";
+      const sessionItem: TimelineItem = {
+        id: `training-${entry.planned.id}`,
+        kind: "training",
+        title: entry.planned.name,
+        subtitle: `${ACTIVITY_LABELS[entry.planned.activityType]}${entry.planned.estimatedDurationMinutes ? ` · ${entry.planned.estimatedDurationMinutes} min` : ""}`,
+        time: entry.planned.scheduledTime || "Livre",
+        sortTime: `${baseTime}:000`,
+        focusTime: entry.planned.scheduledTime,
+        icon: ACTIVITY_ICONS[entry.planned.activityType],
+        accent: ACTIVITY_COLORS[entry.planned.activityType],
+        completed: entry.status === "completed",
+        active: entry.status === "in_progress",
+        onPress: () => openTraining(entry),
+      };
+      const exercises: TimelineItem[] = (entry.planned.prescriptionSnapshot.strength?.exercises ?? [])
+        .slice()
+        .sort((a, b) => a.order - b.order)
+        .map((exercise, index) => {
+          const results = entry.execution?.result.strengthSets.filter((set) => set.exercisePlanId === exercise.id) ?? [];
+          const completed = results.length > 0 && results.every((set) => set.status !== "pending");
+          return {
+            id: `training-exercise-${entry.planned.id}-${exercise.id}`,
+            kind: "exercise",
+            title: exercise.exerciseSnapshot.name,
+            subtitle: `${entry.planned.name} · ${exercise.sets.length} ${exercise.sets.length === 1 ? "série" : "séries"}`,
+            time: "Exercício",
+            sortTime: `${baseTime}:${String(index + 1).padStart(3, "0")}`,
+            icon: "dumbbell",
+            accent: ACTIVITY_COLORS.strength,
+            completed,
+            onPress: () => openTraining(entry),
+          };
+        });
+      return [sessionItem, ...exercises];
+    }),
   ].sort((a, b) => a.sortTime.localeCompare(b.sortTime));
   const currentTimelineId = resolveCurrentTimelineId(timelineItems, today, clockNow);
+  const orderedTimelineItems = prioritizeCurrentTimelineItem(timelineItems, currentTimelineId);
 
   return (
     <>
@@ -244,7 +268,7 @@ export default function HomeScreen() {
                 <View style={styles.featureTop}><Text style={styles.heroEyebrow}>PLANO DO DIA</Text><MaterialDesignIcons name="link-variant" size={17} color="#FFF8EE" /></View>
                 <Text style={styles.heroTitle}>{timelineItems.length ? `${timelineItems.length} atividades hoje` : "Monte sua rotina"}</Text>
                 <View style={styles.featureSchedule}>
-                  {timelineItems.slice(0, 2).map((item) => <View key={item.id} style={styles.featureScheduleRow}><View style={[styles.featureScheduleIcon, { backgroundColor: withAlpha("#FFFFFF", 0.18) }]}><MaterialDesignIcons name={item.icon as never} size={15} color="#FFF8EE" /></View><View style={{ flex: 1 }}><Text style={styles.featureScheduleTitle} numberOfLines={1}>{item.title}</Text><Text style={styles.featureScheduleTime}>{item.time}</Text></View><View style={[styles.featureStatusDot, item.completed && styles.featureStatusDone]} /></View>)}
+                  {orderedTimelineItems.slice(0, 2).map((item) => <View key={item.id} style={styles.featureScheduleRow}><View style={[styles.featureScheduleIcon, { backgroundColor: withAlpha("#FFFFFF", 0.18) }]}><MaterialDesignIcons name={item.icon as never} size={15} color="#FFF8EE" /></View><View style={{ flex: 1 }}><Text style={styles.featureScheduleTitle} numberOfLines={1}>{item.title}</Text><Text style={styles.featureScheduleTime}>{item.time}</Text></View><View style={[styles.featureStatusDot, item.completed && styles.featureStatusDone]} /></View>)}
                   {!timelineItems.length ? <><View style={styles.featureEmptyLine} /><View style={[styles.featureEmptyLine, { width: "68%" }]} /></> : null}
                 </View>
               </Pressable>
@@ -265,8 +289,8 @@ export default function HomeScreen() {
             </Pressable>
 
             <View style={styles.timelineSection}>
-              <SectionTitle title="Atividade de hoje" action="Ver agenda" onPress={() => router.push("/treinos")} />
-              {loading && !timelineItems.length ? <SkeletonCard height={220} /> : timelineItems.length ? <View style={styles.timelineList}>{timelineItems.map((item, index) => <TimelineRow key={item.id} item={item} current={item.id === currentTimelineId} last={index === timelineItems.length - 1} />)}</View> : <View style={styles.timelineEmpty}><MaterialDesignIcons name="calendar-blank-outline" size={25} color={colors.brandPrimary} /><View style={{ flex: 1 }}><Text style={styles.timelineEmptyTitle}>Seu dia está livre</Text><Text style={styles.timelineEmptyText}>Adicione uma refeição ou sessão quando quiser.</Text></View><Pressable style={styles.compactAdd} onPress={() => router.push(`/treino-novo?date=${selectedDate}` as never)}><MaterialDesignIcons name="plus" size={18} color={colors.onBrandPrimary} /></Pressable></View>}
+              <SectionTitle title="O que temos pra hoje" action="Ver agenda" onPress={() => router.push("/treinos")} />
+              {loading && !timelineItems.length ? <SkeletonCard height={220} /> : orderedTimelineItems.length ? <View style={styles.timelineList}>{orderedTimelineItems.map((item, index) => <TimelineRow key={item.id} item={item} current={item.id === currentTimelineId} last={index === orderedTimelineItems.length - 1} />)}</View> : <View style={styles.timelineEmpty}><MaterialDesignIcons name="calendar-blank-outline" size={25} color={colors.brandPrimary} /><View style={{ flex: 1 }}><Text style={styles.timelineEmptyTitle}>Seu dia está livre</Text><Text style={styles.timelineEmptyText}>Adicione uma refeição ou sessão quando quiser.</Text></View><Pressable style={styles.compactAdd} onPress={() => router.push(`/treino-novo?date=${selectedDate}` as never)}><MaterialDesignIcons name="plus" size={18} color={colors.onBrandPrimary} /></Pressable></View>}
             </View>
           </View>
 

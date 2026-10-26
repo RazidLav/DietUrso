@@ -47,6 +47,17 @@ export function resolveCurrentTimelineId(
   return timed[0]?.item.id ?? items.find((item) => !item.completed)?.id;
 }
 
+/**
+ * Mantém a ordem cronológica relativa, mas traz o item atual para o início.
+ * Assim a Home acompanha o momento do dia sem esconder o que veio antes.
+ */
+export function prioritizeCurrentTimelineItem<T extends { id: string }>(items: T[], currentId?: string) {
+  if (!currentId) return items;
+  const currentIndex = items.findIndex((item) => item.id === currentId);
+  if (currentIndex <= 0) return items;
+  return [items[currentIndex], ...items.slice(currentIndex + 1), ...items.slice(0, currentIndex)];
+}
+
 function parseTime(value?: string) {
   const match = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(value ?? "");
   return match ? Number(match[1]) * 60 + Number(match[2]) : undefined;

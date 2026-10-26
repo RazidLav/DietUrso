@@ -93,7 +93,7 @@ test("o treino minimizado permanece flutuante no desktop e reage à persistênci
 test("a Home usa uma única cronologia integrada em qualquer largura", () => {
   const home = read("../app/(tabs)/index.tsx");
   assert.match(home, /topbarDesktop: \{ flexDirection: "row"/);
-  assert.match(home, /Atividade de hoje/);
+  assert.match(home, /O que temos pra hoje/);
   assert.doesNotMatch(home, /Refeições do dia/);
   assert.doesNotMatch(home, /mealsSection/);
   assert.match(home, /maxWidth: layout\.editorMax/);
