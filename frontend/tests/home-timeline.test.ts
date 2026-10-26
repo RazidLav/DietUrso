@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { inferredMealFocusTime, resolveCurrentTimelineId } from "../src/home/timeline";
+import { inferredMealFocusTime, prioritizeCurrentTimelineItem, resolveCurrentTimelineId } from "../src/home/timeline";
 
 test("Home infere faixas coerentes sem alterar o horário salvo da refeição", () => {
   assert.equal(inferredMealFocusTime("cafe"), "08:00");
@@ -28,4 +28,10 @@ test("sessão em andamento vence o relógio e AGORA não aparece em outro dia", 
   ];
   assert.equal(resolveCurrentTimelineId(items, true, new Date(2026, 9, 25, 16, 32)), "treino");
   assert.equal(resolveCurrentTimelineId(items.map((item) => ({ ...item, active: false })), false), undefined);
+});
+
+test("AGORA vira a primeira linha e o restante continua em ordem circular", () => {
+  const items = [{ id: "cafe" }, { id: "almoco" }, { id: "lanche" }, { id: "jantar" }];
+  assert.deepEqual(prioritizeCurrentTimelineItem(items, "lanche").map((item) => item.id), ["lanche", "jantar", "cafe", "almoco"]);
+  assert.deepEqual(prioritizeCurrentTimelineItem(items, undefined), items);
 });

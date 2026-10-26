@@ -98,12 +98,14 @@ test("Home organiza o dia em destaques, progresso e linha do tempo acionável", 
   const home = source("app/(tabs)/index.tsx");
   assert.match(home, /PLANO DO DIA/);
   assert.match(home, /MOVIMENTO DO DIA/);
-  assert.match(home, /Atividade de hoje/);
+  assert.match(home, /O que temos pra hoje/);
   assert.match(home, /type TimelineItem/);
   assert.match(home, /TimelineRow/);
   assert.match(home, /dailyProgressCard/);
   assert.match(home, /item\.onToggle \?\? item\.onPress/);
   assert.match(home, /resolveCurrentTimelineId\(timelineItems, today, clockNow\)/);
+  assert.match(home, /prioritizeCurrentTimelineItem\(timelineItems, currentTimelineId\)/);
+  assert.match(home, /exercise\.exerciseSnapshot\.name/);
   assert.match(home, /setInterval\(\(\) => setClockNow\(new Date\(\)\), 30_000\)/);
   assert.doesNotMatch(home, /Refeições do dia/);
 });
