@@ -12,6 +12,8 @@ export function AreaDashboardHeader({
   onBack,
   onSettings,
   settingsLabel = "Abrir configurações",
+  settingsIcon = "tune-variant",
+  settingsTestID,
   actions,
 }: {
   title: string;
@@ -20,6 +22,8 @@ export function AreaDashboardHeader({
   onBack?: () => void;
   onSettings: () => void;
   settingsLabel?: string;
+  settingsIcon?: string;
+  settingsTestID?: string;
   actions: ProgressiveAction[];
 }) {
   const [open, setOpen] = useState(false);
@@ -37,8 +41,8 @@ export function AreaDashboardHeader({
         {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
       </View>
       <View style={styles.headerActions}>
-        <Pressable accessibilityRole="button" accessibilityLabel={settingsLabel} onPress={onSettings} style={styles.roundButton}><MaterialDesignIcons name="tune-variant" size={23} color={colors.onSurface} /></Pressable>
-        <Pressable accessibilityRole="button" accessibilityLabel={`Adicionar em ${title}`} accessibilityState={{ expanded: open }} onPress={() => setOpen(true)} style={[styles.roundButton, { backgroundColor: accent }]} testID="area-dashboard-add"><MaterialDesignIcons name="plus" size={27} color={colors.onBrandPrimary} /></Pressable>
+        <Pressable accessibilityRole="button" accessibilityLabel={settingsLabel} onPress={onSettings} style={styles.roundButton} testID={settingsTestID}><MaterialDesignIcons name={settingsIcon as never} size={23} color={colors.onSurface} /></Pressable>
+        {actions.length ? <Pressable accessibilityRole="button" accessibilityLabel={`Adicionar em ${title}`} accessibilityState={{ expanded: open }} onPress={() => setOpen(true)} style={[styles.roundButton, { backgroundColor: accent }]} testID="area-dashboard-add"><MaterialDesignIcons name="plus" size={27} color={colors.onBrandPrimary} /></Pressable> : null}
       </View>
     </View>
 
