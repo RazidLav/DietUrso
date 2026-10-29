@@ -30,6 +30,9 @@ import type { ConsumptionEntry, Plan } from "../../src/types/plan";
 import { todayISO } from "../../src/utils/date";
 import { FLOATING_TAB_HEIGHT, FLOATING_TAB_MARGIN } from "./_layout";
 import { useResponsiveLayout } from "../../src/responsive";
+import { listVisibleEvents } from "../../src/admin/service";
+import type { AppEvent } from "../../src/admin/types";
+import { useAppTheme } from "../../src/components/ThemeProvider";
 
 type SectionKey = "diet" | "water" | "training" | "game";
 type DataLoadState = "idle" | "loading" | "success" | "error";
@@ -70,9 +73,11 @@ export default function HomeScreen() {
   const [cloudReady, setCloudReady] = useState(getCloudStatus().readyForData);
   const [refreshing, setRefreshing] = useState(false);
   const [savingWater, setSavingWater] = useState(false);
+  const [events, setEvents] = useState<AppEvent[]>([]);
   const [clockNow, setClockNow] = useState(() => new Date());
   const loadId = useRef(0);
   const waterLock = useRef(false);
+  const { appConfig } = useAppTheme();
 
   React.useEffect(() => subscribeCloudStatus((status) => setCloudReady(status.readyForData)), []);
   React.useEffect(() => {
@@ -87,7 +92,7 @@ export default function HomeScreen() {
     const selectedAt = localDate(selectedDate);
     const nextErrors = { ...EMPTY_ERRORS };
 
-    const [dietResult, waterResult, trainingResult, gameResult] = await Promise.allSettled([
+    const [dietResult, waterResult, trainingResult, gameResult, eventsResult] = await Promise.allSettled([
       Promise.all([getActivePlan(), listConsumption()]),
       getHydrationSummary(selectedAt),
       (async () => {
@@ -95,6 +100,7 @@ export default function HomeScreen() {
         return getTrainingState();
       })(),
       Promise.all([evaluateGamification(), selectedDate === todayISO() ? getPendingAchievement() : Promise.resolve(null)]),
+      listVisibleEvents(),
     ]);
     if (request !== loadId.current) return;
 
@@ -123,6 +129,8 @@ export default function HomeScreen() {
     if (gameResult.status === "fulfilled") {
       fulfilled += 1; setGamification(gameResult.value[0]); setPendingAchievement(gameResult.value[1]);
     } else nextErrors.game = "As conquistas estão temporariamente indisponíveis.";
+
+    setEvents(eventsResult.status === "fulfilled" ? eventsResult.value : []);
 
     setSectionErrors(nextErrors);
     setLoadState(fulfilled ? "success" : "error");
@@ -261,6 +269,15 @@ export default function HomeScreen() {
           ]}
         />
 
+        {appConfig.announcementMessage ? <View style={styles.adminAnnouncement} testID="home-admin-announcement"><MaterialDesignIcons name="bullhorn-outline" size={20} color={colors.brandPrimary} /><Text style={styles.adminAnnouncementText}>{appConfig.announcementMessage}</Text></View> : null}
+        {events.length ? <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.eventShelf} testID="home-event-shelf">
+          {events.map((event) => <Pressable key={event.id} accessibilityRole="button" onPress={() => event.ctaRoute && router.push(event.ctaRoute as never)} style={[styles.homeEventCard, { backgroundColor: withAlpha(event.accentColor, 0.14) }]}>
+            <View style={[styles.homeEventIcon, { backgroundColor: event.accentColor }]}><MaterialDesignIcons name="calendar-star" size={19} color="#172000" /></View>
+            <View style={styles.homeEventCopy}><Text style={styles.homeEventEyebrow}>EVENTO URSOFIT</Text><Text style={styles.homeEventTitle} numberOfLines={1}>{event.title}</Text><Text style={styles.homeEventDescription} numberOfLines={2}>{event.description || formatEventDate(event.startsAt)}</Text></View>
+            {event.ctaRoute ? <MaterialDesignIcons name="arrow-top-right" size={20} color={event.accentColor} /> : null}
+          </Pressable>)}
+        </ScrollView> : null}
+
         <View style={[styles.overview, desktop && styles.overviewDesktop]} testID="home-overview-columns">
           <View style={[styles.focusColumn, desktop && styles.focusColumnDesktop]}>
             <View style={[styles.hero, stackHero && styles.heroStacked, desktop && styles.heroDesktop]} testID="home-main-highlight">
@@ -349,12 +366,22 @@ function EmptyCard({ icon, title, text, action, onPress }: { icon: string; title
 function localDate(iso: string) { const [year, month, day] = iso.split("-").map(Number); return new Date(year, month - 1, day, 12, 0, 0); }
 function dayGreeting() { const hour = new Date().getHours(); return hour < 12 ? "Bom dia" : hour < 18 ? "Boa tarde" : "Boa noite"; }
 function cloudName(email: string | null) { const raw = email?.split("@")[0]?.split(/[._-]/)[0] || "amigo"; return raw.charAt(0).toUpperCase() + raw.slice(1); }
+function formatEventDate(value: string) { return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(value)); }
 function formatLongDate(date: Date) { return new Intl.DateTimeFormat("pt-BR", { weekday: "long", day: "2-digit", month: "long" }).format(date); }
 function formatShortDate(date: Date) { return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short" }).format(date).replace(".", ""); }
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.surface },
   content: { width: "100%", maxWidth: layout.editorMax, alignSelf: "center", paddingHorizontal: spacing.lg, gap: spacing.lg },
+  adminAnnouncement: { minHeight: 48, flexDirection: "row", alignItems: "center", gap: spacing.sm, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surfaceElevated },
+  adminAnnouncementText: { flex: 1, color: colors.onSurface, fontSize: 12, lineHeight: 17, fontWeight: "700" },
+  eventShelf: { gap: spacing.sm, paddingRight: spacing.lg },
+  homeEventCard: { width: 330, minHeight: 104, flexDirection: "row", alignItems: "center", gap: spacing.md, padding: spacing.md, borderRadius: radius.xl, borderWidth: 1, borderColor: colors.border },
+  homeEventIcon: { width: 42, height: 42, alignItems: "center", justifyContent: "center", borderRadius: radius.md },
+  homeEventCopy: { flex: 1, minWidth: 0 },
+  homeEventEyebrow: { color: colors.onSurfaceTertiary, fontSize: 8, fontWeight: "900", letterSpacing: 0.7 },
+  homeEventTitle: { color: colors.onSurface, fontSize: 15, fontWeight: "900", marginTop: 3 },
+  homeEventDescription: { color: colors.onSurfaceSecondary, fontSize: 10, lineHeight: 14, marginTop: 3 },
   topbar: { gap: spacing.md },
   topbarDesktop: { flexDirection: "row", alignItems: "center" },
   header: { flexDirection: "row", alignItems: "center", gap: spacing.md },
