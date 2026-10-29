@@ -37,7 +37,7 @@ export const NAVIGATION: NavigationSection[] = [
     ...item(
       "food",
       "Dieta",
-      "silverware-fork-knife",
+      "food-apple-outline",
       "/alimentacao",
       ["/alimentacao", "/plano", "/historico-alimentar", "/alimentos", "/receitas", "/receita", "/compras", "/editor", "/meal", "/fora-do-plano"],
     ),
@@ -53,7 +53,7 @@ export const NAVIGATION: NavigationSection[] = [
     ],
   },
   {
-    ...item("hydration", "Hidratação", "water-outline", "/hidratacao", ["/hidratacao", "/hidratacao-recipientes", "/hidratacao-historico", "/hidratacao-config"]),
+    ...item("hydration", "Hidratação", "cup-water", "/hidratacao", ["/hidratacao", "/hidratacao-recipientes", "/hidratacao-historico", "/hidratacao-config"]),
     id: "hydration",
     order: 2,
     children: [
@@ -64,7 +64,7 @@ export const NAVIGATION: NavigationSection[] = [
     ],
   },
   {
-    ...item("training", "Treino", "dumbbell", "/treinos", ["/treinos", "/treinos-planos", "/treinos-exercicios", "/treinos-historico", "/treino", "/treino-novo", "/treino-planejado", "/treino-plano"]),
+    ...item("training", "Treino", "kettlebell", "/treinos", ["/treinos", "/treinos-planos", "/treinos-exercicios", "/treinos-historico", "/treino", "/treino-novo", "/treino-planejado", "/treino-plano"]),
     id: "training",
     order: 3,
     children: [
@@ -81,7 +81,7 @@ export const NAVIGATION: NavigationSection[] = [
     children: [
       item("profile-account", "Meu perfil", "account-outline", "/perfil", ["/perfil", "/meu-urso"], "Perfil"),
       item("profile-evolution", "Evolução", "chart-timeline-variant", "/evolucao"),
-      item("profile-community", "Comunidade", "account-group-outline", "/comunidade"),
+      item("profile-community", "Social", "account-group-outline", "/comunidade"),
       item("profile-rugidos", "Rugidos", "bullhorn-outline", "/rugidos"),
       item("profile-challenges", "Desafios", "flag-checkered", "/desafios"),
       item("profile-achievements", "Conquistas", "trophy-outline", "/conquistas"),
