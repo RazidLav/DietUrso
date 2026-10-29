@@ -4,6 +4,7 @@ import { useCallback, useMemo, useState } from "react";
 import { ActivityIndicator, Image, Modal, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AreaDashboardHeader } from "../src/components/AreaDashboard";
+import { DashboardPanelHeader, type DashboardPeriod } from "../src/components/DashboardControls";
 import { ResponsiveSheet } from "../src/components/DesignSystem";
 import { FolderCard } from "../src/components/ProgressiveUI";
 import { signOutFromCloud } from "../src/cloud/cloudSync";
@@ -19,7 +20,7 @@ import { useResponsiveLayout } from "../src/responsive";
 import { getHydrationState } from "../src/store/hydrationStore";
 import { listConsumption } from "../src/store/planStore";
 import { getTrainingState } from "../src/store/trainingStore";
-import { areaColors, colors, flatColors, layout, radius, spacing, withAlpha } from "../src/theme";
+import { areaColors, breakpoints, colors, flatColors, layout, radius, spacing, withAlpha } from "../src/theme";
 import { computeIntegratedStats, type IntegratedStats } from "../src/utils/integratedStats";
 import { getAccessProfile } from "../src/admin/service";
 import type { AccessRole } from "../src/admin/types";
@@ -32,10 +33,11 @@ export default function ProfileScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const responsive = useResponsiveLayout();
-  const desktop = responsive.isDesktop;
+  const desktop = responsive.width >= breakpoints.tablet;
   const [state, setState] = useState<ProfileState | null>(null);
   const [summary, setSummary] = useState<GamificationSummary | null>(null);
   const [activityStats, setActivityStats] = useState<IntegratedStats | null>(null);
+  const [activityPeriod, setActivityPeriod] = useState<DashboardPeriod>("month");
   const [loadState, setLoadState] = useState<LoadState>("loading");
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -46,10 +48,10 @@ export default function ProfileScreen() {
   const [accessRole, setAccessRole] = useState<AccessRole>("user");
 
   const load = useCallback(async () => {
-    setLoadState("loading"); setNotice(null);
+    setLoadState((current) => current === "success" ? current : "loading"); setNotice(null);
     try {
       const statsPromise = Promise.all([listConsumption(), getTrainingState(), getHydrationState()])
-        .then(([consumption, training, hydration]) => computeIntegratedStats(consumption, training, hydration, "month"))
+        .then(([consumption, training, hydration]) => computeIntegratedStats(consumption, training, hydration, activityPeriod))
         .catch(() => null);
       const accessPromise = getAccessProfile().catch(() => ({ role: "user" as const }));
       let [profile, game, integrated, access] = await Promise.all([getProfileState(), evaluateGamification(), statsPromise, accessPromise]);
@@ -61,7 +63,7 @@ export default function ProfileScreen() {
       if (Object.keys(unlocked.unlockedCosmetics).length !== Object.keys(profile.unlockedCosmetics).length) await saveProfileState(unlocked);
       setState(unlocked); setSummary(game); setActivityStats(integrated); setAccessRole(access.role); setLoadState("success");
     } catch (error) { setLoadState("error"); setNotice(error instanceof Error ? error.message : "Não foi possível carregar o perfil."); }
-  }, []);
+  }, [activityPeriod]);
 
   useFocusEffect(useCallback(() => { void load(); }, [load]));
 
@@ -202,7 +204,7 @@ export default function ProfileScreen() {
     <ResponsiveSheet visible={moreAreasOpen} title="Mais espaços da sua toca" description="Recursos sociais e metas ficam guardados aqui para manter o perfil limpo." onClose={() => setMoreAreasOpen(false)}>
       <FolderCard icon="chart-box-outline" title="Estatísticas" description="Indicadores reais por período" onPress={() => { setMoreAreasOpen(false); router.push("/estatisticas"); }} />
       <FolderCard icon="clipboard-account-outline" title="Minhas preferências" description="Anamnese privada e editável" onPress={() => { setMoreAreasOpen(false); router.push("/anamnese" as never); }} />
-      <FolderCard icon="account-group-outline" title="Comunidade" description="Pessoas, perfil social e descobertas" onPress={() => { setMoreAreasOpen(false); router.push("/comunidade"); }} />
+      <FolderCard icon="account-group-outline" title="Social" description="Pessoas, perfil social e descobertas" onPress={() => { setMoreAreasOpen(false); router.push("/comunidade"); }} />
       <FolderCard icon="bullhorn-outline" title="Rugidos" description="Suas publicações e interações" onPress={() => { setMoreAreasOpen(false); router.push("/rugidos"); }} />
       <FolderCard icon="flag-checkered" title="Desafios" description="Metas coletivas e pessoais" onPress={() => { setMoreAreasOpen(false); router.push("/desafios"); }} />
     </ResponsiveSheet>
@@ -210,6 +212,8 @@ export default function ProfileScreen() {
       profile={state.profile}
       summary={summary}
       stats={activityStats}
+      period={activityPeriod}
+      onPeriodChange={setActivityPeriod}
       equippedTitle={equippedTitle}
       onOpenStats={() => router.push("/estatisticas")}
       onOpenJourney={() => router.push("/conquistas")}
@@ -220,7 +224,7 @@ export default function ProfileScreen() {
         { id: "evolution", icon: "chart-line", label: "Evolução", hint: "Registros físicos", color: flatColors.aqua, onPress: () => router.push("/evolucao") },
         { id: "stats", icon: "chart-box-outline", label: "Estatísticas", hint: "Visão integrada", color: flatColors.lavender, onPress: () => router.push("/estatisticas") },
         { id: "preferences", icon: "clipboard-account-outline", label: "Preferências", hint: "Anamnese", color: flatColors.amber, onPress: () => router.push("/anamnese" as never) },
-        { id: "community", icon: "account-group-outline", label: "Comunidade", hint: "Pessoas e perfil", color: flatColors.rose, onPress: () => router.push("/comunidade") },
+        { id: "community", icon: "account-group-outline", label: "Social", hint: "Pessoas e perfil", color: flatColors.rose, onPress: () => router.push("/comunidade") },
         { id: "rugidos", icon: "bullhorn-outline", label: "Rugidos", hint: "Publicações", color: flatColors.orangeSoft, onPress: () => router.push("/rugidos") },
         { id: "challenges", icon: "flag-checkered", label: "Desafios", hint: "Metas", color: flatColors.lime, onPress: () => router.push("/desafios") },
       ]}
@@ -263,6 +267,8 @@ function DesktopProfileDashboard({
   profile,
   summary,
   stats,
+  period,
+  onPeriodChange,
   equippedTitle,
   areas,
   onOpenStats,
@@ -272,6 +278,8 @@ function DesktopProfileDashboard({
   profile: ProfileState["profile"];
   summary: GamificationSummary;
   stats: IntegratedStats | null;
+  period: DashboardPeriod;
+  onPeriodChange: (period: DashboardPeriod) => void;
   equippedTitle?: string;
   areas: DesktopArea[];
   onOpenStats: () => void;
@@ -279,10 +287,11 @@ function DesktopProfileDashboard({
   onOpenBear: () => void;
 }) {
   const calendar = stats?.calendar ?? [];
+  const visibleCalendar = calendar.slice(-31);
   const activeDays = calendar.filter((day) => day.status === "complete" || day.status === "partial").length;
-  const leadingDays = calendar.length ? (new Date(`${calendar[0].date}T12:00:00`).getDay() + 6) % 7 : 0;
-  const monthLabel = calendar.length
-    ? new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" }).format(new Date(`${calendar[0].date}T12:00:00`))
+  const leadingDays = visibleCalendar.length ? (new Date(`${visibleCalendar[0].date}T12:00:00`).getDay() + 6) % 7 : 0;
+  const monthLabel = visibleCalendar.length
+    ? new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" }).format(new Date(`${visibleCalendar[visibleCalendar.length - 1].date}T12:00:00`))
     : "Este mês";
   const avatar = profile.avatarMode === "photo" && profile.photoUrl
     ? { uri: profile.photoUrl }
@@ -298,24 +307,24 @@ function DesktopProfileDashboard({
     </View>
 
     <View style={styles.desktopTopGrid}>
-      <Pressable accessibilityRole="button" accessibilityLabel="Abrir estatísticas" onPress={onOpenStats} style={({ pressed }) => [styles.desktopActivityCard, pressed && styles.desktopPressed]}>
-        <View style={styles.desktopCardHeader}><View><Text style={styles.desktopCardTitle}>Atividade física</Text><Text style={styles.desktopCardHint}>Dados reais deste mês</Text></View><View style={styles.desktopLinkPill}><Text style={styles.desktopLinkText}>Ver detalhes</Text><MaterialDesignIcons name="arrow-top-right" size={15} color={colors.onSurface} /></View></View>
+      <View style={styles.desktopActivityCard}>
+        <DashboardPanelHeader title="Atividade física" hint="Treinos, duração e dias ativos" period={period} onPeriodChange={onPeriodChange} onOptions={onOpenStats} />
         <View style={styles.desktopActivityGraph} accessibilityLabel={`${activeDays} dias com registros`}>
-          {calendar.map((day) => <View key={day.date} style={styles.desktopGraphSlot}><View style={[styles.desktopGraphBar, day.status === "complete" && styles.desktopGraphComplete, day.status === "partial" && styles.desktopGraphPartial, { height: day.status === "complete" ? 48 : day.status === "partial" ? 30 : day.status === "future" ? 5 : 10 }]} /></View>)}
+          {visibleCalendar.map((day) => <View key={day.date} style={styles.desktopGraphSlot}><View style={[styles.desktopGraphBar, day.status === "complete" && styles.desktopGraphComplete, day.status === "partial" && styles.desktopGraphPartial, { height: day.status === "complete" ? 48 : day.status === "partial" ? 30 : day.status === "future" ? 5 : 10 }]} /></View>)}
         </View>
         <View style={styles.desktopMetricRow}>
           <DesktopMetric label="Dias ativos" value={String(activeDays)} hint="com algum registro" />
           <DesktopMetric label="Treinos" value={String(stats?.workouts ?? 0)} hint={`${stats?.modalities ?? 0} modalidades`} />
           <DesktopMetric label="Tempo ativo" value={formatMinutes(stats?.trainingMinutes ?? 0)} hint="sessões registradas" />
         </View>
-      </Pressable>
+      </View>
 
       <Pressable accessibilityRole="button" accessibilityLabel="Abrir calendário de atividade" onPress={onOpenStats} style={({ pressed }) => [styles.desktopCalendarCard, pressed && styles.desktopPressed]}>
         <View style={styles.desktopCalendarHead}><View><Text style={styles.desktopCalendarTitle}>Seus dias ativos</Text><Text style={styles.desktopCalendarMonth}>{monthLabel}</Text></View><MaterialDesignIcons name="calendar-month-outline" size={22} color={colors.onBrandSecondary} /></View>
         <View style={styles.desktopWeekHead}>{WEEK_DAYS.map((day) => <Text key={day} style={styles.desktopWeekDay}>{day}</Text>)}</View>
         <View style={styles.desktopCalendarGrid}>
           {Array.from({ length: leadingDays }).map((_, index) => <View key={`empty-${index}`} style={styles.desktopCalendarDay} />)}
-          {calendar.map((day) => <View key={day.date} style={[styles.desktopCalendarDay, day.status === "complete" && styles.desktopCalendarDayComplete, day.status === "partial" && styles.desktopCalendarDayPartial, day.status === "future" && styles.desktopCalendarDayFuture]}><Text style={[styles.desktopCalendarDayText, day.status === "complete" && styles.desktopCalendarDayTextOn]}>{Number(day.date.slice(-2))}</Text></View>)}
+          {visibleCalendar.map((day) => <View key={day.date} style={[styles.desktopCalendarDay, day.status === "complete" && styles.desktopCalendarDayComplete, day.status === "partial" && styles.desktopCalendarDayPartial, day.status === "future" && styles.desktopCalendarDayFuture]}><Text style={[styles.desktopCalendarDayText, day.status === "complete" && styles.desktopCalendarDayTextOn]}>{Number(day.date.slice(-2))}</Text></View>)}
         </View>
       </Pressable>
     </View>

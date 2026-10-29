@@ -8,9 +8,9 @@ export interface Rugido { id: string; userId: string; type: string; audience: Au
 export interface Challenge { id: string; creatorId: string; name: string; description: string | null; privacy: "private" | "friends" | "public"; state: string; startsAt: string; endsAt: string; metric?: string; pointsPerUnit?: number; joined: boolean }
 
 async function requireCloudUser() {
-  if (!supabase) throw new Error("A Comunidade precisa da nuvem configurada.");
+  if (!supabase) throw new Error("O Social precisa da nuvem configurada.");
   const user = await getSignedInUser();
-  if (!user) throw new Error("Entre na sua conta para acessar a Comunidade dos Ursos.");
+  if (!user) throw new Error("Entre na sua conta para acessar o Social do UrsoFit.");
   return user;
 }
 
@@ -29,7 +29,7 @@ export async function listFeed(tab: "friends" | "explore" = "friends", cursor?: 
   const { data, error } = await query;
   if (error) throw error;
   const authors = await authorsFor((data ?? []).map((row) => row.user_id));
-  return (data ?? []).map((row): SocialPost => ({ id: row.id, userId: row.user_id, postType: row.post_type, audience: row.audience, body: row.body, payload: row.published_payload ?? {}, reactionCount: row.reaction_count, commentCount: row.comment_count, createdAt: row.created_at, author: authors.get(row.user_id) ?? { userId: row.user_id, displayName: row.user_id === user.id ? "Você" : "Urso da comunidade", username: null, photoPath: null } }));
+  return (data ?? []).map((row): SocialPost => ({ id: row.id, userId: row.user_id, postType: row.post_type, audience: row.audience, body: row.body, payload: row.published_payload ?? {}, reactionCount: row.reaction_count, commentCount: row.comment_count, createdAt: row.created_at, author: authors.get(row.user_id) ?? { userId: row.user_id, displayName: row.user_id === user.id ? "Você" : "Urso do Social", username: null, photoPath: null } }));
 }
 
 export async function createTextPost(body: string, audience: Audience, idempotencyKey = globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`) {

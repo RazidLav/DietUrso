@@ -25,7 +25,7 @@ import { getTrainingState, prepareTrainingRange } from "../../src/store/training
 import { dayEntries } from "../../src/training/calculations";
 import { ACTIVITY_COLORS, ACTIVITY_ICONS, ACTIVITY_LABELS } from "../../src/training/catalog";
 import type { TrainingDayEntry } from "../../src/training/types";
-import { areaColors, colors, layout, radius, spacing, withAlpha } from "../../src/theme";
+import { areaColors, breakpoints, colors, layout, radius, spacing, withAlpha } from "../../src/theme";
 import type { ConsumptionEntry, Plan } from "../../src/types/plan";
 import { todayISO } from "../../src/utils/date";
 import { FLOATING_TAB_HEIGHT, FLOATING_TAB_MARGIN } from "./_layout";
@@ -256,18 +256,19 @@ export default function HomeScreen() {
   return (
     <>
       <ScrollView style={styles.screen} contentContainerStyle={[styles.content, { paddingTop: insets.top + spacing.lg, paddingBottom: FLOATING_TAB_HEIGHT + Math.max(insets.bottom, FLOATING_TAB_MARGIN) + spacing.xl }]} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.brandPrimary} />} testID="home-screen">
-        <AreaDashboardHeader
+        {width < breakpoints.tablet ? <AreaDashboardHeader
           title="UrsoFit"
           subtitle={`${dayGreeting()}, ${firstName} · ${formatLongDate(selected)}`}
           accent={areaColors.home}
-          onSettings={() => router.push("/ajustes")}
-          settingsLabel="Abrir configurações do UrsoFit"
+          onSettings={() => router.push("/perfil")}
+          settingsLabel="Abrir perfil"
+          settingsIcon="account-circle-outline"
           actions={[
             { id: "meal", label: "Registrar refeição", hint: "Abra a dieta e registre o que comeu", icon: "silverware-fork-knife", onPress: () => router.push("/alimentacao") },
             { id: "water", label: "Adicionar água", hint: "Registre sua hidratação", icon: "water-plus-outline", onPress: () => router.push("/hidratacao") },
             { id: "training", label: "Iniciar treino", hint: "Escolha ou crie uma sessão", icon: "dumbbell", onPress: () => router.push(`/treino-novo?date=${selectedDate}` as never) },
           ]}
-        />
+        /> : null}
 
         {appConfig.announcementMessage ? <View style={styles.adminAnnouncement} testID="home-admin-announcement"><MaterialDesignIcons name="bullhorn-outline" size={20} color={colors.brandPrimary} /><Text style={styles.adminAnnouncementText}>{appConfig.announcementMessage}</Text></View> : null}
         {events.length ? <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.eventShelf} testID="home-event-shelf">

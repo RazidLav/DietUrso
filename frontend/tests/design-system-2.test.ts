@@ -44,7 +44,7 @@ test("a linguagem flat usa cores editoriais por área e reduz contornos decorati
 
 test("a navegação adapta dock, rail e sidebar sem abrir todos os submenus", () => {
   const source = read("../src/components/AppNavigation.tsx");
-  assert.match(source, /navigationRail/);
+  assert.match(source, /breakpoints\.tablet/);
   assert.match(source, /expanded.*compact.*hidden/s);
   assert.match(source, /urso:navigation\.sidebar/);
   assert.match(source, /!compact && sectionActive/);
@@ -141,7 +141,8 @@ test("o perfil reúne edição e logout em um menu compacto", () => {
 test("o perfil web usa painel compacto com dados reais sem remover a experiência mobile", () => {
   const profile = read("../app/perfil.tsx");
   assert.match(profile, /testID="profile-desktop-dashboard"/);
-  assert.match(profile, /computeIntegratedStats\(consumption, training, hydration, "month"\)/);
+  assert.match(profile, /computeIntegratedStats\(consumption, training, hydration, activityPeriod\)/);
+  assert.match(profile, /DashboardPanelHeader/);
   assert.match(profile, /stats\?\.workouts/);
   assert.match(profile, /stats\?\.averageWaterMl/);
   assert.match(profile, /desktopCalendarGrid/);
@@ -152,15 +153,21 @@ test("o perfil web usa painel compacto com dados reais sem remover a experiênci
   }
 });
 
-test("a dock mobile usa transições CSS seguras no Safari e revela o nome somente na área ativa", () => {
+test("a dock mobile usa transições CSS seguras no Safari e mantém quatro pilares compactos", () => {
   const navigation = read("../src/components/AppNavigation.tsx");
+  const config = read("../src/navigation/config.ts");
   assert.match(navigation, /function MobileDockItem/);
   assert.doesNotMatch(navigation, /Animated\.timing|new Animated\.Value/);
   assert.match(navigation, /transitionDuration: "240ms"/);
-  assert.match(navigation, /transitionProperty: "flex-basis, flex-grow, background-color, transform"/);
+  assert.match(navigation, /transitionProperty: "background-color, transform"/);
   assert.match(navigation, /useReducedMotion\(\)/);
-  assert.match(navigation, /dockLabelActive: \{ maxWidth: 76, opacity: 1/);
-  assert.match(navigation, /maxWidth: 560/);
+  assert.match(navigation, /MOBILE_DOCK_IDS = \["home", "food", "training", "hydration"\]/);
+  assert.match(navigation, /maxWidth: 304/);
+  assert.doesNotMatch(navigation, /dockLabelActive/);
+  assert.match(config, /"food-apple-outline"/);
+  assert.match(config, /"kettlebell"/);
+  assert.match(config, /"cup-water"/);
+  assert.match(config, /"profile-community", "Social"/);
 });
 
 test("as áreas principais têm retorno consistente e a marca pública usa Hidratação", () => {
