@@ -75,7 +75,7 @@ export const NAVIGATION: NavigationSection[] = [
     ],
   },
   {
-    ...item("profile", "Perfil", "account-circle-outline", "/perfil", ["/perfil", "/meu-urso", "/ajustes", "/conta", "/conquistas", "/estatisticas", "/evolucao", "/comunidade", "/rugidos", "/desafios"]),
+    ...item("profile", "Perfil", "account-circle-outline", "/perfil", ["/perfil", "/meu-urso", "/ajustes", "/conta", "/conquistas", "/estatisticas", "/evolucao", "/comunidade", "/rugidos", "/desafios", "/admin"]),
     id: "profile",
     order: 4,
     children: [

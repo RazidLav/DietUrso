@@ -21,6 +21,8 @@ import { listConsumption } from "../src/store/planStore";
 import { getTrainingState } from "../src/store/trainingStore";
 import { areaColors, colors, flatColors, layout, radius, spacing, withAlpha } from "../src/theme";
 import { computeIntegratedStats, type IntegratedStats } from "../src/utils/integratedStats";
+import { getAccessProfile } from "../src/admin/service";
+import type { AccessRole } from "../src/admin/types";
 
 type LoadState = "loading" | "success" | "error";
 const VISIBILITY: { id: SocialVisibility; label: string }[] = [{ id: "private", label: "Privado" }, { id: "friends", label: "Amigos" }, { id: "public", label: "Público" }];
@@ -41,6 +43,7 @@ export default function ProfileScreen() {
   const [moreAreasOpen, setMoreAreasOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
+  const [accessRole, setAccessRole] = useState<AccessRole>("user");
 
   const load = useCallback(async () => {
     setLoadState("loading"); setNotice(null);
@@ -48,14 +51,15 @@ export default function ProfileScreen() {
       const statsPromise = Promise.all([listConsumption(), getTrainingState(), getHydrationState()])
         .then(([consumption, training, hydration]) => computeIntegratedStats(consumption, training, hydration, "month"))
         .catch(() => null);
-      let [profile, game, integrated] = await Promise.all([getProfileState(), evaluateGamification(), statsPromise]);
+      const accessPromise = getAccessProfile().catch(() => ({ role: "user" as const }));
+      let [profile, game, integrated, access] = await Promise.all([getProfileState(), evaluateGamification(), statsPromise, accessPromise]);
       if (profile.profile.photoPath) {
         const refreshedUrl = await resolveProfilePhotoUrl(profile.profile.photoPath).catch(() => null);
         if (refreshedUrl) profile = { ...profile, profile: { ...profile.profile, photoUrl: refreshedUrl } };
       }
       const unlocked = unlockEligibleCosmetics(profile, game);
       if (Object.keys(unlocked.unlockedCosmetics).length !== Object.keys(profile.unlockedCosmetics).length) await saveProfileState(unlocked);
-      setState(unlocked); setSummary(game); setActivityStats(integrated); setLoadState("success");
+      setState(unlocked); setSummary(game); setActivityStats(integrated); setAccessRole(access.role); setLoadState("success");
     } catch (error) { setLoadState("error"); setNotice(error instanceof Error ? error.message : "Não foi possível carregar o perfil."); }
   }, []);
 
@@ -168,6 +172,13 @@ export default function ProfileScreen() {
             <View style={styles.menuIcon}><MaterialDesignIcons name="pencil-outline" size={19} color={colors.brandPrimary} /></View>
             <Text style={styles.menuText}>Editar perfil</Text>
           </Pressable>
+          {accessRole === "admin" ? <>
+            <View style={styles.menuDivider} />
+            <Pressable accessibilityRole="menuitem" style={({ pressed }) => [styles.menuItem, pressed && styles.menuItemPressed]} onPress={() => { setProfileMenuOpen(false); router.push("/admin" as never); }} testID="profile-menu-admin">
+              <View style={styles.menuIcon}><MaterialDesignIcons name="shield-crown-outline" size={19} color={colors.brandPrimary} /></View>
+              <Text style={styles.menuText}>Painel administrativo</Text>
+            </Pressable>
+          </> : null}
           <View style={styles.menuDivider} />
           <Pressable accessibilityRole="menuitem" disabled={signingOut} style={({ pressed }) => [styles.menuItem, pressed && styles.menuItemPressed, signingOut && styles.disabled]} onPress={() => void signOut()} testID="profile-menu-logout">
             <View style={[styles.menuIcon, styles.logoutIcon]}>{signingOut ? <ActivityIndicator size="small" color={colors.error} /> : <MaterialDesignIcons name="logout" size={19} color={colors.error} />}</View>
