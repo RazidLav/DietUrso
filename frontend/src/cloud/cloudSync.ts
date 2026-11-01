@@ -15,6 +15,7 @@ import {
   EVOLUTION_STATE_KEY,
   TRAINING_STATE_KEY,
   LOCAL_CHANGED_AT_KEY,
+  LOCAL_OWNER_ID_KEY,
   ONBOARDING_COMPLETE_KEY,
   NUTRITION_SEED_KEY,
   PLANS_KEY,
@@ -24,6 +25,7 @@ import {
   PROFILE_STATE_KEY,
   THEME_PREFERENCE_KEY,
   WATER_KEY,
+  SEED_KEY,
 } from "../store/storageKeys";
 import { isCloudConfigured, supabase } from "./supabase";
 import { authRedirectUrl, normalizeEmail, registerWithPassword, requestPasswordReset, resendEmailConfirmation, signInWithPassword } from "./authFlow";
@@ -31,6 +33,8 @@ import { applyRemoteThemePreference, sanitizeThemePreference } from "../store/th
 import type { ThemePreference } from "../theme";
 import type { ProfileState } from "../profile/types";
 import type { EvolutionState } from "../evolution/types";
+import { createInitialProfileState } from "../profile/rules";
+import { shouldStartFreshForAccount } from "./accountIsolation";
 
 type CloudPhase =
   | "disabled"
@@ -95,6 +99,52 @@ let applyingRemote = false;
 let pushTimer: ReturnType<typeof setTimeout> | null = null;
 let activeSync: Promise<void> | null = null;
 let pendingLocalChange = false;
+
+const RESETTABLE_DATA_KEYS = [
+  PLANS_KEY,
+  ACTIVE_PLAN_KEY,
+  CONSUMPTION_KEY,
+  CHOSEN_OPTIONS_KEY,
+  SHOPPING_STATE_KEY,
+  SEED_KEY,
+  LOCAL_CHANGED_AT_KEY,
+  GAMIFICATION_KEY,
+  WATER_KEY,
+  HYDRATION_STATE_KEY,
+  TRAINING_STATE_KEY,
+  ONBOARDING_COMPLETE_KEY,
+  FOOD_LIBRARY_KEY,
+  RECIPES_KEY,
+  NUTRITION_SEED_KEY,
+  SHOPPING_CONFIG_KEY,
+  PROFILE_STATE_KEY,
+  EVOLUTION_STATE_KEY,
+];
+
+async function replaceLocalDataWithFreshDefaults(ownerId: string) {
+  applyingRemote = true;
+  try {
+    await AsyncStorage.multiRemove(RESETTABLE_DATA_KEYS);
+    const now = new Date().toISOString();
+    await AsyncStorage.multiSet([
+      [GAMIFICATION_KEY, JSON.stringify(createInitialGamificationState())],
+      [PROFILE_STATE_KEY, JSON.stringify(createInitialProfileState(now))],
+      [EVOLUTION_STATE_KEY, JSON.stringify({ version: 1, goal: { type: "recomposition", startedAt: now }, assessments: [], photos: [], comparisonEvents: [] } satisfies EvolutionState)],
+      [LOCAL_OWNER_ID_KEY, ownerId],
+    ]);
+
+    const [{ ensureSeed }, { ensureNutritionSeed }, { ensureHydrationSeed }, { ensureTrainingSeed }] = await Promise.all([
+      import("../store/planStore"),
+      import("../store/nutritionStore"),
+      import("../store/hydrationStore"),
+      import("../store/trainingStore"),
+    ]);
+    await ensureSeed();
+    await Promise.all([ensureNutritionSeed(), ensureHydrationSeed(), ensureTrainingSeed()]);
+  } finally {
+    applyingRemote = false;
+  }
+}
 
 function updateStatus(next: Partial<CloudStatus>) {
   status = { ...status, ...next };
@@ -278,6 +328,7 @@ async function pushLocalState(session?: Session): Promise<void> {
 
   if (error) throw error;
   await AsyncStorage.setItem(LOCAL_CHANGED_AT_KEY, updatedAt);
+  await AsyncStorage.setItem(LOCAL_OWNER_ID_KEY, currentSession.user.id);
   updateStatus({
     phase: "synced",
     authenticated: true,
@@ -310,6 +361,20 @@ async function performSync(): Promise<void> {
 
   if (error) throw error;
 
+  const localOwnerId = await AsyncStorage.getItem(LOCAL_OWNER_ID_KEY);
+  const differentAccount = Boolean(localOwnerId && localOwnerId !== session.user.id);
+  if (differentAccount) {
+    if (shouldStartFreshForAccount(localOwnerId, session.user.id, Boolean(data))) {
+      await replaceLocalDataWithFreshDefaults(session.user.id);
+      await pushLocalState(session);
+    } else if (data) {
+      await applyCloudSnapshot(data);
+      await AsyncStorage.setItem(LOCAL_OWNER_ID_KEY, session.user.id);
+    }
+    notifyDataChanged();
+    return;
+  }
+
   if (!data) {
     await pushLocalState(session);
     return;
@@ -322,6 +387,7 @@ async function performSync(): Promise<void> {
   }
 
   await applyCloudSnapshot(data);
+  await AsyncStorage.setItem(LOCAL_OWNER_ID_KEY, session.user.id);
   updateStatus({
     phase: "synced",
     authenticated: true,
@@ -390,6 +456,31 @@ export function syncCloudNow(): Promise<void> {
     });
 
   return activeSync;
+}
+
+export async function resetUserData(): Promise<void> {
+  if (!supabase) throw new Error("Sincronização não configurada.");
+  if (activeSync) await activeSync.catch(() => undefined);
+  const session = await getSession();
+  if (!session) throw new Error("Entre na sua conta para zerar o progresso.");
+  if (pushTimer) { clearTimeout(pushTimer); pushTimer = null; }
+  pendingLocalChange = false;
+  updateStatus({ phase: "syncing", authenticated: true, readyForData: false, email: session.user.email ?? null, message: null });
+
+  const resetTask = (async () => {
+    await replaceLocalDataWithFreshDefaults(session.user.id);
+    await pushLocalState(session);
+    notifyDataChanged();
+  })();
+  activeSync = resetTask;
+  try {
+    await resetTask;
+  } catch (error) {
+    updateStatus({ phase: "error", readyForData: true, message: "Não foi possível zerar o progresso. Nenhuma nova tentativa será feita automaticamente." });
+    throw error;
+  } finally {
+    activeSync = null;
+  }
 }
 
 export async function initializeCloudSync(): Promise<void> {
