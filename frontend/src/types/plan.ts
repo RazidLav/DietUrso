@@ -84,6 +84,8 @@ export interface Food {
   recipeId?: string;
   referenceQuantity?: number;
   referenceUnit?: Unit;
+  /** Quantidade da unidade de referência equivalente a 1 unidade doméstica. */
+  unitEquivalents?: Partial<Record<Unit, number>>;
   category?: string;
   brand?: string;
   notes?: string;

@@ -4,7 +4,7 @@ import { ActivityIndicator, KeyboardAvoidingView, Modal, Platform, Pressable, Sc
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { optionMacros } from "../store/planStore";
 import { listFoodCatalog, listRecipes } from "../store/nutritionStore";
-import { cloneMealOption, foodFromCatalog, foodFromRecipe, optionTemplates, resizePlanFood, type MealOptionTemplate } from "../nutrition/planComposer";
+import { availableFoodUnits, changePlanFoodUnit, cloneMealOption, foodFromCatalog, foodFromRecipe, optionTemplates, resizePlanFood, UNIT_LABELS, updatePlanFoodUnitEquivalent, type MealOptionTemplate } from "../nutrition/planComposer";
 import { colors, radius, spacing, withAlpha } from "../theme";
 import type { Food, FoodCatalogItem, MealOption, Plan, Recipe, Unit } from "../types/plan";
 import FoodCatalogPicker from "./FoodCatalogPicker";
@@ -37,6 +37,8 @@ export default function MealOptionComposer({
   const [catalog, setCatalog] = useState<FoodCatalogItem[]>([]);
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [picker, setPicker] = useState<Picker>(null);
+  const [unitFoodId, setUnitFoodId] = useState<string | null>(null);
+  const [unitEquivalentDraft, setUnitEquivalentDraft] = useState<string | null>(null);
   const [loading, setLoading] = useState(visible);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -76,6 +78,18 @@ export default function MealOptionComposer({
     const sourceFood = food.foodId ? catalog.find((item) => item.id === food.foodId) : undefined;
     const sourceRecipe = food.recipeId ? recipes.find((item) => item.id === food.recipeId) : undefined;
     setFoods((current) => current.map((item) => item.id === food.id ? resizePlanFood(item, Number.isFinite(quantity) ? quantity : 0, sourceFood, sourceRecipe) : item));
+  };
+  const changeUnit = (food: Food, unit: Unit) => {
+    setFoods((current) => current.map((item) => item.id === food.id ? changePlanFoodUnit(item, unit) : item));
+    setUnitEquivalentDraft(null);
+    if (unit === (food.referenceUnit ?? food.unit)) setUnitFoodId(null);
+  };
+  const changeEquivalent = (food: Food, raw: string) => {
+    setUnitEquivalentDraft(raw);
+    const equivalent = number(raw);
+    if (!Number.isFinite(equivalent) || equivalent <= 0) return;
+    const sourceFood = food.foodId ? catalog.find((item) => item.id === food.foodId) : undefined;
+    setFoods((current) => current.map((item) => item.id === food.id ? updatePlanFoodUnitEquivalent(item, equivalent, sourceFood) : item));
   };
   const addManual = () => {
     const quantity = Math.max(0, number(manual.quantity) || 0);
@@ -139,7 +153,12 @@ export default function MealOptionComposer({
               <View key={food.id} style={styles.ingredient} testID={`option-ingredient-${food.id}`}>
                 <View style={[styles.itemIcon, { backgroundColor: withAlpha(food.recipeId ? colors.brandSecondary : colors.brandPrimary, 0.13) }]}><MaterialDesignIcons name={food.recipeId ? "chef-hat" : "food-apple-outline"} size={20} color={food.recipeId ? colors.brandSecondary : colors.brandPrimary} /></View>
                 <View style={styles.itemCopy}><Text style={styles.itemName} numberOfLines={2}>{food.name}</Text><Text style={styles.itemMacros}>{Math.round(food.kcal ?? 0)} kcal · P {(food.protein ?? 0).toFixed(1)} · C {(food.carbs ?? 0).toFixed(1)} · G {(food.fats ?? 0).toFixed(1)}</Text></View>
-                <View style={styles.quantityWrap}><TextInput accessibilityLabel={`Quantidade de ${food.name}`} value={String(food.quantity)} onChangeText={(value) => updateQuantity(food, value)} keyboardType="decimal-pad" style={styles.quantityInput} /><Text style={styles.unit}>{food.unit}</Text></View>
+                <View style={styles.quantityWrap}>
+                  <TextInput accessibilityLabel={`Quantidade de ${food.name}`} value={String(food.quantity)} onChangeText={(value) => updateQuantity(food, value)} keyboardType="decimal-pad" style={styles.quantityInput} />
+                  <Pressable accessibilityRole="button" accessibilityLabel={`Alterar unidade de ${food.name}`} style={styles.unitButton} onPress={() => { setUnitEquivalentDraft(null); setUnitFoodId(food.id); }} testID={`option-unit-${food.id}`}>
+                    <Text style={styles.unit}>{UNIT_LABELS[food.unit]}</Text><MaterialDesignIcons name="chevron-down" size={15} color={colors.onSurfaceSecondary} />
+                  </Pressable>
+                </View>
                 <Pressable accessibilityRole="button" accessibilityLabel={`Remover ${food.name}`} style={styles.removeButton} onPress={() => setFoods((current) => current.filter((item) => item.id !== food.id))}><MaterialDesignIcons name="close" size={19} color={colors.error} /></Pressable>
               </View>
             ))}
@@ -169,6 +188,34 @@ export default function MealOptionComposer({
         <Pressable style={styles.primaryButton} onPress={addManual}><Text style={styles.primaryText}>Adicionar à opção</Text></Pressable>
       </View>
     </SelectionSheet>
+    <SelectionSheet visible={Boolean(unitFoodId)} eyebrow="COMO MEDIR" title={foods.find((food) => food.id === unitFoodId)?.name ?? "Escolha a unidade"} onClose={() => { setUnitEquivalentDraft(null); setUnitFoodId(null); }}>
+      {(() => {
+        const food = foods.find((item) => item.id === unitFoodId);
+        if (!food) return null;
+        return <>
+          <Text style={styles.unitHelp}>Escolha como você costuma medir este alimento. O UrsoFit preserva os macros e guarda a equivalência para os próximos ajustes.</Text>
+          {availableFoodUnits(food).map((unit) => {
+            const selected = food.unit === unit;
+            const detail = unit === food.referenceUnit
+              ? "Medida original do alimento"
+              : unit === "un" ? "Contar unidades, como 1 ovo ou 2 torradas"
+              : unit === "porcao" ? "Contar porções desta quantidade"
+              : unit === "ml" ? "Medir o volume em mililitros"
+              : "Medir o peso em gramas";
+            return <Pressable key={unit} accessibilityRole="radio" accessibilityState={{ selected }} style={[styles.unitPickRow, selected && styles.unitPickRowActive]} onPress={() => changeUnit(food, unit)} testID={`option-unit-choice-${unit}`}>
+              <View style={[styles.unitBadge, selected && styles.unitBadgeActive]}><Text style={[styles.unitBadgeText, selected && styles.unitBadgeTextActive]}>{UNIT_LABELS[unit]}</Text></View>
+              <View style={{ flex: 1 }}><Text style={styles.pickTitle}>{unit === "un" ? "Unidade" : unit === "porcao" ? "Porção" : unit === "ml" ? "Mililitros" : "Gramas"}</Text><Text style={styles.pickMeta}>{detail}</Text></View>
+              {selected ? <MaterialDesignIcons name="check-circle" size={22} color={colors.brandPrimary} /> : <MaterialDesignIcons name="chevron-right" size={21} color={colors.onSurfaceTertiary} />}
+            </Pressable>;
+          })}
+          {food.unit !== (food.referenceUnit ?? food.unit) && ((food.referenceUnit ?? food.unit) === "g" || (food.referenceUnit ?? food.unit) === "ml") ? <View style={styles.equivalentEditor} testID="option-unit-equivalent">
+            <View style={{ flex: 1 }}><Text style={styles.equivalentTitle}>Quanto vale 1 {UNIT_LABELS[food.unit]}?</Text><Text style={styles.pickMeta}>Assim os macros continuam corretos quando você informar 1, 2 ou mais.</Text></View>
+            <View style={styles.equivalentControl}><TextInput accessibilityLabel={`Equivalência de ${food.name}`} value={unitEquivalentDraft ?? String(food.unitEquivalents?.[food.unit] ?? food.referenceQuantity ?? 1)} onChangeText={(value) => changeEquivalent(food, value)} keyboardType="decimal-pad" style={styles.equivalentInput} /><Text style={styles.equivalentUnit}>{UNIT_LABELS[food.referenceUnit ?? food.unit]}</Text></View>
+          </View> : null}
+          <Pressable style={styles.primaryButton} onPress={() => { setUnitEquivalentDraft(null); setUnitFoodId(null); }}><Text style={styles.primaryText}>Usar esta medida</Text></Pressable>
+        </>;
+      })()}
+    </SelectionSheet>
   </>;
 }
 
@@ -197,9 +244,9 @@ const styles = StyleSheet.create({
   label: { color: colors.onSurfaceSecondary, fontSize: 10, fontWeight: "800", marginBottom: 6 }, input: { minHeight: 46, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radius.md, borderWidth: 1, borderColor: colors.borderStrong, backgroundColor: colors.surfaceTertiary, color: colors.onSurface, ...(Platform.OS === "web" ? ({ outlineStyle: "none" } as never) : {}) }, notes: { minHeight: 72, paddingTop: spacing.md, textAlignVertical: "top" },
   sectionTitle: { color: colors.onSurface, fontSize: 15, fontWeight: "900" }, help: { color: colors.onSurfaceTertiary, fontSize: 10.5, lineHeight: 16, marginTop: 3 }, sourceGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, marginTop: spacing.md }, sourceButton: { minWidth: 120, flexGrow: 1, minHeight: 66, alignItems: "center", justifyContent: "center", gap: spacing.xs, padding: spacing.sm, borderRadius: radius.md, backgroundColor: withAlpha(colors.brandPrimary, 0.09) }, sourceLabel: { color: colors.onSurface, fontSize: 10.5, fontWeight: "800" },
   ingredientsHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.md }, count: { color: colors.brandPrimary, fontSize: 10, fontWeight: "900" }, loading: { minHeight: 100, alignItems: "center", justifyContent: "center", gap: spacing.sm },
-  ingredient: { minHeight: 72, flexDirection: "row", alignItems: "center", gap: spacing.sm, padding: spacing.sm, borderRadius: radius.md, backgroundColor: colors.surfaceTertiary }, itemIcon: { width: 40, height: 40, alignItems: "center", justifyContent: "center", borderRadius: radius.md }, itemCopy: { flex: 1, minWidth: 100 }, itemName: { color: colors.onSurface, fontSize: 12, fontWeight: "800" }, itemMacros: { color: colors.onSurfaceTertiary, fontSize: 9, lineHeight: 13, marginTop: 3 }, quantityWrap: { width: 94, flexDirection: "row", alignItems: "center", gap: 5 }, quantityInput: { width: 62, minHeight: 40, paddingHorizontal: spacing.sm, borderRadius: radius.sm, backgroundColor: colors.surface, color: colors.onSurface, textAlign: "right", ...(Platform.OS === "web" ? ({ outlineStyle: "none" } as never) : {}) }, unit: { color: colors.onSurfaceTertiary, fontSize: 10 }, removeButton: { width: 36, height: 36, alignItems: "center", justifyContent: "center", borderRadius: radius.pill, backgroundColor: colors.surface },
+  ingredient: { minHeight: 72, flexDirection: "row", alignItems: "center", gap: spacing.sm, padding: spacing.sm, borderRadius: radius.md, backgroundColor: colors.surfaceTertiary }, itemIcon: { width: 40, height: 40, alignItems: "center", justifyContent: "center", borderRadius: radius.md }, itemCopy: { flex: 1, minWidth: 88 }, itemName: { color: colors.onSurface, fontSize: 12, fontWeight: "800" }, itemMacros: { color: colors.onSurfaceTertiary, fontSize: 9, lineHeight: 13, marginTop: 3 }, quantityWrap: { width: 132, flexDirection: "row", alignItems: "center", gap: 5 }, quantityInput: { width: 62, minHeight: 40, paddingHorizontal: spacing.sm, borderRadius: radius.sm, backgroundColor: colors.surface, color: colors.onSurface, textAlign: "right", ...(Platform.OS === "web" ? ({ outlineStyle: "none" } as never) : {}) }, unitButton: { minWidth: 62, minHeight: 40, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 1, paddingHorizontal: 6, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.borderStrong, backgroundColor: colors.surface }, unit: { color: colors.onSurface, fontSize: 10, fontWeight: "800" }, removeButton: { width: 36, height: 36, alignItems: "center", justifyContent: "center", borderRadius: radius.pill, backgroundColor: colors.surface },
   empty: { minHeight: 130, alignItems: "center", justifyContent: "center", gap: spacing.xs, padding: spacing.lg, borderRadius: radius.md, borderWidth: 1, borderStyle: "dashed", borderColor: colors.borderStrong }, emptyTitle: { color: colors.onSurface, fontSize: 13, fontWeight: "800" }, error: { color: colors.error, fontSize: 11, lineHeight: 16 },
   footer: { flexDirection: "row", justifyContent: "flex-end", gap: spacing.sm, padding: spacing.lg, paddingTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.borderSubtle, backgroundColor: colors.surfaceSecondary }, secondaryButton: { minHeight: 44, alignItems: "center", justifyContent: "center", paddingHorizontal: spacing.lg, borderRadius: radius.pill, backgroundColor: colors.surfaceTertiary }, secondaryText: { color: colors.onSurface, fontSize: 11, fontWeight: "800" }, primaryButton: { minHeight: 44, alignItems: "center", justifyContent: "center", paddingHorizontal: spacing.xl, borderRadius: radius.pill, backgroundColor: colors.brandPrimary }, primaryText: { color: colors.onBrandPrimary, fontSize: 11, fontWeight: "900" }, disabled: { opacity: 0.45 },
   pickerBackdrop: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.78)" }, pickerSheet: { width: "100%", maxWidth: 760, maxHeight: "84%", minHeight: 360, alignSelf: "center", borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl, borderWidth: 1, borderColor: colors.borderStrong, backgroundColor: colors.surfaceSecondary }, pickerContent: { padding: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.xl, gap: spacing.sm }, pickRow: { minHeight: 70, flexDirection: "row", alignItems: "center", gap: spacing.md, padding: spacing.md, borderRadius: radius.md, backgroundColor: colors.surfaceTertiary }, pickIcon: { width: 40, height: 40, alignItems: "center", justifyContent: "center", borderRadius: radius.md, backgroundColor: colors.surface }, pickTitle: { color: colors.onSurface, fontSize: 12, fontWeight: "800" }, pickMeta: { color: colors.onSurfaceTertiary, fontSize: 9.5, lineHeight: 14, marginTop: 3 }, useText: { color: colors.brandPrimary, fontSize: 10, fontWeight: "900" }, pickerEmpty: { minHeight: 180, alignItems: "center", justifyContent: "center", gap: spacing.sm, padding: spacing.xl },
-  manualForm: { gap: spacing.md }, manualRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm }, unitChoices: { minHeight: 46, flexDirection: "row", padding: 3, borderRadius: radius.md, backgroundColor: colors.surfaceTertiary }, unitChoice: { flex: 1, minWidth: 40, alignItems: "center", justifyContent: "center", borderRadius: radius.sm }, unitChoiceActive: { backgroundColor: colors.brandPrimary }, unitChoiceText: { color: colors.onSurfaceSecondary, fontSize: 10, fontWeight: "800" }, unitChoiceTextActive: { color: colors.onBrandPrimary },
+  manualForm: { gap: spacing.md }, manualRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm }, unitChoices: { minHeight: 46, flexDirection: "row", padding: 3, borderRadius: radius.md, backgroundColor: colors.surfaceTertiary }, unitChoice: { flex: 1, minWidth: 40, alignItems: "center", justifyContent: "center", borderRadius: radius.sm }, unitChoiceActive: { backgroundColor: colors.brandPrimary }, unitChoiceText: { color: colors.onSurfaceSecondary, fontSize: 10, fontWeight: "800" }, unitChoiceTextActive: { color: colors.onBrandPrimary }, unitHelp: { color: colors.onSurfaceSecondary, fontSize: 11, lineHeight: 17, marginBottom: spacing.sm }, unitPickRow: { minHeight: 68, flexDirection: "row", alignItems: "center", gap: spacing.md, padding: spacing.md, borderRadius: radius.md, borderWidth: 1, borderColor: colors.borderSubtle, backgroundColor: colors.surfaceTertiary }, unitPickRowActive: { borderColor: withAlpha(colors.brandPrimary, 0.65), backgroundColor: withAlpha(colors.brandPrimary, 0.08) }, unitBadge: { minWidth: 48, height: 40, alignItems: "center", justifyContent: "center", paddingHorizontal: spacing.sm, borderRadius: radius.md, backgroundColor: colors.surface }, unitBadgeActive: { backgroundColor: colors.brandPrimary }, unitBadgeText: { color: colors.onSurface, fontSize: 11, fontWeight: "900" }, unitBadgeTextActive: { color: colors.onBrandPrimary }, equivalentEditor: { flexDirection: "row", alignItems: "center", gap: spacing.md, padding: spacing.md, marginVertical: spacing.sm, borderRadius: radius.md, backgroundColor: withAlpha(colors.brandSecondary, 0.1) }, equivalentTitle: { color: colors.onSurface, fontSize: 12, fontWeight: "900" }, equivalentControl: { flexDirection: "row", alignItems: "center", gap: spacing.xs }, equivalentInput: { width: 72, minHeight: 42, paddingHorizontal: spacing.sm, borderRadius: radius.sm, backgroundColor: colors.surface, color: colors.onSurface, textAlign: "right", ...(Platform.OS === "web" ? ({ outlineStyle: "none" } as never) : {}) }, equivalentUnit: { color: colors.onSurfaceSecondary, fontSize: 11, fontWeight: "800" },
 });
