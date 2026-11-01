@@ -5,30 +5,34 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AreaDashboardHeader, DashboardTile } from "../../src/components/AreaDashboard";
 import { ContentContainer, ResponsiveGrid } from "../../src/components/DesignSystem";
 import { useCloudDataRefresh } from "../../src/cloud/useCloudDataRefresh";
-import { listConsumption } from "../../src/store/planStore";
+import { getActivePlanId, listConsumption, listPlans } from "../../src/store/planStore";
 import { listFoodCatalog, listRecipes } from "../../src/store/nutritionStore";
 import { areaColors, colors, spacing } from "../../src/theme";
 import { todayISO } from "../../src/utils/date";
 import { FLOATING_TAB_HEIGHT, FLOATING_TAB_MARGIN } from "./_layout";
 
-type Counts = { foods: number; recipes: number; today: number; offPlan: number };
+type Counts = { foods: number; recipes: number; today: number; offPlan: number; plans: number; activePlan: string };
 
 export default function AlimentacaoScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const [counts, setCounts] = useState<Counts>({ foods: 0, recipes: 0, today: 0, offPlan: 0 });
+  const [counts, setCounts] = useState<Counts>({ foods: 0, recipes: 0, today: 0, offPlan: 0, plans: 0, activePlan: "Nenhum ativo" });
 
   const load = useCallback(async () => {
-    const [foods, recipes, entries] = await Promise.all([
+    const [foods, recipes, entries, plans, activeId] = await Promise.all([
       listFoodCatalog(),
       listRecipes(),
       listConsumption(),
+      listPlans(),
+      getActivePlanId(),
     ]);
     setCounts({
       foods: foods.length,
       recipes: recipes.length,
       today: entries.filter((entry) => entry.date === todayISO() && entry.status !== "skipped").length,
       offPlan: entries.filter((entry) => entry.status === "off_plan").length,
+      plans: plans.filter((plan) => !plan.archived).length,
+      activePlan: plans.find((plan) => plan.id === activeId)?.name ?? plans.find((plan) => !plan.archived)?.name ?? "Nenhum ativo",
     });
   }, []);
 
@@ -61,6 +65,14 @@ export default function AlimentacaoScreen() {
           hint="Refeições planejadas e consumo do dia"
           accent={areaColors.food}
           onPress={() => router.push("/plano")}
+        />
+        <DashboardTile
+          icon="clipboard-text-outline"
+          label="Planos alimentares"
+          value={`${counts.plans} ${counts.plans === 1 ? "plano" : "planos"}`}
+          hint={`Ativo: ${counts.activePlan}`}
+          accent={areaColors.food}
+          onPress={() => router.push("/planos-alimentares" as never)}
         />
         <DashboardTile
           icon="food-apple"

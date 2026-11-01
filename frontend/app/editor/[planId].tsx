@@ -13,10 +13,11 @@ import {
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import MaterialDesignIcons from "@react-native-vector-icons/material-design-icons";
-import { colors, withAlpha, radius, spacing } from "../../src/theme";
+import { areaColors, colors, withAlpha, radius, spacing } from "../../src/theme";
 import {
   deleteFood,
   deleteOption,
+  dayMacrosDefault,
   listPlans,
   optionMacros,
   toggleMealArchived,
@@ -31,12 +32,15 @@ import { WEEKDAYS_SHORT } from "../../src/utils/date";
 import { listFoodCatalog } from "../../src/store/nutritionStore";
 import { scaleNutrients } from "../../src/nutrition/calculations";
 import FoodCatalogPicker from "../../src/components/FoodCatalogPicker";
+import MealOptionComposer from "../../src/components/MealOptionComposer";
+import MacroSummary from "../../src/components/MacroSummary";
+import { ContentContainer, PageHeader, PrimaryButton, SectionHeader } from "../../src/components/DesignSystem";
 
 const uid = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
 
 type ModalMode =
   | { kind: "none" }
-  | { kind: "meal"; meal?: Meal }
+  | { kind: "meal"; meal?: Meal; defaultDay?: number }
   | { kind: "option"; mealId: string; option?: MealOption }
   | { kind: "food"; mealId: string; optionId: string; food?: Food };
 
@@ -45,10 +49,13 @@ export default function EditorScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const [plan, setPlan] = useState<Plan | null>(null);
+  const [plans, setPlans] = useState<Plan[]>([]);
   const [modal, setModal] = useState<ModalMode>({ kind: "none" });
+  const [selectedDay, setSelectedDay] = useState(new Date().getDay());
 
   const load = useCallback(async () => {
     const all = await listPlans();
+    setPlans(all);
     setPlan(all.find((p) => p.id === planId) ?? null);
   }, [planId]);
 
@@ -105,49 +112,53 @@ export default function EditorScreen() {
     await load();
   };
   const doMoveMeal = async (mealId: string, direction: -1 | 1) => {
-    const meals = [...plan.meals];
+    const meals = [...plan.meals].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    const visibleMeals = meals.filter((meal) => !meal.archived && (!meal.daysOfWeek?.length || meal.daysOfWeek.includes(selectedDay)));
+    const visibleIndex = visibleMeals.findIndex((meal) => meal.id === mealId);
+    const targetMeal = visibleMeals[visibleIndex + direction];
+    if (visibleIndex < 0 || !targetMeal) return;
     const index = meals.findIndex((meal) => meal.id === mealId);
-    const target = index + direction;
-    if (index < 0 || target < 0 || target >= meals.length) return;
+    const target = meals.findIndex((meal) => meal.id === targetMeal.id);
     [meals[index], meals[target]] = [meals[target], meals[index]];
     await updatePlan({ ...plan, meals: meals.map((meal, order) => ({ ...meal, order })), updatedAt: new Date().toISOString() });
     await load();
   };
 
+  const mealsForDay = plan.meals
+    .filter((meal) => !meal.archived && (!meal.daysOfWeek?.length || meal.daysOfWeek.includes(selectedDay)))
+    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+  const totals = dayMacrosDefault({ ...plan, meals: mealsForDay });
+  const archivedMeals = plan.meals.filter((meal) => meal.archived);
+  const optionMode = modal.kind === "option" ? modal : null;
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.surface }} testID="editor-screen">
       <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
-        <View style={styles.headerRow}>
-          <Pressable style={styles.backBtn} onPress={() => router.back()} testID="editor-back-btn">
-            <MaterialDesignIcons name="chevron-left" size={26} color={colors.onSurface} />
-          </Pressable>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.eyebrow}>EDITAR PLANO</Text>
-            <PlanNameInput value={plan.name} onSave={savePlanName} />
-          </View>
-        </View>
+        <ContentContainer maxWidth={1120} style={styles.headerContainer}>
+          <PageHeader eyebrow="DIETA · EDITAR PLANO" title="Montar plano alimentar" description="Escolha o dia, monte as refeições e veja os macros enquanto edita." onBack={() => router.back()} accent={areaColors.food} action={<PrimaryButton icon="plus" label="Adicionar refeição" onPress={() => setModal({ kind: "meal", defaultDay: selectedDay })} />} />
+          <Text style={styles.nameHint}>NOME DO PLANO · toque para editar</Text>
+          <PlanNameInput value={plan.name} onSave={savePlanName} />
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.dayChips} accessibilityLabel="Dias da semana">
+            {WEEKDAYS_SHORT.map((label, day) => <Pressable key={day} accessibilityRole="tab" accessibilityState={{ selected: selectedDay === day }} style={[styles.dayChip, selectedDay === day && styles.dayChipSelected]} onPress={() => setSelectedDay(day)} testID={`editor-day-${day}`}><Text style={[styles.dayChipText, selectedDay === day && styles.dayChipTextSelected]}>{label}</Text></Pressable>)}
+          </ScrollView>
+        </ContentContainer>
       </View>
 
-      <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: spacing.xxxl, gap: spacing.md }}>
-        <Pressable
-          style={styles.addBtn}
-          onPress={() => setModal({ kind: "meal" })}
-          testID="add-meal-btn"
-        >
-          <MaterialDesignIcons name="plus" size={18} color={colors.onBrandPrimary} />
-          <Text style={styles.addBtnText}>Adicionar refeição</Text>
-        </Pressable>
+      <ScrollView contentContainerStyle={{ paddingVertical: spacing.lg, paddingBottom: spacing.xxxl }}>
+        <ContentContainer maxWidth={1120} style={styles.editorContent}>
+        <MacroSummary compact title={`TOTAL DE ${WEEKDAYS_SHORT[selectedDay].toUpperCase()}`} subtitle="Soma da primeira opção de cada refeição" kcal={totals.kcal} protein={totals.protein} carbs={totals.carbs} fats={totals.fats} fiber={totals.fiber} />
+        <SectionHeader title={`Refeições de ${WEEKDAYS_SHORT[selectedDay]}`} description={`${mealsForDay.length} ${mealsForDay.length === 1 ? "refeição" : "refeições"} neste dia`} />
 
-        {plan.meals.slice().sort((a, b) => (a.order ?? 0) - (b.order ?? 0)).map((meal, mealIndex) => (
+        {mealsForDay.map((meal, mealIndex) => (
           <View key={meal.id} style={[styles.mealBlock, meal.archived && { opacity: 0.55 }]} testID={`edit-meal-${meal.id}`}>
             <View style={styles.mealHeader}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.mealName}>{meal.name}</Text>
-                <Text style={styles.mealMeta}>{meal.archived ? "Arquivada · " : ""}{meal.suggestedTime ? `${meal.suggestedTime} · ` : ""}{meal.options.length} opções · {meal.daysOfWeek?.length ? meal.daysOfWeek.map((day) => WEEKDAYS_SHORT[day]).join(", ") : "todos os dias"}</Text>
+                <Text style={styles.mealMeta}>{meal.suggestedTime ? `${meal.suggestedTime} · ` : ""}{meal.options.length} {meal.options.length === 1 ? "opção" : "opções"} · {meal.daysOfWeek?.length ? meal.daysOfWeek.map((day) => WEEKDAYS_SHORT[day]).join(", ") : "todos os dias"}</Text>
               </View>
               <View style={styles.orderActions}>
                 <Pressable style={styles.orderBtn} disabled={mealIndex === 0} onPress={() => void doMoveMeal(meal.id, -1)}><MaterialDesignIcons name="chevron-up" size={17} color={mealIndex === 0 ? colors.onSurfaceTertiary : colors.onSurface} /></Pressable>
-                <Pressable style={styles.orderBtn} disabled={mealIndex === plan.meals.length - 1} onPress={() => void doMoveMeal(meal.id, 1)}><MaterialDesignIcons name="chevron-down" size={17} color={mealIndex === plan.meals.length - 1 ? colors.onSurfaceTertiary : colors.onSurface} /></Pressable>
+                <Pressable style={styles.orderBtn} disabled={mealIndex === mealsForDay.length - 1} onPress={() => void doMoveMeal(meal.id, 1)}><MaterialDesignIcons name="chevron-down" size={17} color={mealIndex === mealsForDay.length - 1 ? colors.onSurfaceTertiary : colors.onSurface} /></Pressable>
               </View>
               <ActionsRow
                 onEdit={() => setModal({ kind: "meal", meal })}
@@ -213,26 +224,43 @@ export default function EditorScreen() {
                   </View>
                 );
               })}
-              <Pressable
-                style={styles.addSmall}
+                <Pressable
+                  style={styles.addOption}
                 onPress={() => setModal({ kind: "option", mealId: meal.id })}
                 testID={`add-option-${meal.id}`}
               >
-                <MaterialDesignIcons name="plus" size={14} color={colors.brandPrimary} />
-                <Text style={styles.addSmallText}>Adicionar opção</Text>
+                <MaterialDesignIcons name="plus" size={17} color={colors.onBrandPrimary} />
+                <Text style={styles.addOptionText}>{meal.options.length ? "Adicionar outra opção" : "Montar primeira opção"}</Text>
               </Pressable>
             </View>
           </View>
         ))}
+        {!mealsForDay.length ? <View style={styles.dayEmpty}><MaterialDesignIcons name="silverware-fork-knife" size={32} color={areaColors.food} /><Text style={styles.dayEmptyTitle}>Nenhuma refeição neste dia</Text><Text style={styles.dayEmptyText}>Adicione uma refeição, escolha o tipo e monte a primeira opção com alimentos ou receitas.</Text><PrimaryButton icon="plus" label="Adicionar refeição" onPress={() => setModal({ kind: "meal", defaultDay: selectedDay })} /></View> : null}
+        {archivedMeals.length ? <View style={styles.archivedBlock}><Text style={styles.archivedTitle}>Refeições arquivadas</Text><Text style={styles.archivedDescription}>Ficam fora do plano até você restaurá-las.</Text>{archivedMeals.map((meal) => <View key={meal.id} style={styles.archivedRow}><View style={{ flex: 1 }}><Text style={styles.foodEditName}>{meal.name}</Text><Text style={styles.foodEditMeta}>{meal.options.length} opções</Text></View><Pressable accessibilityRole="button" style={styles.restoreButton} onPress={() => void doToggleMealArchived(meal.id)}><MaterialDesignIcons name="archive-arrow-up-outline" size={18} color={colors.brandPrimary} /><Text style={styles.restoreText}>Restaurar</Text></Pressable></View>)}</View> : null}
+        </ContentContainer>
       </ScrollView>
 
       <EditorModals
         mode={modal}
         planId={plan.id}
         onClose={() => setModal({ kind: "none" })}
-        onDone={async () => {
-          setModal({ kind: "none" });
+        onDone={async (createdMeal) => {
           await load();
+          setModal(createdMeal && !createdMeal.options.length ? { kind: "option", mealId: createdMeal.id } : { kind: "none" });
+        }}
+      />
+      <MealOptionComposer
+        key={`${optionMode?.mealId ?? "closed"}-${optionMode?.option?.id ?? "new"}-${Boolean(optionMode)}`}
+        visible={Boolean(optionMode)}
+        option={optionMode?.option}
+        plans={plans}
+        suggestedName={optionMode?.option ? optionMode.option.name : "Principal"}
+        onClose={() => setModal({ kind: "none" })}
+        onSave={async (option) => {
+          if (!optionMode) return;
+          await upsertOption(plan.id, optionMode.mealId, option);
+          await load();
+          setModal({ kind: "none" });
         }}
       />
     </View>
@@ -288,9 +316,9 @@ function EditorModals({
   mode: ModalMode;
   planId: string;
   onClose: () => void;
-  onDone: () => void;
+  onDone: (createdMeal?: Meal) => void;
 }) {
-  if (mode.kind === "none") return null;
+  if (mode.kind === "none" || mode.kind === "option") return null;
 
   return (
     <Modal visible transparent animationType="fade" onRequestClose={onClose}>
@@ -300,9 +328,7 @@ function EditorModals({
       >
         <View style={mStyles.card}>
           {mode.kind === "meal" ? (
-            <MealForm planId={planId} meal={mode.meal} onDone={onDone} onCancel={onClose} />
-          ) : mode.kind === "option" ? (
-            <OptionForm planId={planId} mealId={mode.mealId} option={mode.option} onDone={onDone} onCancel={onClose} />
+            <MealForm planId={planId} meal={mode.meal} defaultDay={mode.defaultDay} onDone={onDone} onCancel={onClose} />
           ) : (
             <FoodForm
               planId={planId}
@@ -319,14 +345,14 @@ function EditorModals({
   );
 }
 
-function MealForm({ planId, meal, onDone, onCancel }: any) {
-  const [name, setName] = useState<string>(meal?.name ?? "");
+function MealForm({ planId, meal, defaultDay, onDone, onCancel }: any) {
+  const [name, setName] = useState<string>(meal?.name ?? MEAL_TYPES.find((item) => item.key === "lanche")?.label ?? "Lanche");
   const [type, setType] = useState<string>(meal?.type ?? "lanche");
   const [suggestedTime, setSuggestedTime] = useState<string>(meal?.suggestedTime ?? "");
   const [scheduleByWeekday, setScheduleByWeekday] = useState<Partial<Record<number, string>>>(meal?.scheduleByWeekday ?? {});
   const [customSchedule, setCustomSchedule] = useState(Boolean(meal?.scheduleByWeekday && Object.keys(meal.scheduleByWeekday).length));
   const [guidance, setGuidance] = useState<string>(meal?.guidance ?? "");
-  const [daysOfWeek, setDaysOfWeek] = useState<number[]>(meal?.daysOfWeek ?? [0, 1, 2, 3, 4, 5, 6]);
+  const [daysOfWeek, setDaysOfWeek] = useState<number[]>(meal?.daysOfWeek ?? [typeof defaultDay === "number" ? defaultDay : new Date().getDay()]);
   const submit = async () => {
     const m: Meal = {
       id: meal?.id ?? uid(),
@@ -342,25 +368,26 @@ function MealForm({ planId, meal, onDone, onCancel }: any) {
       order: meal?.order ?? 999,
     };
     await upsertMeal(planId, m);
-    onDone();
+    onDone(meal ? undefined : m);
   };
   return (
     <ScrollView>
-      <Text style={mStyles.title}>{meal ? "Editar refeição" : "Nova refeição"}</Text>
-      <Text style={mStyles.label}>Nome</Text>
-      <TextInput style={mStyles.input} value={name} onChangeText={setName} testID="meal-name-input" />
-      <Text style={mStyles.label}>Tipo</Text>
+      <Text style={mStyles.title}>{meal ? "Configurar refeição" : "Qual refeição você quer adicionar?"}</Text>
+      <Text style={mStyles.intro}>{meal ? "Ajuste os dias, o horário e as orientações desta refeição." : "Escolha o tipo. Na etapa seguinte você adicionará alimentos, receitas ou usará uma opção já existente como base."}</Text>
+      <Text style={mStyles.label}>Tipo de refeição</Text>
       <View style={mStyles.chipRow}>
         {MEAL_TYPES.map((t) => (
           <Pressable
             key={t.key}
             style={[mStyles.chip, type === t.key && mStyles.chipSelected]}
-            onPress={() => setType(t.key)}
+            onPress={() => { setType(t.key); if (!meal && (!name || MEAL_TYPES.some((item) => item.label === name))) setName(t.label); }}
           >
             <Text style={[mStyles.chipText, type === t.key && mStyles.chipTextSel]}>{t.label}</Text>
           </Pressable>
         ))}
       </View>
+      <Text style={mStyles.label}>Nome exibido (opcional)</Text>
+      <TextInput style={mStyles.input} value={name} onChangeText={setName} placeholder={MEAL_TYPES.find((item) => item.key === type)?.label ?? "Refeição"} placeholderTextColor={colors.onSurfaceTertiary} testID="meal-name-input" />
       <Text style={mStyles.label}>Horário sugerido</Text>
       <TextInput style={mStyles.input} value={suggestedTime} onChangeText={setSuggestedTime} placeholder="Ex.: 12:30" placeholderTextColor={colors.onSurfaceTertiary} />
       <Pressable style={mStyles.scheduleToggle} onPress={() => setCustomSchedule((value) => !value)} accessibilityRole="button" accessibilityState={{ expanded: customSchedule }}>
@@ -374,36 +401,6 @@ function MealForm({ planId, meal, onDone, onCancel }: any) {
       <View style={mStyles.chipRow}>{WEEKDAYS_SHORT.map((label, day) => { const selected = daysOfWeek.includes(day); return <Pressable key={day} style={[mStyles.chip, selected && mStyles.chipSelected]} onPress={() => setDaysOfWeek((current) => selected ? current.filter((value) => value !== day) : [...current, day].sort())}><Text style={[mStyles.chipText, selected && mStyles.chipTextSel]}>{label}</Text></Pressable>; })}</View>
       <Text style={mStyles.label}>Orientações</Text>
       <TextInput style={[mStyles.input, { minHeight: 64 }]} value={guidance} onChangeText={setGuidance} multiline />
-      <FormActions onCancel={onCancel} onSave={submit} />
-    </ScrollView>
-  );
-}
-
-function OptionForm({ planId, mealId, option, onDone, onCancel }: any) {
-  const [name, setName] = useState<string>(option?.name ?? "");
-  const [notes, setNotes] = useState<string>(option?.notes ?? "");
-  const submit = async () => {
-    const o: MealOption = {
-      id: option?.id ?? uid(),
-      name: name.trim() || "Nova opção",
-      notes,
-      foods: option?.foods ?? [],
-    };
-    await upsertOption(planId, mealId, o);
-    onDone();
-  };
-  return (
-    <ScrollView>
-      <Text style={mStyles.title}>{option ? "Editar opção" : "Nova opção"}</Text>
-      <Text style={mStyles.label}>Nome</Text>
-      <TextInput style={mStyles.input} value={name} onChangeText={setName} testID="option-name-input" />
-      <Text style={mStyles.label}>Observações</Text>
-      <TextInput
-        style={[mStyles.input, { minHeight: 60 }]}
-        value={notes}
-        onChangeText={setNotes}
-        multiline
-      />
       <FormActions onCancel={onCancel} onSave={submit} />
     </ScrollView>
   );
@@ -625,8 +622,15 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
     paddingBottom: spacing.md,
-    paddingHorizontal: spacing.lg,
   },
+  headerContainer: { gap: spacing.xs },
+  editorContent: { gap: spacing.md },
+  nameHint: { color: colors.onSurfaceTertiary, fontSize: 8, fontWeight: "900", letterSpacing: 1, marginTop: spacing.xs },
+  dayChips: { gap: spacing.sm, paddingVertical: spacing.sm },
+  dayChip: { minWidth: 58, minHeight: 36, alignItems: "center", justifyContent: "center", paddingHorizontal: spacing.md, borderRadius: radius.pill, backgroundColor: colors.surfaceSecondary, borderWidth: 1, borderColor: colors.border },
+  dayChipSelected: { backgroundColor: colors.brandPrimary, borderColor: colors.brandPrimary },
+  dayChipText: { color: colors.onSurfaceSecondary, fontSize: 11, fontWeight: "800" },
+  dayChipTextSelected: { color: colors.onBrandPrimary },
   headerRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   backBtn: {
     width: 40, height: 40, borderRadius: radius.md,
@@ -634,7 +638,7 @@ const styles = StyleSheet.create({
     alignItems: "center", justifyContent: "center",
   },
   eyebrow: { color: colors.brandPrimary, fontSize: 11, fontWeight: "800", letterSpacing: 1.5 },
-  planNameInput: { color: colors.onSurface, fontSize: 18, fontWeight: "800", padding: 0, marginTop: 2 },
+  planNameInput: { minHeight: 42, color: colors.onSurface, backgroundColor: colors.surfaceSecondary, borderRadius: radius.md, fontSize: 15, fontWeight: "850" as never, paddingHorizontal: spacing.md, marginTop: 2 },
   addBtn: {
     flexDirection: "row", alignItems: "center", justifyContent: "center", gap: spacing.xs,
     backgroundColor: colors.brandPrimary,
@@ -686,6 +690,12 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
   },
   addSmallText: { color: colors.brandPrimary, fontWeight: "700", fontSize: 12 },
+  addOption: { minHeight: 42, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: spacing.xs, paddingHorizontal: spacing.md, borderRadius: radius.pill, backgroundColor: colors.brandPrimary },
+  addOptionText: { color: colors.onBrandPrimary, fontSize: 11, fontWeight: "900" },
+  dayEmpty: { minHeight: 210, alignItems: "center", justifyContent: "center", gap: spacing.sm, padding: spacing.xl, borderRadius: radius.lg, borderWidth: 1, borderStyle: "dashed", borderColor: colors.borderStrong },
+  dayEmptyTitle: { color: colors.onSurface, fontSize: 16, fontWeight: "900" },
+  dayEmptyText: { maxWidth: 480, color: colors.onSurfaceTertiary, fontSize: 11, lineHeight: 17, textAlign: "center" },
+  archivedBlock: { gap: spacing.sm, padding: spacing.md, borderRadius: radius.lg, backgroundColor: colors.surfaceSecondary }, archivedTitle: { color: colors.onSurface, fontSize: 14, fontWeight: "900" }, archivedDescription: { color: colors.onSurfaceTertiary, fontSize: 10, marginTop: -spacing.xs }, archivedRow: { minHeight: 52, flexDirection: "row", alignItems: "center", gap: spacing.sm, padding: spacing.sm, borderRadius: radius.md, backgroundColor: colors.surfaceTertiary }, restoreButton: { minHeight: 38, flexDirection: "row", alignItems: "center", gap: spacing.xs, paddingHorizontal: spacing.md, borderRadius: radius.pill, backgroundColor: withAlpha(colors.brandPrimary, 0.12) }, restoreText: { color: colors.brandPrimary, fontSize: 10, fontWeight: "900" },
   emptyText: { color: colors.onSurfaceTertiary, textAlign: "center", marginTop: spacing.xl },
 });
 
@@ -708,6 +718,7 @@ const mStyles = StyleSheet.create({
     maxHeight: "90%",
   },
   title: { color: colors.onSurface, fontSize: 18, fontWeight: "800", marginBottom: spacing.md },
+  intro: { color: colors.onSurfaceTertiary, fontSize: 11, lineHeight: 17, marginTop: -spacing.sm, marginBottom: spacing.sm },
   formContent: { paddingBottom: spacing.sm },
   label: { color: colors.onSurfaceTertiary, fontSize: 11, fontWeight: "700", marginTop: spacing.sm, marginBottom: 4 },
   input: {

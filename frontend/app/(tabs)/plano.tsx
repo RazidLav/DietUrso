@@ -65,13 +65,13 @@ export default function PlanoScreen() {
     return (
       <View style={[styles.empty, { paddingTop: insets.top + spacing.xxl }]}>
         <Text style={styles.emptyTitle}>Nenhum plano ativo</Text>
-        <Text style={styles.emptyDesc}>Crie ou ative um plano em Ajustes.</Text>
+        <Text style={styles.emptyDesc}>Crie ou ative um plano dentro da área Dieta.</Text>
         <Pressable
           style={styles.emptyCta}
-          onPress={() => router.push("/ajustes")}
-          testID="empty-go-ajustes-btn"
+          onPress={() => router.push("/planos-alimentares" as never)}
+          testID="empty-go-food-plans-btn"
         >
-          <Text style={styles.emptyCtaText}>Ir para Ajustes</Text>
+          <Text style={styles.emptyCtaText}>Criar plano alimentar</Text>
         </Pressable>
       </View>
     );
@@ -100,7 +100,7 @@ export default function PlanoScreen() {
       {/* Sticky header with day chips */}
       <View style={[styles.stickyHeader, { paddingTop: insets.top + spacing.md }]}>
         <ContentContainer style={styles.headerContent} maxWidth={1100}>
-          <PageHeader eyebrow="PLANO ALIMENTAR" title={plan.name} description="Escolha o dia e acesse somente a refeição que deseja ajustar." action={<View style={styles.headerActions}><IconButton icon="content-copy" label="Duplicar programação do dia" onPress={() => setCopyOpen(true)} /><PrimaryButton icon="pencil" label="Editar plano" onPress={() => router.push(`/editor/${plan.id}`)} /></View>} />
+          <PageHeader eyebrow="PLANO ALIMENTAR" title={plan.name} description="Escolha o dia e acesse somente a refeição que deseja ajustar." action={<View style={styles.headerActions}><IconButton icon="clipboard-text-outline" label="Gerenciar planos alimentares" onPress={() => router.push("/planos-alimentares" as never)} /><IconButton icon="content-copy" label="Duplicar programação do dia" onPress={() => setCopyOpen(true)} /><PrimaryButton icon="pencil" label="Editar plano" onPress={() => router.push(`/editor/${plan.id}`)} /></View>} />
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRowContent} style={styles.chipRow} accessibilityLabel="Dias da semana">
             {WEEKDAYS_SHORT.map((d, i) => {
               const selected = i === selectedDay;

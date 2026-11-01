@@ -13,6 +13,7 @@ test("a dock central possui exatamente as cinco áreas na ordem definida", () =>
 test("rotas antigas continuam associadas à seção e subseção corretas", () => {
   assert.equal(getActiveSection("/(tabs)/alimentacao").id, "food");
   assert.equal(getActiveSection("/editor/plano-1").id, "food");
+  assert.equal(getActiveChild(getActiveSection("/editor/plano-1"), "/editor/plano-1")?.id, "food-plans");
   assert.equal(getActiveSection("/hidratacao-recipientes").id, "hydration");
   assert.equal(getActiveSection("/treinos-exercicios").id, "training");
   assert.equal(getActiveSection("/conquistas").id, "profile");
@@ -23,9 +24,10 @@ test("rotas antigas continuam associadas à seção e subseção corretas", () =
 });
 
 test("formulários de tela cheia preservam o rascunho ao ocultar a navegação global", () => {
-  for (const path of ["/conta", "/editor/1", "/meal/1/2", "/fora-do-plano", "/receita/1", "/treino/1", "/treino-planejado/1"]) {
+  for (const path of ["/conta", "/meal/1/2", "/fora-do-plano", "/receita/1", "/treino/1", "/treino-planejado/1"]) {
     assert.equal(shouldHideNavigation(path), true, path);
   }
+  assert.equal(shouldHideNavigation("/editor/1"), false, "o editor pertence à navegação de Dieta");
   assert.equal(shouldHideNavigation("/alimentos"), false);
   assert.equal(shouldHideNavigation("/hidratacao"), false);
 });
