@@ -237,11 +237,24 @@ test("todos os dados pessoais recebem ownerId", () => {
   state.exercises.push({ id: "mine", name: "Meu", activityType: "custom", secondaryMuscles: [], alternativeExerciseIds: [], laterality: "not_applicable", scope: "personal", favorite: false, createdAt: now.toISOString(), updatedAt: now.toISOString() });
   const scoped = scopeTrainingStateToOwner(state, "user-a");
   assert.equal(scoped.plans[0].ownerId, "user-a"); assert.equal(scoped.plannedSessions[0].ownerId, "user-a"); assert.equal(scoped.sessions[0].ownerId, "user-a"); assert.equal(scoped.exercises.find((exercise) => exercise.id === "mine")?.ownerId, "user-a");
+  assert.equal(scopeTrainingStateToOwner(scoped, "user-a"), scoped, "não deve sinalizar alteração quando o ownerId já está correto");
+});
+
+test("preparar uma faixa já materializada preserva a referência do estado", () => {
+  const scoped = scopeTrainingStateToOwner(createInitialTrainingState(), "user-a");
+  assert.equal(materializePlans(scoped, "2026-11-01", "2026-11-01", now), scoped);
 });
 
 test("RLS restringe o snapshot de treinos ao auth.uid", () => {
   const sql = readFileSync(new URL("../../supabase/migrations/20260907140000_harden_user_app_state.sql", import.meta.url), "utf8");
   assert.match(sql, /force row level security/i); assert.match(sql, /auth\.uid\(\)\) = user_id/g); assert.match(sql, /revoke all on table public\.user_app_state from anon/i);
+});
+
+test("RLS de desafios não recursa entre challenges e challenge_members", () => {
+  const sql = readFileSync(new URL("../../supabase/migrations/20261101103000_fix_challenge_members_rls_recursion.sql", import.meta.url), "utf8");
+  assert.match(sql, /drop policy if exists "participants read members"/i);
+  assert.match(sql, /using \(\(select auth\.uid\(\)\) = user_id\)/i);
+  assert.doesNotMatch(sql, /from public\.challenges/i);
 });
 
 test("falha no Supabase restaura o estado anterior", async () => {

@@ -104,14 +104,26 @@ export function sanitizeTrainingState(value: unknown): TrainingState {
 }
 
 export function scopeTrainingStateToOwner(state: TrainingState, ownerId: string): TrainingState {
+  const alreadyScoped =
+    state.plans.every((item) => item.ownerId === ownerId) &&
+    state.templates.every((item) => item.ownerId === ownerId) &&
+    state.exercises.every((item) => item.scope !== "personal" || item.ownerId === ownerId) &&
+    state.plannedSessions.every((item) => item.ownerId === ownerId) &&
+    state.sessions.every((item) => item.ownerId === ownerId) &&
+    state.personalRecords.every((item) => item.ownerId === ownerId);
+
+  // Returning the same reference is important: callers use referential equality
+  // to decide whether the training state changed and needs to be synchronized.
+  if (alreadyScoped) return state;
+
   return {
     ...state,
-    plans: state.plans.map((item) => ({ ...item, ownerId })),
-    templates: state.templates.map((item) => ({ ...item, ownerId })),
-    exercises: state.exercises.map((item) => item.scope === "personal" ? { ...item, ownerId } : item),
-    plannedSessions: state.plannedSessions.map((item) => ({ ...item, ownerId })),
-    sessions: state.sessions.map((item) => ({ ...item, ownerId })),
-    personalRecords: state.personalRecords.map((item) => ({ ...item, ownerId })),
+    plans: state.plans.map((item) => item.ownerId === ownerId ? item : { ...item, ownerId }),
+    templates: state.templates.map((item) => item.ownerId === ownerId ? item : { ...item, ownerId }),
+    exercises: state.exercises.map((item) => item.scope === "personal" && item.ownerId !== ownerId ? { ...item, ownerId } : item),
+    plannedSessions: state.plannedSessions.map((item) => item.ownerId === ownerId ? item : { ...item, ownerId }),
+    sessions: state.sessions.map((item) => item.ownerId === ownerId ? item : { ...item, ownerId }),
+    personalRecords: state.personalRecords.map((item) => item.ownerId === ownerId ? item : { ...item, ownerId }),
   };
 }
 
