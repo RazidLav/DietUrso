@@ -1,5 +1,5 @@
 import { recipeNutrients, scaleNutrients } from "./calculations";
-import type { Food, FoodCatalogItem, MealOption, Nutrients, Plan, Recipe } from "../types/plan";
+import type { Food, FoodCatalogItem, MealOption, Nutrients, Plan, Recipe, Unit } from "../types/plan";
 
 const id = (prefix: string) => `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 
@@ -97,6 +97,9 @@ export function resizePlanFood(food: Food, quantity: number, catalog?: FoodCatal
   let nutrients: Nutrients;
   if (catalog && catalog.referenceUnit === food.unit) {
     nutrients = scaleNutrients(catalog.nutrients, catalog.referenceQuantity, safeQuantity);
+  } else if (catalog && food.unitEquivalents?.[food.unit]) {
+    const equivalentQuantity = safeQuantity * (food.unitEquivalents[food.unit] ?? 0);
+    nutrients = scaleNutrients(catalog.nutrients, catalog.referenceQuantity, equivalentQuantity);
   } else if (recipe && food.unit === "porcao") {
     nutrients = scaleNutrients(recipeNutrients(recipe).perServing, 1, safeQuantity);
   } else {
@@ -109,6 +112,69 @@ export function resizePlanFood(food: Food, quantity: number, catalog?: FoodCatal
     referenceUnit: food.referenceUnit || food.unit,
     ...nutrients,
   };
+}
+
+export const UNIT_LABELS: Record<Unit, string> = {
+  g: "g",
+  ml: "ml",
+  un: "un",
+  porcao: "porção",
+};
+
+/**
+ * Unidades compatíveis com a dimensão original do alimento. Não oferecemos,
+ * por exemplo, ml para um sólido em gramas, pois isso exigiria uma conversão
+ * que o catálogo não conhece.
+ */
+export function availableFoodUnits(food: Food): Unit[] {
+  if (food.recipeId) return ["porcao"];
+  const referenceUnit = food.referenceUnit ?? food.unit;
+  if (referenceUnit === "g") return ["g", "un", "porcao"];
+  if (referenceUnit === "ml") return ["ml", "un", "porcao"];
+  if (referenceUnit === "un") return ["un", "porcao"];
+  return ["porcao", "un"];
+}
+
+/**
+ * Troca a forma de medir sem alterar os nutrientes do que já está na opção.
+ * Quando uma medida doméstica ainda não possui equivalência, a quantidade
+ * atual passa a representar 1 unidade/porção e a relação fica salva no item.
+ */
+export function changePlanFoodUnit(food: Food, nextUnit: Unit): Food {
+  if (food.unit === nextUnit) return food;
+
+  const referenceUnit = food.referenceUnit ?? food.unit;
+  const referenceQuantity = food.referenceQuantity || food.quantity || 1;
+  const equivalents = { ...(food.unitEquivalents ?? {}) };
+  const currentEquivalent = food.unit === referenceUnit
+    ? food.quantity
+    : (equivalents[food.unit] ?? referenceQuantity) * food.quantity;
+
+  if (nextUnit === referenceUnit) {
+    return { ...food, quantity: currentEquivalent, unit: nextUnit, referenceQuantity, referenceUnit, unitEquivalents: equivalents };
+  }
+
+  const knownEquivalent = equivalents[nextUnit];
+  if (knownEquivalent && knownEquivalent > 0) {
+    return { ...food, quantity: currentEquivalent / knownEquivalent, unit: nextUnit, referenceQuantity, referenceUnit, unitEquivalents: equivalents };
+  }
+
+  equivalents[nextUnit] = currentEquivalent || referenceQuantity;
+  return { ...food, quantity: 1, unit: nextUnit, referenceQuantity, referenceUnit, unitEquivalents: equivalents };
+}
+
+export function updatePlanFoodUnitEquivalent(food: Food, equivalentQuantity: number, catalog?: FoodCatalogItem): Food {
+  const referenceUnit = food.referenceUnit ?? food.unit;
+  if (food.unit === referenceUnit || !Number.isFinite(equivalentQuantity) || equivalentQuantity <= 0) return food;
+
+  const equivalents = { ...(food.unitEquivalents ?? {}) };
+  const previousEquivalent = equivalents[food.unit] ?? food.referenceQuantity ?? 1;
+  equivalents[food.unit] = equivalentQuantity;
+  const nutrients = catalog && catalog.referenceUnit === referenceUnit
+    ? scaleNutrients(catalog.nutrients, catalog.referenceQuantity, equivalentQuantity * food.quantity)
+    : scaleNutrients(nutrientsFromFood(food), previousEquivalent, equivalentQuantity);
+
+  return { ...food, unitEquivalents: equivalents, ...nutrients };
 }
 
 export function mealTypeDefaultName(type: string, labels: Record<string, string>) {

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
-import { cloneMealOption, foodFromCatalog, foodFromRecipe, optionTemplates, resizePlanFood } from "../src/nutrition/planComposer";
+import { availableFoodUnits, changePlanFoodUnit, cloneMealOption, foodFromCatalog, foodFromRecipe, optionTemplates, resizePlanFood, updatePlanFoodUnitEquivalent } from "../src/nutrition/planComposer";
 import type { FoodCatalogItem, MealOption, Plan, Recipe } from "../src/types/plan";
 
 const catalogFood: FoodCatalogItem = {
@@ -24,6 +24,41 @@ test("alimento manual pode ter a quantidade editada mais de uma vez sem acumular
   const tripled = resizePlanFood(doubled, 90);
   assert.equal(tripled.kcal, 360);
   assert.equal(tripled.protein, 12);
+});
+
+test("alimento pode ser contado em unidades sem perder a equivalência em gramas", () => {
+  const portion = resizePlanFood(foodFromCatalog(catalogFood), 25, catalogFood);
+  const unit = changePlanFoodUnit(portion, "un");
+  assert.equal(unit.quantity, 1);
+  assert.equal(unit.unit, "un");
+  assert.equal(unit.unitEquivalents?.un, 25);
+  assert.equal(unit.kcal, 100);
+
+  const twoUnits = resizePlanFood(unit, 2, catalogFood);
+  assert.equal(twoUnits.kcal, 200);
+  assert.equal(twoUnits.protein, 20 / 3);
+
+  const gramsAgain = changePlanFoodUnit(twoUnits, "g");
+  assert.equal(gramsAgain.quantity, 50);
+  assert.equal(gramsAgain.kcal, 200);
+});
+
+test("equivalência por unidade pode ser ajustada sem inventar macros", () => {
+  const portion = resizePlanFood(foodFromCatalog(catalogFood), 25, catalogFood);
+  const unit = changePlanFoodUnit(portion, "un");
+  const toast = updatePlanFoodUnitEquivalent(unit, 12.5, catalogFood);
+  assert.equal(toast.quantity, 1);
+  assert.equal(toast.unitEquivalents?.un, 12.5);
+  assert.equal(toast.kcal, 50);
+  const twoToasts = resizePlanFood(toast, 2, catalogFood);
+  assert.equal(twoToasts.kcal, 100);
+  assert.equal(changePlanFoodUnit(twoToasts, "g").quantity, 25);
+});
+
+test("seletor oferece apenas medidas compatíveis com o tipo do alimento", () => {
+  assert.deepEqual(availableFoodUnits(foodFromCatalog(catalogFood)), ["g", "un", "porcao"]);
+  const egg = foodFromCatalog({ ...catalogFood, id: "egg", name: "Ovo", referenceQuantity: 1, referenceUnit: "un" });
+  assert.deepEqual(availableFoodUnits(egg), ["un", "porcao"]);
 });
 
 test("receita entra por porção e contribui para os macros da opção", () => {
@@ -60,5 +95,5 @@ test("gestão e edição de planos permanecem dentro do contexto Dieta", async (
   assert.doesNotMatch(settings, /new-plan-btn/);
   assert.match(editor, /MealOptionComposer/);
   assert.match(editor, /MacroSummary/);
-  for (const capability of ["option-add-food", "option-add-recipe", "option-use-template", "option-live-macros"]) assert.match(composer, new RegExp(capability));
+  for (const capability of ["option-add-food", "option-add-recipe", "option-use-template", "option-live-macros", "option-unit-choice"] ) assert.match(composer, new RegExp(capability));
 });
