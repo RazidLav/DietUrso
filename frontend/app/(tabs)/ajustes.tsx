@@ -1,73 +1,17 @@
-import React, { useCallback, useState } from "react";
-import { ScrollView, StyleSheet, Text, View, Pressable, TextInput, Modal } from "react-native";
-import { useFocusEffect, useRouter } from "expo-router";
+import React from "react";
+import { ScrollView, StyleSheet, Text, View, Pressable } from "react-native";
+import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import MaterialDesignIcons from "@react-native-vector-icons/material-design-icons";
 import { colors, withAlpha, radius, spacing, themePalettes, type ThemePreference } from "../../src/theme";
-import {
-  createEmptyPlan,
-  deletePlan,
-  duplicatePlan,
-  getActivePlanId,
-  listPlans,
-  setActivePlanId,
-  toggleArchivePlan,
-} from "../../src/store/planStore";
-import type { Plan } from "../../src/types/plan";
 import { FLOATING_TAB_HEIGHT, FLOATING_TAB_MARGIN } from "./_layout";
 import CloudSyncCard from "../../src/components/CloudSyncCard";
-import { useCloudDataRefresh } from "../../src/cloud/useCloudDataRefresh";
 import { useAppTheme } from "../../src/components/ThemeProvider";
 
 export default function AjustesScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { preference, setPreference } = useAppTheme();
-  const [plans, setPlans] = useState<Plan[]>([]);
-  const [activeId, setActiveIdState] = useState<string | null>(null);
-  const [showCreate, setShowCreate] = useState(false);
-  const [newName, setNewName] = useState("");
-  const [confirmDel, setConfirmDel] = useState<Plan | null>(null);
-
-  const load = useCallback(async () => {
-    setPlans(await listPlans());
-    setActiveIdState(await getActivePlanId());
-  }, []);
-
-  useFocusEffect(
-    useCallback(() => {
-      load();
-    }, [load])
-  );
-  useCloudDataRefresh(load);
-
-  const handleActivate = async (id: string) => {
-    await setActivePlanId(id);
-    await load();
-  };
-  const handleArchive = async (id: string) => {
-    await toggleArchivePlan(id);
-    await load();
-  };
-  const handleDelete = async () => {
-    if (!confirmDel) return;
-    await deletePlan(confirmDel.id);
-    setConfirmDel(null);
-    await load();
-  };
-  const handleCreate = async () => {
-    const name = newName.trim() || "Novo plano";
-    const plan = await createEmptyPlan(name);
-    setNewName("");
-    setShowCreate(false);
-    await load();
-    router.push(`/editor/${plan.id}`);
-  };
-  const handleDuplicate = async (id: string) => {
-    const copy = await duplicatePlan(id);
-    await load();
-    router.push(`/editor/${copy.id}`);
-  };
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.surface }} testID="ajustes-screen">
@@ -75,14 +19,6 @@ export default function AjustesScreen() {
         <Text style={styles.eyebrow}>AJUSTES</Text>
         <View style={styles.headerRow}>
           <Text style={styles.title}>Configurações</Text>
-          <Pressable
-            style={styles.newBtn}
-            onPress={() => setShowCreate(true)}
-            testID="new-plan-btn"
-          >
-            <MaterialDesignIcons name="plus" size={16} color={colors.onBrandPrimary} />
-            <Text style={styles.newBtnText}>Novo</Text>
-          </Pressable>
         </View>
       </View>
 
@@ -91,7 +27,7 @@ export default function AjustesScreen() {
         paddingBottom: FLOATING_TAB_HEIGHT + Math.max(insets.bottom, FLOATING_TAB_MARGIN) + spacing.xl,
         gap: spacing.sm,
       }}>
-        <CloudSyncCard onSynced={load} />
+        <CloudSyncCard />
 
         <View style={styles.appearance} testID="appearance-settings">
           <View style={styles.appearanceHeader}>
@@ -149,124 +85,7 @@ export default function AjustesScreen() {
           <MaterialDesignIcons name="chevron-right" size={22} color={colors.onSurfaceTertiary} />
         </Pressable>
 
-        <Text style={styles.sectionLabel}>PLANOS</Text>
-        {plans.map((p) => {
-          const active = p.id === activeId;
-          return (
-            <View
-              key={p.id}
-              style={[styles.planCard, active && styles.planCardActive]}
-              testID={`plan-item-${p.id}`}
-            >
-              <View style={{ flex: 1 }}>
-                <View style={styles.planTitleRow}>
-                  <Text style={styles.planName} numberOfLines={1}>{p.name}</Text>
-                  {active ? (
-                    <View style={styles.activeBadge}>
-                      <Text style={styles.activeBadgeText}>ATIVO</Text>
-                    </View>
-                  ) : null}
-                  {p.archived ? (
-                    <View style={styles.archBadge}>
-                      <Text style={styles.archBadgeText}>arquivado</Text>
-                    </View>
-                  ) : null}
-                </View>
-                <Text style={styles.planMeta}>{p.meals.length} refeições</Text>
-              </View>
-              <View style={styles.planActions}>
-                {!active ? (
-                  <Pressable
-                    style={styles.iconBtn}
-                    onPress={() => handleActivate(p.id)}
-                    testID={`activate-${p.id}`}
-                  >
-                    <MaterialDesignIcons name="check-circle-outline" size={22} color={colors.brandPrimary} />
-                  </Pressable>
-                ) : null}
-                <Pressable
-                  style={styles.iconBtn}
-                  onPress={() => router.push(`/editor/${p.id}`)}
-                  testID={`edit-${p.id}`}
-                >
-                  <MaterialDesignIcons name="pencil-outline" size={22} color={colors.onSurface} />
-                </Pressable>
-                <Pressable style={styles.iconBtn} onPress={() => void handleDuplicate(p.id)} testID={`duplicate-${p.id}`}>
-                  <MaterialDesignIcons name="content-copy" size={21} color={colors.brandSecondary} />
-                </Pressable>
-                <Pressable
-                  style={styles.iconBtn}
-                  onPress={() => handleArchive(p.id)}
-                  testID={`archive-${p.id}`}
-                >
-                  <MaterialDesignIcons
-                    name={p.archived ? "archive-arrow-up-outline" : "archive-outline"}
-                    size={22}
-                    color={colors.onSurfaceSecondary}
-                  />
-                </Pressable>
-                <Pressable
-                  style={styles.iconBtn}
-                  onPress={() => setConfirmDel(p)}
-                  testID={`delete-${p.id}`}
-                >
-                  <MaterialDesignIcons name="trash-can-outline" size={22} color={colors.error} />
-                </Pressable>
-              </View>
-            </View>
-          );
-        })}
       </ScrollView>
-
-      {/* Create modal */}
-      <Modal visible={showCreate} transparent animationType="fade" onRequestClose={() => setShowCreate(false)}>
-        <View style={styles.modalWrap}>
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Novo plano</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Nome do plano"
-              placeholderTextColor={colors.muted}
-              value={newName}
-              onChangeText={setNewName}
-              testID="new-plan-name-input"
-              autoFocus
-            />
-            <View style={styles.modalActions}>
-              <Pressable style={styles.modalBtnSecondary} onPress={() => setShowCreate(false)}>
-                <Text style={styles.modalBtnSecondaryText}>Cancelar</Text>
-              </Pressable>
-              <Pressable style={styles.modalBtnPrimary} onPress={handleCreate} testID="new-plan-confirm-btn">
-                <Text style={styles.modalBtnPrimaryText}>Criar</Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Delete confirm */}
-      <Modal visible={!!confirmDel} transparent animationType="fade" onRequestClose={() => setConfirmDel(null)}>
-        <View style={styles.modalWrap}>
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Excluir plano?</Text>
-            <Text style={styles.modalDesc}>
-              {confirmDel?.name} será removido permanentemente.
-            </Text>
-            <View style={styles.modalActions}>
-              <Pressable style={styles.modalBtnSecondary} onPress={() => setConfirmDel(null)}>
-                <Text style={styles.modalBtnSecondaryText}>Cancelar</Text>
-              </Pressable>
-              <Pressable
-                style={[styles.modalBtnPrimary, { backgroundColor: colors.error }]}
-                onPress={handleDelete}
-                testID="confirm-delete-btn"
-              >
-                <Text style={[styles.modalBtnPrimaryText, { color: colors.onError }]}>Excluir</Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }
