@@ -128,10 +128,14 @@ test("o banco de exercícios preserva filtros e ações existentes", () => {
   }
 });
 
-test("o perfil reúne edição e logout em um menu compacto", () => {
+test("o perfil reúne edição, sincronização e logout em um menu compacto", () => {
   const profile = read("../app/perfil.tsx");
   assert.match(profile, /settingsLabel="Abrir menu do perfil"/);
   assert.match(profile, /testID="profile-menu-edit"/);
+  assert.match(profile, /testID="profile-menu-sync"/);
+  assert.match(profile, /Conta e sincronização/);
+  assert.match(profile, /router\.push\("\/ajustes"/);
+  assert.match(profile, /subscribeCloudStatus\(setCloud\)/);
   assert.match(profile, /testID="profile-menu-logout"/);
   assert.match(profile, /await signOutFromCloud\(\)/);
   assert.match(profile, /router\.replace\("\/conta\?mode=signin"/);

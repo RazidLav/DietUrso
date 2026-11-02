@@ -1,13 +1,19 @@
 import MaterialDesignIcons from "@react-native-vector-icons/material-design-icons";
 import { useFocusEffect, useRouter } from "expo-router";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Image, Modal, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AreaDashboardHeader } from "../src/components/AreaDashboard";
 import { DashboardPanelHeader, type DashboardPeriod } from "../src/components/DashboardControls";
 import { ResponsiveSheet } from "../src/components/DesignSystem";
 import { FolderCard } from "../src/components/ProgressiveUI";
-import { resetUserData, signOutFromCloud } from "../src/cloud/cloudSync";
+import {
+  getCloudStatus,
+  resetUserData,
+  signOutFromCloud,
+  subscribeCloudStatus,
+  type CloudStatus,
+} from "../src/cloud/cloudSync";
 import { ACHIEVEMENTS } from "../src/gamification/achievements";
 import { evaluateGamification } from "../src/gamification/engine";
 import { findCosmetic } from "../src/gamification/cosmetics";
@@ -50,6 +56,9 @@ export default function ProfileScreen() {
   const [resetPhrase, setResetPhrase] = useState("");
   const [resetting, setResetting] = useState(false);
   const [accessRole, setAccessRole] = useState<AccessRole>("user");
+  const [cloud, setCloud] = useState<CloudStatus>(getCloudStatus());
+
+  useEffect(() => subscribeCloudStatus(setCloud), []);
 
   const load = useCallback(async () => {
     setLoadState((current) => current === "success" ? current : "loading"); setNotice(null);
@@ -198,6 +207,30 @@ export default function ProfileScreen() {
           <Pressable accessibilityRole="menuitem" style={({ pressed }) => [styles.menuItem, pressed && styles.menuItemPressed]} onPress={editProfile} testID="profile-menu-edit">
             <View style={styles.menuIcon}><MaterialDesignIcons name="pencil-outline" size={19} color={colors.brandPrimary} /></View>
             <Text style={styles.menuText}>Editar perfil</Text>
+          </Pressable>
+          <View style={styles.menuDivider} />
+          <Pressable
+            accessibilityRole="menuitem"
+            style={({ pressed }) => [styles.menuItem, pressed && styles.menuItemPressed]}
+            onPress={() => { setProfileMenuOpen(false); router.push("/ajustes" as never); }}
+            testID="profile-menu-sync"
+          >
+            <View style={styles.menuIcon}><MaterialDesignIcons name="cloud-sync-outline" size={19} color={colors.brandPrimary} /></View>
+            <View style={styles.menuCopy}>
+              <Text style={styles.menuText}>Conta e sincronização</Text>
+              <Text style={styles.menuHint}>
+                {!cloud.configured
+                  ? "Nuvem indisponível neste build"
+                  : cloud.authenticated
+                    ? cloud.phase === "syncing"
+                      ? "Sincronizando agora…"
+                      : cloud.lastSyncAt
+                        ? `Sincronizado às ${new Date(cloud.lastSyncAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`
+                        : "Conectado · toque para sincronizar"
+                    : "Entre para usar em outros aparelhos"}
+              </Text>
+            </View>
+            <MaterialDesignIcons name="chevron-right" size={18} color={colors.onSurfaceTertiary} />
           </Pressable>
           {accessRole === "admin" ? <>
             <View style={styles.menuDivider} />
@@ -425,6 +458,8 @@ function Toggle({ label, value, onValueChange }: { label: string; value: boolean
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.surface }, content: { width: "100%", maxWidth: layout.contentMax, alignSelf: "center", paddingHorizontal: spacing.lg, gap: spacing.lg }, center: { flex: 1, backgroundColor: colors.surface, alignItems: "center", justifyContent: "center", gap: spacing.md, padding: spacing.xl }, menuLayer: { flex: 1, backgroundColor: withAlpha("#000000", 0.28) }, profileMenu: { position: "absolute", width: 220, padding: spacing.xs, borderRadius: radius.md, borderWidth: 1, borderColor: colors.borderStrong, backgroundColor: colors.surfaceSecondary, shadowColor: "#000000", shadowOpacity: 0.28, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 12 }, menuItem: { minHeight: 52, flexDirection: "row", alignItems: "center", gap: spacing.sm, paddingHorizontal: spacing.sm, borderRadius: radius.sm }, menuItemPressed: { backgroundColor: colors.surfaceTertiary }, menuIcon: { width: 34, height: 34, alignItems: "center", justifyContent: "center", borderRadius: radius.sm, backgroundColor: withAlpha(colors.brandPrimary, 0.1) }, logoutIcon: { backgroundColor: withAlpha(colors.error, 0.1) }, menuText: { flex: 1, color: colors.onSurface, fontSize: 12, fontWeight: "800" }, logoutText: { flex: 1, color: colors.error, fontSize: 12, fontWeight: "800" }, menuDivider: { height: 1, marginHorizontal: spacing.sm, backgroundColor: colors.borderSubtle }, areaShelf: { flexDirection: "row", gap: spacing.sm }, areaTile: { flex: 1, minWidth: 0, minHeight: 82, alignItems: "center", justifyContent: "center", gap: spacing.xs, padding: spacing.xs, borderRadius: radius.md, backgroundColor: colors.surfaceSecondary }, areaTilePressed: { opacity: 0.72 }, areaIcon: { width: 34, height: 34, borderRadius: radius.sm, alignItems: "center", justifyContent: "center", backgroundColor: withAlpha(colors.brandPrimary, 0.1) }, areaLabel: { color: colors.onSurfaceSecondary, fontSize: 9, lineHeight: 12, fontWeight: "850" as never, textAlign: "center" }, moreAreaTile: { flex: 1, minWidth: 0, minHeight: 82, alignItems: "center", justifyContent: "center", gap: spacing.xs, padding: spacing.xs, borderRadius: radius.md, backgroundColor: colors.surfaceSecondary }, stackBackTwo: { position: "absolute", top: 15, width: 30, height: 25, borderRadius: radius.sm, transform: [{ rotate: "8deg" }], backgroundColor: withAlpha(colors.brandPrimary, 0.18) }, stackBackOne: { position: "absolute", top: 13, width: 30, height: 27, borderRadius: radius.sm, transform: [{ rotate: "-6deg" }], backgroundColor: withAlpha(colors.brandPrimary, 0.34) }, stackFront: { width: 34, height: 34, borderRadius: radius.sm, alignItems: "center", justifyContent: "center", backgroundColor: colors.brandPrimary }, showcase: { overflow: "hidden", borderRadius: radius.md, backgroundColor: colors.surfaceSecondary }, banner: { height: 112, backgroundColor: withAlpha(colors.brandPrimary, 0.16), overflow: "hidden" }, bannerGlow: { width: 240, height: 240, borderRadius: 120, alignSelf: "flex-end", marginTop: -90, marginRight: -40, backgroundColor: withAlpha("#F6C85F", 0.22) }, avatarWrap: { width: 96, height: 96, marginTop: -48, marginLeft: spacing.xl, padding: 5, borderRadius: 32, backgroundColor: colors.surfaceSecondary, borderWidth: 3, borderColor: colors.brandPrimary }, avatar: { width: "100%", height: "100%", borderRadius: 26 }, identity: { padding: spacing.lg, paddingTop: spacing.md, gap: spacing.xs }, name: { color: colors.onSurface, fontSize: 23, fontWeight: "900" }, username: { color: colors.brandPrimary, fontSize: 12, fontWeight: "800" }, titlePill: { alignSelf: "flex-start", flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: spacing.sm, paddingVertical: 5, borderRadius: radius.pill, backgroundColor: withAlpha("#F6C85F", 0.14) }, titlePillText: { color: colors.onSurface, fontSize: 10, fontWeight: "800" }, bio: { color: colors.onSurfaceSecondary, fontSize: 12, lineHeight: 18, marginTop: spacing.xs }, privateLabel: { color: colors.onSurfaceTertiary, fontSize: 10, marginTop: spacing.xs }, levelBlock: { marginHorizontal: spacing.lg, padding: spacing.md, borderRadius: radius.md, backgroundColor: colors.surfaceTertiary, gap: spacing.sm }, levelTop: { flexDirection: "row", justifyContent: "space-between", gap: spacing.sm }, levelTitle: { flex: 1, color: colors.onSurface, fontSize: 12, fontWeight: "900" }, levelXp: { color: colors.onSurfaceTertiary, fontSize: 10 }, track: { height: 8, overflow: "hidden", borderRadius: radius.pill, backgroundColor: colors.surface }, fill: { height: "100%", borderRadius: radius.pill, backgroundColor: colors.brandPrimary }, legacy: { color: colors.brandTertiary, fontSize: 9, fontWeight: "800" }, stats: { flexDirection: "row", margin: spacing.lg, borderTopWidth: 1, borderTopColor: colors.borderSubtle, paddingTop: spacing.md }, stat: { flex: 1, alignItems: "center", gap: 2 }, statValue: { color: colors.onSurface, fontSize: 19, fontWeight: "900" }, statLabel: { color: colors.onSurfaceTertiary, fontSize: 9 }, actions: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, padding: spacing.lg, paddingTop: 0 }, sideColumn: { gap: spacing.md }, sideColumnDesktop: { flexDirection: "row", flexWrap: "wrap", alignItems: "flex-start" }, card: { gap: spacing.md, padding: spacing.lg, borderRadius: radius.md, backgroundColor: colors.surfaceSecondary }, cardDesktop: { flexBasis: "48%", flexGrow: 1 }, cardHeading: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" }, cardTitle: { color: colors.onSurface, fontSize: 16, fontWeight: "900" }, counter: { color: colors.brandPrimary, fontSize: 11, fontWeight: "900" }, field: { gap: 6 }, label: { color: colors.onSurfaceTertiary, fontSize: 10, fontWeight: "800" }, input: { minHeight: 46, paddingHorizontal: spacing.md, borderRadius: radius.md, borderWidth: 1, borderColor: colors.borderStrong, backgroundColor: colors.surfaceTertiary, color: colors.onSurface, outlineStyle: "none" } as never, bioInput: { minHeight: 86, paddingTop: spacing.md, textAlignVertical: "top" }, toggle: { minHeight: 48, flexDirection: "row", alignItems: "center", gap: spacing.md }, toggleText: { flex: 1, color: colors.onSurfaceSecondary, fontSize: 11, lineHeight: 16 }, primaryButton: { minHeight: 44, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: spacing.sm, paddingHorizontal: spacing.lg, borderRadius: radius.pill, backgroundColor: colors.brandPrimary }, primaryText: { color: colors.onBrandPrimary, fontSize: 11, fontWeight: "900" }, secondaryButton: { minHeight: 44, alignItems: "center", justifyContent: "center", paddingHorizontal: spacing.lg, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.borderStrong, backgroundColor: colors.surfaceTertiary }, secondaryText: { color: colors.onSurface, fontSize: 11, fontWeight: "800" }, dangerText: { color: colors.error, fontSize: 11, fontWeight: "800" }, photoActions: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm }, featured: { flexDirection: "row", alignItems: "center", gap: spacing.sm }, reorderButton: { width: 32, height: 32, alignItems: "center", justifyContent: "center", borderRadius: radius.sm, backgroundColor: colors.surfaceTertiary }, featuredIndex: { width: 28, height: 28, textAlign: "center", lineHeight: 28, borderRadius: radius.pill, overflow: "hidden", color: colors.onBrandPrimary, backgroundColor: colors.brandPrimary, fontWeight: "900" }, featuredText: { flex: 1, color: colors.onSurface, fontSize: 11, fontWeight: "800" }, achievementChoices: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs }, choice: { maxWidth: "100%", paddingHorizontal: spacing.sm, paddingVertical: 7, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surfaceTertiary }, choiceActive: { borderColor: colors.brandPrimary, backgroundColor: withAlpha(colors.brandPrimary, 0.12) }, choiceText: { color: colors.onSurfaceTertiary, fontSize: 9, fontWeight: "700" }, choiceTextActive: { color: colors.brandPrimary }, recent: { flexDirection: "row", alignItems: "center", gap: spacing.sm }, recentIcon: { width: 38, height: 38, alignItems: "center", justifyContent: "center", borderRadius: radius.md, backgroundColor: withAlpha(colors.brandPrimary, 0.12) }, recentTitle: { color: colors.onSurface, fontSize: 11, fontWeight: "800" }, muted: { color: colors.onSurfaceTertiary, fontSize: 10, lineHeight: 15, textAlign: "center" }, title: { color: colors.onSurface, fontSize: 18, fontWeight: "900", textAlign: "center" }, notice: { padding: spacing.md, borderRadius: radius.md, backgroundColor: withAlpha(colors.brandTertiary, 0.12), borderWidth: 1, borderColor: withAlpha(colors.brandTertiary, 0.35) }, noticeText: { color: colors.onSurfaceSecondary, fontSize: 11 },
+  menuCopy: { flex: 1, minWidth: 0, gap: 2 },
+  menuHint: { color: colors.onSurfaceTertiary, fontSize: 9, lineHeight: 12 },
   resetLayer: { flex: 1, alignItems: "center", justifyContent: "center", padding: spacing.lg, backgroundColor: withAlpha("#000000", 0.68) }, resetCard: { width: "100%", maxWidth: 480, padding: spacing.xl, gap: spacing.md, borderRadius: radius.lg, borderWidth: 1, borderColor: withAlpha(colors.error, 0.45), backgroundColor: colors.surfaceSecondary }, resetIcon: { width: 52, height: 52, alignItems: "center", justifyContent: "center", borderRadius: radius.md, backgroundColor: withAlpha(colors.error, 0.12) }, resetTitle: { color: colors.onSurface, fontSize: 21, fontWeight: "900" }, resetDescription: { color: colors.onSurfaceSecondary, fontSize: 12, lineHeight: 19 }, resetLabel: { color: colors.onSurface, fontSize: 11, fontWeight: "800" }, resetInput: { minHeight: 48, paddingHorizontal: spacing.md, borderRadius: radius.md, borderWidth: 1, borderColor: colors.error, backgroundColor: colors.surface, color: colors.onSurface, fontWeight: "900", letterSpacing: 1.5, outlineStyle: "none" } as never, resetActions: { flexDirection: "row", flexWrap: "wrap", justifyContent: "flex-end", gap: spacing.sm, marginTop: spacing.xs }, resetButton: { minHeight: 44, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: spacing.sm, paddingHorizontal: spacing.lg, borderRadius: radius.pill, backgroundColor: colors.error }, resetButtonText: { color: "#FFFFFF", fontSize: 11, fontWeight: "900" },
   desktopDashboard: { gap: spacing.md, padding: spacing.md, borderRadius: radius.xl, backgroundColor: colors.surfaceSecondary },
   desktopWelcome: { minHeight: 54, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.md, paddingHorizontal: spacing.xs },
