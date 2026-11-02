@@ -11,6 +11,7 @@ import MaterialDesignIcons from "@react-native-vector-icons/material-design-icon
 import { colors, withAlpha, radius, spacing } from "../theme";
 import {
   getCloudStatus,
+  resolveSyncConflict,
   signOutFromCloud,
   subscribeCloudStatus,
   syncCloudNow,
@@ -52,6 +53,7 @@ export default function CloudSyncCard({ onSynced }: { onSynced?: () => void | Pr
 
   const signedIn = cloud.authenticated;
   const syncing = busy || cloud.phase === "syncing";
+  const conflicting = cloud.hasConflict || cloud.phase === "conflict";
 
   return (
     <View style={styles.card} testID="cloud-sync-card">
@@ -75,7 +77,9 @@ export default function CloudSyncCard({ onSynced }: { onSynced?: () => void | Pr
       {signedIn ? (
         <>
           <Text style={styles.statusText}>
-            {cloud.phase === "error"
+            {conflicting
+              ? cloud.message
+              : cloud.phase === "error"
               ? cloud.message
               : cloud.lastSyncAt
                 ? `Sincronizado às ${new Date(cloud.lastSyncAt).toLocaleTimeString("pt-BR", {
@@ -84,7 +88,34 @@ export default function CloudSyncCard({ onSynced }: { onSynced?: () => void | Pr
                   })}`
                 : "Pronto para sincronizar"}
           </Text>
-          <View style={styles.actions}>
+          {conflicting ? (
+            <View style={styles.conflictBox} testID="sync-conflict-actions">
+              <Text style={styles.conflictTitle}>Qual versão você quer manter?</Text>
+              <Text style={styles.conflictHelp}>
+                A outra versão continuará preservada no histórico de segurança.
+              </Text>
+              <View style={styles.actions}>
+                <Pressable
+                  style={[styles.primaryButton, syncing && styles.disabled]}
+                  disabled={syncing}
+                  onPress={() => run(() => resolveSyncConflict("cloud"))}
+                  testID="sync-use-cloud"
+                >
+                  <MaterialDesignIcons name="cloud-download-outline" size={17} color={colors.onBrandPrimary} />
+                  <Text style={styles.primaryButtonText}>Usar nuvem</Text>
+                </Pressable>
+                <Pressable
+                  style={[styles.secondaryButton, syncing && styles.disabled]}
+                  disabled={syncing}
+                  onPress={() => run(() => resolveSyncConflict("local"))}
+                  testID="sync-use-device"
+                >
+                  <MaterialDesignIcons name="cellphone-arrow-down" size={17} color={colors.onSurface} />
+                  <Text style={styles.secondaryButtonText}>Usar este aparelho</Text>
+                </Pressable>
+              </View>
+            </View>
+          ) : <View style={styles.actions}>
             <Pressable
               style={[styles.primaryButton, syncing && styles.disabled]}
               disabled={syncing}
@@ -101,7 +132,7 @@ export default function CloudSyncCard({ onSynced }: { onSynced?: () => void | Pr
             >
               <Text style={styles.secondaryButtonText}>Sair</Text>
             </Pressable>
-          </View>
+          </View>}
         </>
       ) : (
         <Pressable style={styles.primaryButton} onPress={() => router.push("/conta")} testID="open-account-btn">
@@ -138,6 +169,16 @@ const styles = StyleSheet.create({
   title: { color: colors.onSurface, fontSize: 16, fontWeight: "700" },
   description: { color: colors.onSurfaceTertiary, fontSize: 12, marginTop: 2 },
   statusText: { color: colors.onSurfaceSecondary, fontSize: 12 },
+  conflictBox: {
+    padding: spacing.md,
+    gap: spacing.sm,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: withAlpha(colors.brandTertiary, "66"),
+    backgroundColor: withAlpha(colors.brandTertiary, "12"),
+  },
+  conflictTitle: { color: colors.onSurface, fontSize: 13, fontWeight: "800" },
+  conflictHelp: { color: colors.onSurfaceSecondary, fontSize: 12, lineHeight: 17 },
   actions: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
   primaryButton: {
     minHeight: 42,
