@@ -1,5 +1,5 @@
 import { Stack } from "expo-router";
-import { ActivityIndicator, AppState, StatusBar, Text, View } from "react-native";
+import { ActivityIndicator, AppState, Platform, StatusBar, Text, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { colors } from "../src/theme";
@@ -12,6 +12,7 @@ import { ensureTrainingSeed } from "../src/store/trainingStore";
 import AppNavigation from "../src/components/AppNavigation";
 import ThemeProvider, { useAppTheme } from "../src/components/ThemeProvider";
 import { loadThemePreference } from "../src/store/themeStore";
+import { installViewportStability } from "../src/web/viewportStability";
 
 export default function RootLayout() {
   const [storeState, setStoreState] = useState<"loading" | "ready" | "error">(
@@ -45,6 +46,11 @@ export default function RootLayout() {
       mounted = false;
       subscription.remove();
     };
+  }, []);
+
+  useEffect(() => {
+    if (Platform.OS !== "web" || typeof window === "undefined" || typeof document === "undefined") return;
+    return installViewportStability();
   }, []);
 
   return (
