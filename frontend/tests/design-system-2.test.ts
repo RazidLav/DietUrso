@@ -174,6 +174,24 @@ test("a dock mobile usa transições CSS seguras no Safari e mantém quatro pila
   assert.match(config, /"profile-community", "Social"/);
 });
 
+test("o viewport web se recompõe depois do zoom sem criar rolagem fantasma", () => {
+  const layout = read("../app/_layout.tsx");
+  const stability = read("../src/web/viewportStability.ts");
+  const css = read("../public/global.css");
+  const html = read("../app/+html.tsx");
+
+  assert.match(layout, /installViewportStability\(\)/);
+  assert.match(stability, /visualViewport/);
+  assert.match(stability, /Math\.abs\(scale - 1\)/);
+  assert.match(stability, /scrollTo\(0, 0\)/);
+  assert.match(stability, /--uf-app-viewport-width/);
+  assert.match(stability, /--uf-app-viewport-height/);
+  assert.match(css, /#root \{/);
+  assert.match(css, /overflow: clip/);
+  assert.match(css, /contain: layout size style/);
+  assert.match(html, /interactive-widget=resizes-content/);
+});
+
 test("as áreas principais têm retorno consistente e a marca pública usa Hidratação", () => {
   const diet = read("../app/(tabs)/alimentacao.tsx");
   const training = read("../app/treinos.tsx");
